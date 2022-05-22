@@ -11,6 +11,10 @@ library(forcats)
 library(plyr)
 library(Hmisc)
 library(lme4)
+library(multcompView)
+library(emmeans)
+library(multcomp)
+
 
 
 setwd("C:/Users/harri/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/data")
@@ -315,7 +319,7 @@ svg(file="figures/allfractions_percent.svg",width = 6, height=6 )
 data %>%
   filter(Plant!="Soil", Incubation=="H")%>%
   ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
-  geom_boxplot(alpha=.7, outlier.shape = NA, fill= mycols3[4])+
+  geom_boxplot(alpha=.7, outlier.shape = NA, fill= mycols[4])+
   geom_jitter(width = .2)+
   theme_bw(base_size = 20, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
@@ -332,7 +336,7 @@ svg(file="figures/percentBONCATlog.svg",width = 14, height=6 )
 data %>%
   filter(Treatment == "HPG", Plant!= "Soil", Plant!="PEA")%>%
   ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
-  geom_boxplot( alpha=.7, fill= mycols3[4], outlier.shape = NA)+
+  geom_boxplot( alpha=.7, fill= mycols[4], outlier.shape = NA)+
   geom_jitter(size = 1.5, width = .2)+
   theme_minimal(base_size = 22, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
@@ -349,7 +353,7 @@ svg(file="figures/percentBONCATlog_clo.svg",width = 8, height=6 )
 data %>%
   filter(Treatment == "HPG", Plant=="CLO")%>%
   ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
-  geom_boxplot( alpha=.7, fill= mycols3[4], outlier.shape = NA)+
+  geom_boxplot( alpha=.7, fill= mycols[4], outlier.shape = NA)+
   geom_jitter(size = 1.5, width = .2)+
   theme_minimal(base_size = 22, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
@@ -442,9 +446,21 @@ glmm
   clo<-prop%>% filter(Plant == "CLO")
   y<-cbind(clo$n_Events_Boncat, clo$n_failures)
   
-  m3<-glm(y~clo$Fraction, quasibinomial)
+  Fraction = clo$Fraction
+  m3<-glm(y~Fraction, quasibinomial)
   summary(m3)
-  plot(m2)
+  plot(m3)
+  
+  anova(m3, test= "LR")
+  
+ 
+  marginal = emmeans(m3, ~Fraction)
+  pairs(marginal, adjust = "tukey")
+
+  
+  summary(glht(m3,mcp(Fraction = "Tukey")))
+  summary(glht(age, mcp(age="Tukey")))
+  
   
   clo$Fraction<-factor(clo$Fraction, levels = c("Endo", "Nod", "Rhizo", "Bulk"))
   #pea
@@ -459,15 +475,15 @@ glmm
   A17<-prop%>% filter(Plant == "A17")
   y<-cbind(A17$n_Events_Boncat, A17$n_failures)
   
-  m2<-glm(y~A17$Fraction, quasibinomial)
+  Fraction = A17$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
   summary(m2)
   plot(m2)
   
-  A17$Fraction<-factor(A17$Fraction, levels = c("Endo", "Nod", "Rhizo", "Bulk"))
+  anova(m2, test= "LR")
   
-  m2<-glm(y~A17$Fraction, quasibinomial)
-  summary(m2)
-  plot(m2)
+  summary(glht(m2,mcp(Fraction = "Tukey")))
+  
 
 
 #poisson
