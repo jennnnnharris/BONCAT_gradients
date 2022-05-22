@@ -13,6 +13,7 @@ library(Hmisc)
 library(lme4)
 
 
+setwd("C:/Users/harri/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/data")
 #import data
 data<- read_excel("FlowCyto_Data_BONCAT_flower2021.xlsx")
 counts<- read_excel("Flow cyto/cell_counts/Master_cell_counts.xlsx")
@@ -50,12 +51,13 @@ data<-data%>%mutate(cells_active_per_ul= Percent_Boncat_pos*cells_per_ul,
                     Prop_Active = Percent_Boncat_pos/100)
 
 
-mycols = c("#003f5c", "#7a5195", "#ef5675", "#ffa600")
-mycols2 = c("#003f5c",   "#bc5090",   "#ffa600")
+#mycols = c("#003f5c", "#7a5195", "#ef5675", "#ffa600")
+#mycols2 = c("#003f5c",   "#bc5090",   "#ffa600")
 
-mycols3 = c("#FF7733", "#FFBB34", "#148FBD", "#252230")
+mycols = c("#45924b", "#aac581", "#fffac9", "#f2a870", "#de425b")
 
-data$Fraction<-factor(data$Fraction, levels = c("Nod", "Endo", "Rhizo", "Bulk"))
+
+data$Fraction<-factor(data$Fraction, levels = c("Bulk", "Rhizo", "Endo", "Nod"))
 
 hist(data$cells_per_ul, breaks = 30)
 hist(data$Percent_Boncat_pos, breaks = 50)
@@ -66,14 +68,14 @@ hist(data$Percent_Boncat_pos, breaks = 50)
 #bulk + rhizo by plant
 
  rhizobulk<- data %>%
-  filter(Plant!="Soil", Fraction==("Rhizo")|Fraction == ("Bulk"))
-rhizobulk$Fraction<-factor(rhizobulk$Fraction, levels = c("Rhizo", "Bulk"))  
+  filter(Plant!="Soil", Fraction!="Nod", Fraction!="endo")
+rhizobulk$Fraction<-factor(rhizobulk$Fraction, levels = c("Bulk", "Rhizo"))  
 
-svg(file="figures/bulkrhizo_byplantcells.svg",width = 8, height=4 )
-  rhizobulk%>%
+svg(file="figures/bulkrhizo_clo.svg",width = 4, height=4 )
+  rhizobulk%>% filter(Plant=="CLO")%>%
   ggplot( aes(x=Fraction, y=cells_per_gram_soil)) +
   geom_jitter(width = .2, size=2 )+
-  geom_boxplot(alpha=.5, fill = mycols3[2], outlier.shape = NA)+
+  geom_boxplot(alpha=.5, fill = mycols[5], outlier.shape = NA)+
   scale_fill_manual(values = mycols)+
   theme_minimal(base_size = 22, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
@@ -84,7 +86,7 @@ svg(file="figures/bulkrhizo_byplantcells.svg",width = 8, height=4 )
   
 dev.off()
 
-rhizobulk<-rhizobulk%>%
+rhizobulk<-rhizobulk%>% filter(Plant!="PEA")%>%
 mutate(log_cell_g_soil = log(cells_per_gram_soil))
 m1<-lm(log_cell_g_soil~Plant+Fraction+Plant*Fraction, data = rhizobulk)
 summary(m1)
@@ -95,16 +97,17 @@ TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
 
 
 #Rhizo + bulk
-svg(file="figures/rhizobulkcells.svg",width = 4, height=4 )
-rhizobulk%>%
+svg(file="figures/rhizobulk_a17.svg",width = 4, height=4 )
+rhizobulk%>% filter(Plant!="A17")%>%
   ggplot( aes(x=Fraction, y=cells_per_gram_soil)) +
   geom_jitter(width = .2)+
-  geom_boxplot(alpha=.5,outlier.shape = NA , fill= mycols3[2])+
-  scale_fill_manual(values = mycols)+
+  geom_boxplot(alpha=.6,outlier.shape = NA , fill= mycols3[5])+
+  scale_fill_manual(values = mycols3[5])+
   theme_minimal(base_size = 22, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
   scale_y_log10(limits= c(1E7, 1E9)) +
   #xlab("Plant")+
+  ggtitle("Medicago")+
   ylab("Number Cells/ g soil")
 
 dev.off()
@@ -121,12 +124,12 @@ TukeyHSD(a1, 'lm1$Fraction', conf.level = .95)
 
 nodendo<-data %>%
   filter(Plant!="Soil", Fraction=="Nod"|Fraction == "Endo")
-  nodendo$Fraction<-factor(nodendo$Fraction, levels = c("Nod", "Endo"))
-pdf(file="figures/nodendo_byplantcells.pdf",width = 8, height=4 )
-  nodendo%>%
+  nodendo$Fraction<-factor(nodendo$Fraction, levels = c("Endo", "Nod"))
+svg(file="figures/nodendo_a17.svg",width = 4, height=4 )
+  nodendo%>% filter(Plant=="A17")%>%
   ggplot( aes(x=Fraction, y=cells_per_plant)) +
   geom_jitter(width = .2, size=2 )+
-  geom_boxplot(alpha=.5, fill = mycols3[2], outlier.shape = NA)+
+  geom_boxplot(alpha=.6, fill = mycols[5], outlier.shape = NA)+
   scale_fill_manual(values = mycols)+
   theme_minimal(base_size = 22, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
@@ -137,13 +140,14 @@ pdf(file="figures/nodendo_byplantcells.pdf",width = 8, height=4 )
 
 dev.off()
 
-svg(file="figures/nodendos.svg",width = 4, height=4 )
-nodendo%>%
+svg(file="figures/nodendos_clo.svg",width = 4, height=4 )
+nodendo%>% filter(Plant=="CLO")%>%
   ggplot( aes(x=Fraction, y=cells_per_plant)) +
   geom_jitter(width = .2, size=2 )+
-  geom_boxplot(alpha=.5, fill = mycols3[2], outlier.shape = NA)+
+  geom_boxplot(alpha=.5, fill = mycols3[5], outlier.shape = NA)+
   scale_fill_manual(values = mycols)+
   theme_minimal(base_size = 22, )+
+  ggtitle("clo")+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
   #facet_wrap(vars(Plant))+
   #xlab("Plant")+
@@ -153,7 +157,7 @@ dev.off()
 
 
 lm1 <- data %>%
-  filter(Plant!="Soil", Fraction!="Endo", Fraction!="Nod", Incubation=="H")
+  filter(Plant!="Soil", Fraction!="Endo", Fraction!="Nod", Incubation=="H", Plant!="PEA")
 #t.test(cells_per_gram_soil~Plant, data = lm1)
 
 a1<-aov(lm1$cells_per_gram_soil~lm1$Plant)
@@ -311,7 +315,7 @@ svg(file="figures/allfractions_percent.svg",width = 6, height=6 )
 data %>%
   filter(Plant!="Soil", Incubation=="H")%>%
   ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
-  geom_boxplot(alpha=.7, outlier.shape = NA, fill= mycols3[1])+
+  geom_boxplot(alpha=.7, outlier.shape = NA, fill= mycols3[4])+
   geom_jitter(width = .2)+
   theme_bw(base_size = 20, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
@@ -324,11 +328,11 @@ dev.off()
 
 
 
-svg(file="figures/percentBONCATlog.svg",width = 12, height=6 )
+svg(file="figures/percentBONCATlog.svg",width = 14, height=6 )
 data %>%
-  filter(Treatment == "HPG", Plant!= "Soil")%>%
+  filter(Treatment == "HPG", Plant!= "Soil", Plant!="PEA")%>%
   ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
-  geom_boxplot( alpha=.7, fill= mycols3[1], outlier.shape = NA)+
+  geom_boxplot( alpha=.7, fill= mycols3[4], outlier.shape = NA)+
   geom_jitter(size = 1.5, width = .2)+
   theme_minimal(base_size = 22, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
@@ -337,17 +341,32 @@ data %>%
   ylab("% Boncat Active")+
   scale_y_log10(limits= c())+
   facet_wrap(vars(Plant))+
-  ggtitle("Percent BONCAT active - Pea, Clover, A17")
+  ggtitle("Percent BONCAT active")
 dev.off()
 
 
+svg(file="figures/percentBONCATlog_clo.svg",width = 8, height=6 )
+data %>%
+  filter(Treatment == "HPG", Plant=="CLO")%>%
+  ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
+  geom_boxplot( alpha=.7, fill= mycols3[4], outlier.shape = NA)+
+  geom_jitter(size = 1.5, width = .2)+
+  theme_minimal(base_size = 22, )+
+  theme(axis.text.x = element_text(angle=60, hjust=1))+
+  #ylim(0, 50)+
+  xlab("Fraction")+
+  ylab("% Boncat Active")+
+  scale_y_log10(limits= c())+
+  facet_wrap(vars(Plant))
+  #ggtitle("Percent BONCAT active")
+dev.off()
 #combined figure
 
-pdf(file="figures/percentBONCAT.pdf",width = 12, height=6 )
+svg(file="figures/percentBONCAT_log_a17.svg",width = 8, height=6 )
 data %>%
-  filter(Treatment == "HPG", Plant!= "Soil")%>%
+  filter(Treatment == "HPG", Plant=="A17")%>%
   ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
-  geom_boxplot( alpha=.7, fill= mycols3[1], outlier.shape = NA)+
+  geom_boxplot( alpha=.7, fill= mycols[4], outlier.shape = NA)+
   geom_jitter(size = 1.5, width = .2)+
   theme_minimal(base_size = 22, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
@@ -355,14 +374,14 @@ data %>%
   xlab("Fraction")+
   ylab("% Boncat Active")+
   facet_wrap(vars(Plant))+
-  ggtitle("Percent BONCAT active - Pea, Clover, A17")
+  scale_y_log10(limits= c())
 dev.off()
 
 #-------stats---------
 # make a smaller df for tests
 prop <- data %>%
   mutate(Plant_rep = paste0(Plant, Number))%>%
-  filter(Plant!="Soil", Incubation=="H")%>%
+  filter(Plant!="Soil", Incubation=="H", Plant!="PEA")%>%
   select(Plant, Plant_rep, Fraction, Prop_Active,  n_Events_Cells, n_Events_Boncat)%>%
   mutate(n_failures = n_Events_Cells-n_Events_Boncat)%>%
   mutate(Active = ifelse(Prop_Active<.0001, 0, 1 ))
