@@ -64,7 +64,7 @@ mycols = c("#45924b", "#aac581", "#fffac9", "#f2a870", "#de425b")
 data$Fraction<-factor(data$Fraction, levels = c("Bulk", "Rhizo", "Endo", "Nod"))
 
 hist(data$cells_per_ul, breaks = 30)
-hist(data$Percent_Boncat_pos, breaks = 50)
+hist(data$cells_active_g_soil, breaks = 50)
 
 
 #-------n cells-------------
@@ -72,12 +72,12 @@ hist(data$Percent_Boncat_pos, breaks = 50)
 #bulk + rhizo by plant
 
  rhizobulk<- data %>%
-  filter(Plant!="Soil", Fraction!="Nod", Fraction!="endo")
+  filter(Plant!="Soil", Fraction!="Nod", Fraction!="Endo", !is.na(Fraction))
 rhizobulk$Fraction<-factor(rhizobulk$Fraction, levels = c("Bulk", "Rhizo"))  
 
 svg(file="figures/bulkrhizo_clo.svg",width = 4, height=4 )
-  rhizobulk%>% filter(Plant=="CLO")%>%
-  ggplot( aes(x=Fraction, y=cells_per_gram_soil)) +
+  rhizobulk %>% filter(Plant=="CLO")%>%
+  ggplot(aes(x=Fraction, y=cells_per_gram_soil)) +
   geom_jitter(width = .2, size=2 )+
   geom_boxplot(alpha=.5, fill = mycols[5], outlier.shape = NA)+
   scale_fill_manual(values = mycols)+
@@ -179,12 +179,12 @@ t.test(cells_per_ul~Fraction, data = lm1)
 
 #bulk
 
-pdf(file="figures/bulk_n_active_cells.pdf",width = 6, height=6 )
+svg(file="figures/bulk_n_active_cells.avg",width = 6, height=6 )
 data %>%
   filter(Plant!="Soil", Fraction==("Bulk"), Treatment=="HPG")%>%
   ggplot( aes(x=Plant, y=cells_active_g_soil)) +
   geom_jitter(width = .2)+
-  geom_boxplot(alpha=.5, fill = mycols2,outlier.shape = NA)+
+  geom_boxplot(alpha=.5, fill = mycols[3], outlier.shape = NA)+
   scale_fill_manual(values = mycols)+
   theme_bw(base_size = 20, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
@@ -239,7 +239,7 @@ TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
 #Rhizo + bulk
 pdf(file="figures/rhizoandbulkactive.pdf",width = 6, height=6 )
 data %>%
-  filter(Plant!="Soil", Fraction!="Endo", Fraction!="Nod", Incubation=="H")%>%
+  filter(Plant!="Soil", Plant=="CLO", Fraction!="Endo", Fraction!="Nod", Incubation=="H")%>%
   ggplot( aes(x=Fraction, y=cells_active_g_soil)) +
   geom_jitter(width = .2)+
   geom_boxplot(alpha=.5, outlier.shape = NA)+
@@ -249,8 +249,33 @@ data %>%
   #facet_wrap(~Fraction)+
   xlab("Plant")+
   ylab("Cells Active/ g soil")+
+  scale_y_log10()
   ylim(0, 3E8)
+
 dev.off()
+
+#Rhizo + bulk
+pdf(file="figures/rhizoandbulkactive.pdf",width = 6, height=6 )
+data %>%
+  filter(Plant!="Soil", Plant=="A17", Fraction!="Endo", Fraction!="Nod", Incubation=="H")%>%
+  ggplot( aes(x=Fraction, y=cells_active_g_soil)) +
+  geom_jitter(width = .2)+
+  geom_boxplot(alpha=.5, outlier.shape = NA)+
+  scale_fill_manual(values = mycols)+
+  theme_bw(base_size = 20, )+
+  theme(axis.text.x = element_text(angle=60, hjust=1))+
+  #facet_wrap(~Fraction)+
+  xlab("Plant")+
+  ylab("Cells Active/ g soil")+
+  scale_y_log10()
+ylim(0, 3E8)
+
+dev.off()
+
+
+
+
+
 
 #t  test
 lm1 <- data %>%
@@ -262,7 +287,7 @@ t.test(cells_active_g_soil~Fraction, data = lm1)
 #nod
 pdf(file="figures/nod_n_active_cells_logscale.pdf",width = 6, height=6 )
 data %>%
-  filter(Plant!="Soil", Fraction==("Nod"), Treatment=="HPG")%>%
+  filter(Plant!="Soil", Fraction=("Nod"), Treatment=="HPG")%>%
   ggplot( aes(x=Plant, y=cells_active_per_ul)) +
   geom_jitter(width = .2)+
   geom_boxplot(alpha=.5, fill = mycols2, outlier.shape = NA)+
@@ -308,7 +333,26 @@ lm1 <- data %>%
 a1<-aov(lm1$cells_active_per_ul~lm1$Plant)
 TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
 
+#is there an interaction with plant type?
 
+# log transformed linear model 
+colnames(data)
+
+NE<-data%>%filter(Plant!="PEA", Plant!="Soil", Treatment=="HPG", Fraction!="Endo", Fraction!="Nod")%>%
+  mutate(lg_cell_act_soil= log(cells_active_g_soil))
+  
+m1<-lm(lg_cell_act_soil~ Fraction + Plant+ Plant*Fraction, data = NE)
+anova(m1)
+
+
+
+NE<-data%>%filter(Plant!="PEA", Plant!="Soil", Treatment=="HPG", Fraction!="Endo", Fraction!="Nod")%>%
+  mutate(lg_cell_act_soil= log(cells_active_g_soil))
+
+m1<-lm(lg_cell_act_soil~ Fraction + Plant+ Plant*Fraction, data = NE)
+
+a1<-aov(m1)
+TukeyHSD(a1, conf.level = .95)
 
 
 #-------percent-------
@@ -494,60 +538,4 @@ with(m1, cbind(res.deviance = deviance, df = df.residual,
 
 # the P value i very low indicating that the data doesn't fit the model well.
 
-
-#------------n active cells by plant---------------
-
-#------A17---------
-
-pdf(file="figures/A17BONCAT.pdf",width = 6, height=6 )
-data %>%
-  filter(Plant=="A17", Treatment == "HPG")%>%
-  ggplot(aes(x=Fraction , y=cells_per_g_soil)) +
-  geom_jitter(size = 1.5, width = .2)+
-  geom_boxplot(fill = mycols, alpha = .5, outlier.shape = NA) +
-  scale_fill_manual(values = mycols)+
-  theme_bw(base_size = 22, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #ylim(0, 50)+
-  xlab("Fraction")+
-  ylab("Boncat Active")+
-  ggtitle("Percent BONCAT - Medicago")
-dev.off()
-
-
-
-
-
-#-----Pea-------
-
-pdf(file="figures/PEABONCAT.pdf",width = 6, height=6 )
-data %>%
-  filter(Plant=="PEA", Treatment == "HPG")%>%
-  ggplot(aes(x=Fraction , y=cells_active_per_g_soil)) +
-  geom_jitter(size = 1.5, width = .2)+
-  geom_boxplot(fill = mycols, alpha = .5, outlier.shape = NA) +
-  theme_bw(base_size = 22, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #ylim(0, 50)+
-  xlab("Fraction")+
-  ylab("% Boncat Active")+
-  ggtitle("Percent BONCAT active - Pea")
-dev.off()
-
-
-#-----clover-----
-
-pdf(file="figures/CloverBONCAT.pdf",width = 6, height=6 )
-data %>%
-  filter(Plant=="CLO", Treatment == "HPG")%>%
-  ggplot(aes(x=Fraction , y=cells_active_per_g_soil)) +
-  geom_jitter(size = 1.5, width = .2)+
-  geom_boxplot(fill = mycols, alpha = .5, outlier.shape = NA) +
-  theme_bw(base_size = 22)+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #ylim(0, 50)+
-  xlab("Fraction")+
-  ylab("% Boncat Active")+
-  ggtitle("Percent BONCAT active - Clover")
-dev.off()
 
