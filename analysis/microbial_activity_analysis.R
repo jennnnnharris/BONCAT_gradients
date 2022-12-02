@@ -255,7 +255,7 @@ data %>%
 dev.off()
 
 #Rhizo + bulk
-pdf(file="figures/rhizoandbulkactive.pdf",width = 6, height=6 )
+svg(file="figures/rhizoandbulkactive.svg",width = 3, height=3 )
 data %>%
   filter(Plant!="Soil", Plant=="A17", Fraction!="Endo", Fraction!="Nod", Incubation=="H")%>%
   ggplot( aes(x=Fraction, y=cells_active_g_soil)) +
