@@ -104,40 +104,37 @@ qiime tools export \
    --input-path ./asvs/stats.dada2.qza \
    --output-path ./asvs/stats.dada2.qzv
 
+# most samples had low chimeras, 80% to 90% of sequences were non chimeric
+# for some samples (C1B DNA, C2B DNA, C2R DNA, C5B DNA) about 50% of sequences where chimeras
+# this is not great but I'm going to keep moving forward the pipeline
 
-
-
-# merge and summerize denoised data
-
-qiime tools export \
-  --input-path trimmed.dada2.qza \
-  --output-path asv_table
+#### summerize and export
 
 qiime tools export \
-  --input-path table-dada2.qza \
+  --input-path  table-dada2.qza\
   --output-path asvs/asv_table
 
-biom convert -i asv_table/feature-table.biom -o asv_table/feature-table.tsv --to-tsv
+biom convert -i asvs/asv_table/feature-table.biom -o asvs/asv_table/feature-table.tsv --to-tsv
 
-qiime feature-table summarize \
-  --i-table table-dada2.qza \
-  --o-visualization asvs/tabledada2.qzv \
-  --m-sample-metadata-file metadata.txt
-
-qiime feature-table tabulate-seqs \
-  --i-data asvs/trimmed.dada2.qza \
-  --o-visualization asvs/rep-seqs.qzv
-
-qiime metadata tabulate \
-  --m-input-file asvs/stats-dada2.qza \
-  --m-sample-metadata-file metadata.txt
-  --o-visualization asvs/stats-dada2.qzv
-
+# export representative sequences 
+# t
 qiime tools export \
-  --input-path trimmed.dada2.qza \
+  --input-path ./asvs/trimmed.dada2.qza\
   --output-path asvs
 
-# silva classification 
+# tablulate and export feature table
+qiime feature-table tabulate-seqs \
+  --i-data  ./asvs/trimmed.dada2.qza \
+  --o-visualization rep-seqs.qzv
+
+#export with metadata
+qiime feature-table summarize \
+  --i-table table-dada2.qza \
+  --o-visualization asvs/table-dada2.qzv \
+  --m-sample-metadata-file metadata.txt
+
+
+######################## silva classification ############################
 
 #upload files to cluster 
 #scp silva-138-99-seqs-515-806.qza silva-138-99-tax-515-806.qza jeh6121@datamgr.aci.ics.psu.edu:/storage/work/jeh6121/TTC_16S/
