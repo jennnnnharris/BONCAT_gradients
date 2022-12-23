@@ -94,38 +94,47 @@ qiime dada2 denoise-paired \
     --p-max-ee-r 4 \
     --p-n-reads-learn 1000000 \
     --p-chimera-method pooled \
-    --o-table table-dada2.qza \
+    --o-table ./asvs/table-dada2.qza \
     --o-representative-sequences ./asvs/trimmed.dada2.qza \
     --o-denoising-stats ./asvs/stats.dada2.qza
-# upload metadata
-# download this file from teh cluster to view it
-# scp jeh6121@datamgr.aci.ics.psu.edu:/storage/work/jeh6121/TTC_16S/paired-end-demux.trimmed.primer.qzv .
+
+# on how DADA2 went
 
 qiime tools export \
-  --input-path demux.trimmed.dada2.qza \
+   --input-path ./asvs/stats.dada2.qza \
+   --output-path ./asvs/stats.dada2.qzv
+
+
+
+
+# merge and summerize denoised data
+
+qiime tools export \
+  --input-path trimmed.dada2.qza \
   --output-path asv_table
 
 qiime tools export \
   --input-path table-dada2.qza \
-  --output-path asv_table
+  --output-path asvs/asv_table
 
 biom convert -i asv_table/feature-table.biom -o asv_table/feature-table.tsv --to-tsv
 
 qiime feature-table summarize \
   --i-table table-dada2.qza \
-  --o-visualization tabledada2.qzv \
+  --o-visualization asvs/tabledada2.qzv \
   --m-sample-metadata-file metadata.txt
 
 qiime feature-table tabulate-seqs \
-  --i-data demux.trimmed.dada2.qza \
-  --o-visualization rep-seqs.qzv
+  --i-data asvs/trimmed.dada2.qza \
+  --o-visualization asvs/rep-seqs.qzv
 
 qiime metadata tabulate \
-  --m-input-file stats-dada2.qza \
-  --o-visualization stats-dada2.qzv
+  --m-input-file asvs/stats-dada2.qza \
+  --m-sample-metadata-file metadata.txt
+  --o-visualization asvs/stats-dada2.qzv
 
 qiime tools export \
-  --input-path demux.trimmed.dada2.qza \
+  --input-path trimmed.dada2.qza \
   --output-path asvs
 
 # silva classification 
