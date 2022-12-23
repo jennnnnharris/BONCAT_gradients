@@ -79,26 +79,24 @@ qiime demux summarize \
     --p-n 100000 \
     --o-visualization 16s.trimmed.primer.qzv
 
-# copy to local device
-
-#scp jeh6121@datamgr.aci.ics.psu.edu:/storage/work/jeh6121/TTC_16S/paired-end-demux.trimmed.primer.qzv .
-
 # deniose with dada 2
 # tutorial https://github.com/allenlab/QIIME2_16S_ASV_protocol
 
+mkdir asvs
+
 qiime dada2 denoise-paired \
-    --i-demultiplexed-seqs paired-end-demux.trimmed.primer.qza \
+    --i-demultiplexed-seqs ./16S.trimmed.primer.qza \
     --p-n-threads 0 \
     --p-trunc-q 2 \
-    --p-trunc-len-f 219 \
-    --p-trunc-len-r 194 \
+    --p-trunc-len-f 220 \
+    --p-trunc-len-r 220 \
     --p-max-ee-f 2 \
     --p-max-ee-r 4 \
     --p-n-reads-learn 1000000 \
     --p-chimera-method pooled \
     --o-table table-dada2.qza \
-    --o-representative-sequences demux.trimmed.dada2.qza \
-    --o-denoising-stats stats-dada2.qza
+    --o-representative-sequences ./asvs/trimmed.dada2.qza \
+    --o-denoising-stats ./asvs/stats.dada2.qza
 # upload metadata
 # download this file from teh cluster to view it
 # scp jeh6121@datamgr.aci.ics.psu.edu:/storage/work/jeh6121/TTC_16S/paired-end-demux.trimmed.primer.qzv .
