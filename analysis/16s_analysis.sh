@@ -153,11 +153,13 @@ qiime feature-classifier fit-classifier-naive-bayes \
   --i-reference-reads /silva/silva-138-99-extracts.qza \
   --i-reference-taxonomy /silva/silva-138-99-tax.qza \
   --o-classifier /silva/silva-138-99-classifier.qza
+
 # test the classifier
 qiime feature-classifier classify-sklearn \
   --i-classifier silva/silva-138-99-classifier.qza \
-  --i-reads demux.trimmed.dada2.qza \
+  --i-reads asvs/trimmed.dada2.qza \
   --o-classification taxonomy.qza
+
 qiime metadata tabulate \
   --m-input-file taxonomy.qza \
   --o-visualization taxonomy.qzv
