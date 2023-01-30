@@ -62,20 +62,29 @@ flowcyto<- rep("Astrios", length(df_ast$Date))
 Plant<- rep("CLO", length(df_ast$Date))
 df_ast<-cbind(df_ast, flowcyto)
 df_ast<- cbind(df_ast, Plant)
-colnames(df_ast)
+#order columns
+df_ast<-subset(df_ast, select=-c(year, month, day, singlet_count, total_count))
+df_ast<-df_ast[,c(1,11,2,4,10,3, 6:9,5) ]
 
-
-colnames(df_fort)
-#make dat col date format
+#make date column date format
 df_fort$Date<-as.Date(df_fort$Date , format = "%y%m$d")
-#add flor cyto column
+#add flow cyto column
 flowcyto<- rep("Fortessa", length(df_fort$Date))
-cbind
-#remove unesscary columns
-df_fort<-subset(df_fort, select=-c(Project,Incubation,Number, Volume_filtered_ul, Spin_Speed, COUNT, Treatment))
+df_fort<-cbind(df_fort, flowcyto)
+Dyes <-c()
+Dyes <-ifelse(grepl("W",df_fort$ID), 'unstained', 'BONCAT-SYTO')
+df_fort<-cbind(df_fort, Dyes)
+#remove unnesscary columns
+df_fort<-subset(df_fort, select=-c(Project,Incubation,Number, Volume_filtered_ul, Spin_Speed, COUNT, Treatment, Run_number))
+colnames(df_fort)
+df_fort<-df_fort[,c(1:4,10,11, 5:9)]
 
+#make column names the same
+colnames(df_ast)<-colnames(df_fort)
+# combine
+df<-rbind(df_ast, df_fort)
 
-#--------calculating cells/ ul and cells/ g soil
+#--------calculating cells/ ul and cells/ g soil-------
 counts<-counts%>%
   mutate(cells_per_ul_diluted = green_pos_count / Volume_taken_ul)%>%
   mutate(cells_per_ul = cells_per_ul_diluted * dilution_1_XXX)%>%
@@ -90,22 +99,22 @@ completeFun <- function(data, desiredCols) {
   completeVec <- complete.cases(data[, desiredCols])
   return(data[completeVec, ])
 }
-data<-completeFun(data, 3)
+df<-completeFun(df, 3)
 counts<-counts[c(2,4,8:13)]
 
 #merging boncat data and count data
-data<-left_join(data, counts, by = c("ID", "Plant", "Fraction"))
+df<-left_join(df, counts, by = c("ID", "Plant", "Fraction"))
 #data<-left_join(data, nodules, by= c("Plant", "Number", "Fraction"))
 #data<-left_join(data, weights, by = c("Plant", "Number", "Fraction"))
 #calculate number of active cells
 ul_PBS = 10000
 
-data<-data%>%mutate(cells_active_per_ul= Percent_Boncat_pos*cells_per_ul,
+df<-df%>%mutate(cells_active_per_ul= Percent_Boncat_pos*cells_per_ul,
                     cells_active_g_soil = Percent_Boncat_pos*cells_per_gram_soil,
                     cells_per_plant= cells_per_ul*ul_PBS,
                     Prop_Active = Percent_Boncat_pos/100)
 
-data$Fraction<-factor(data$Fraction, levels = c("Bulk", "Rhizo", "Endo", "Nod"))
+df$Fraction<-factor(df$Fraction, levels = c("Bulk", "Rhizo", "Endo", "Nod"))
 
 
 #-------set colors--------
@@ -224,18 +233,20 @@ t.test(cells_per_ul~Fraction, data = lm1)
 #bulk
 
 svg(file="figures/bulk_n_active_cells.avg",width = 6, height=6 )
-data %>%
-  filter(Plant!="Soil", Fraction==("Bulk"), Treatment=="HPG")%>%
-  ggplot( aes(x=Plant, y=cells_active_g_soil)) +
+df %>%
+  filter(Dyes == "BONCAT-SYTO") %>%
+  filter(Fraction == "Bulk") %>%
+ 
+  ggplot( aes(x=Plant, y=n_Events_Boncat)) +
   geom_jitter(width = .2)+
   geom_boxplot(alpha=.5, fill = mycols[3], outlier.shape = NA)+
-  scale_fill_manual(values = mycols)+
+  #scale_fill_manual(values = mycols)+
   theme_bw(base_size = 20, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
+  #theme(axis.text.x = element_text(angle=60, hjust=1))+
   #facet_wrap(~Fraction)+
   xlab("Plant")+
-  ylab("Number Active Cells/ gram of soil")+
-  ylim(0,3E8)+
+  #ylab("Number Active Cells/ gram of soil")+
+  #ylim(0,3E8)+
   #scale_y_log10() + 
   ggtitle("Bulk Soil")
 dev.off()
