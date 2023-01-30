@@ -8,7 +8,7 @@ library(tidyverse)
 library(tidyr)
 library(ggplot2)
 library(forcats)
-library(plyr)
+library(dplyr)
 library(Hmisc)
 library(lme4)
 library(multcompView)
@@ -65,6 +65,39 @@ data$Fraction<-factor(data$Fraction, levels = c("Bulk", "Rhizo", "Endo", "Nod"))
 
 hist(data$cells_per_ul, breaks = 30)
 hist(data$cells_active_g_soil, breaks = 50)
+
+###----- import data --------
+
+dir<-"C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/Flow cyto/Astrios"
+
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/Flow cyto/Astrios")
+files<-list.files(path=dir, full.names = FALSE)
+
+#import data
+dat_csv <- lapply(files, read.csv)
+data1<- read.csv(files[1])
+data2<- read.csv(files[2])
+
+#remove mean and SD rows
+data1<-data1[!(data1$X=="Mean" | data1$X=="SD"),]
+data2<-data2[!(data2$X=="Mean" | data2$X=="SD"),]
+dat_csv<-lapply(dat_csv, function(k) subset(k, X!="Mean" & X!= "SD")) 
+
+data1<-separate(data1, X, into = c(NA, NA, NA, NA, NA, "year", "month", "day", "sample"), extra= "merge")
+dat_csv<-lapply(dat_csv, function(k) separate(k, X, into = c(NA, NA, NA, NA, NA, "year", "month", "day", "sample"), extra= "merge"))
+
+# pick cols and rename
+dat_csv<-lapply(dat_csv, function(k) subset(k, select = c(1:10)))
+names=c("year", "month", "day", "sample", "total_count","singlet_count",
+        "syto59_freq", "syto59_count", "BONCAT_freq", "BONCAT_count")
+
+dat_csv <- lapply(dat_csv, function(x) setNames(x, names))
+
+#turn into dataframe
+df <- do.call("rbind", dat_csv)
+
+#make dat column
+df$Date<-as.Date(with(df,paste(year,month,day,sep="-")),"%Y-%m-%d")
 
 
 #-------n cells-------------
