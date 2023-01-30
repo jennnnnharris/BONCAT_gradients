@@ -16,17 +16,68 @@ library(emmeans)
 library(multcomp)
 
 
-
-setwd("C:/Users/harri/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/data")
-#import data
-data<- read_excel("FlowCyto_Data_BONCAT_flower2021.xlsx")
+###------import data --------
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/data")
+#import data from fortessa and VYB flow cyto
+df_fort<- read_excel("FlowCyto_Data_BONCAT_flower2021.xlsx")
 counts<- read_excel("Flow cyto/cell_counts/Master_cell_counts.xlsx")
 weights <- read_excel("Plant fitness/PlantFitness_Data_BONCAT_flower_Fall2020.xlsx", sheet = 2)
 nodules<-read.csv("Plant fitness/nodule_surface_area.csv")
-# calculating cells/ ul and cells/ g soil
 
+
+###----- import data astrios--------
+
+dir<-"C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/Flow cyto/Astrios"
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/Flow cyto/Astrios")
+files<-list.files(path=dir, full.names = FALSE)
+
+#import data
+dat_csv <- lapply(files, read.csv)
+
+#remove mean and SD rows
+dat_csv<-lapply(dat_csv, function(k) subset(k, X!="Mean" & X!= "SD")) 
+data1<-separate(data1, X, into = c(NA, NA, NA, NA, NA, "year", "month", "day", "sample"), extra= "merge")
+dat_csv<-lapply(dat_csv, function(k) separate(k, X, into = c(NA, NA, NA, NA, NA, "year", "month", "day", "sample"), extra= "merge"))
+
+# pick cols and rename
+dat_csv<-lapply(dat_csv, function(k) subset(k, select = c(1:10)))
+names=c("year", "month", "day", "sample", "total_count","singlet_count",
+        "syto59_freq", "syto59_count", "BONCAT_freq", "BONCAT_count")
+dat_csv <- lapply(dat_csv, function(x) setNames(x, names))
+
+#turn into dataframe
+df <- do.call("rbind", dat_csv)
+#make dat column
+df$Date<-as.Date(with(df,paste(year,month,day,sep="-")),"%Y-%m-%d")
+
+#------cleaning data-------
+write.csv(df, file= "combined.csv")
+# added the metadat by hand in excel
+# re import file
+df_ast<-read.csv("combined_metadata_included.csv")
+# remove rows without BONCAT dyes + controls
+df_ast<-subset(df_ast, Dyes!= "SYBR- no click")
+# add column for flow cyto machine
+flowcyto<- rep("Astrios", length(df_ast$Date))
+Plant<- rep("CLO", length(df_ast$Date))
+df_ast<-cbind(df_ast, flowcyto)
+df_ast<- cbind(df_ast, Plant)
+colnames(df_ast)
+
+
+colnames(df_fort)
+#make dat col date format
+df_fort$Date<-as.Date(df_fort$Date , format = "%y%m$d")
+#add flor cyto column
+flowcyto<- rep("Fortessa", length(df_fort$Date))
+cbind
+#remove unesscary columns
+df_fort<-subset(df_fort, select=-c(Project,Incubation,Number, Volume_filtered_ul, Spin_Speed, COUNT, Treatment))
+
+
+#--------calculating cells/ ul and cells/ g soil
 counts<-counts%>%
-mutate(cells_per_ul_diluted = green_pos_count / Volume_taken_ul)%>%
+  mutate(cells_per_ul_diluted = green_pos_count / Volume_taken_ul)%>%
   mutate(cells_per_ul = cells_per_ul_diluted * dilution_1_XXX)%>%
   mutate(cells_per_gram_soil= ifelse( Fraction == "Bulk" | Fraction == "Rhizo", cells_per_ul*5000, NA))
 
@@ -54,51 +105,11 @@ data<-data%>%mutate(cells_active_per_ul= Percent_Boncat_pos*cells_per_ul,
                     cells_per_plant= cells_per_ul*ul_PBS,
                     Prop_Active = Percent_Boncat_pos/100)
 
-
-#mycols = c("#003f5c", "#7a5195", "#ef5675", "#ffa600")
-#mycols2 = c("#003f5c",   "#bc5090",   "#ffa600")
-
-mycols = c("#45924b", "#aac581", "#fffac9", "#f2a870", "#de425b")
-
-
 data$Fraction<-factor(data$Fraction, levels = c("Bulk", "Rhizo", "Endo", "Nod"))
 
-hist(data$cells_per_ul, breaks = 30)
-hist(data$cells_active_g_soil, breaks = 50)
 
-###----- import data --------
-
-dir<-"C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/Flow cyto/Astrios"
-
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/Flow cyto/Astrios")
-files<-list.files(path=dir, full.names = FALSE)
-
-#import data
-dat_csv <- lapply(files, read.csv)
-data1<- read.csv(files[1])
-data2<- read.csv(files[2])
-
-#remove mean and SD rows
-data1<-data1[!(data1$X=="Mean" | data1$X=="SD"),]
-data2<-data2[!(data2$X=="Mean" | data2$X=="SD"),]
-dat_csv<-lapply(dat_csv, function(k) subset(k, X!="Mean" & X!= "SD")) 
-
-data1<-separate(data1, X, into = c(NA, NA, NA, NA, NA, "year", "month", "day", "sample"), extra= "merge")
-dat_csv<-lapply(dat_csv, function(k) separate(k, X, into = c(NA, NA, NA, NA, NA, "year", "month", "day", "sample"), extra= "merge"))
-
-# pick cols and rename
-dat_csv<-lapply(dat_csv, function(k) subset(k, select = c(1:10)))
-names=c("year", "month", "day", "sample", "total_count","singlet_count",
-        "syto59_freq", "syto59_count", "BONCAT_freq", "BONCAT_count")
-
-dat_csv <- lapply(dat_csv, function(x) setNames(x, names))
-
-#turn into dataframe
-df <- do.call("rbind", dat_csv)
-
-#make dat column
-df$Date<-as.Date(with(df,paste(year,month,day,sep="-")),"%Y-%m-%d")
-
+#-------set colors--------
+mycols = c("#45924b", "#aac581", "#fffac9", "#f2a870", "#de425b")
 
 #-------n cells-------------
 
