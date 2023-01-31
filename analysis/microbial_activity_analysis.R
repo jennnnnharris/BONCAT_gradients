@@ -5,7 +5,7 @@
 
 library(readxl)
 library(tidyverse)
-library(tidyr)
+library(lubridate)
 library(ggplot2)
 library(forcats)
 library(dplyr)
@@ -15,17 +15,7 @@ library(multcompView)
 library(emmeans)
 library(multcomp)
 
-
-###------import data --------
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/data")
-#import data from fortessa and VYB flow cyto
-df_fort<- read_excel("FlowCyto_Data_BONCAT_flower2021.xlsx")
-counts<- read_excel("Flow cyto/cell_counts/Master_cell_counts.xlsx")
-weights <- read_excel("Plant fitness/PlantFitness_Data_BONCAT_flower_Fall2020.xlsx", sheet = 2)
-nodules<-read.csv("Plant fitness/nodule_surface_area.csv")
-
-
-###----- import data astrios--------
+###-------oragnizing data Astrios----------
 
 dir<-"C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/Flow cyto/Astrios"
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/Flow cyto/Astrios")
@@ -49,12 +39,23 @@ dat_csv <- lapply(dat_csv, function(x) setNames(x, names))
 df <- do.call("rbind", dat_csv)
 #make dat column
 df$Date<-as.Date(with(df,paste(year,month,day,sep="-")),"%Y-%m-%d")
-
-#------cleaning data-------
 write.csv(df, file= "combined.csv")
 # added the metadat by hand in excel
-# re import file
+
+
+###------import data --------
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/data")
+#import data from fortessa and VYB flow cyto
+df_fort<- read_excel("FlowCyto_Data_BONCAT_flower2021.xlsx")
+counts<- read_excel("Flow cyto/cell_counts/Master_cell_counts.xlsx")
+weights <- read_excel("Plant fitness/PlantFitness_Data_BONCAT_flower_Fall2020.xlsx", sheet = 2)
+nodules<-read.csv("Plant fitness/nodule_surface_area.csv")
+#import astrios data
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/Flow cyto/Astrios")
 df_ast<-read.csv("combined_metadata_included.csv")
+
+#------cleaning data-------
+
 # remove rows without BONCAT dyes + controls
 df_ast<-subset(df_ast, Dyes!= "SYBR- no click")
 # add column for flow cyto machine
@@ -65,9 +66,11 @@ df_ast<- cbind(df_ast, Plant)
 #order columns
 df_ast<-subset(df_ast, select=-c(year, month, day, singlet_count, total_count))
 df_ast<-df_ast[,c(1,11,2,4,10,3, 6:9,5) ]
+df_ast$Date<-mdy(df_ast$Date)  
 
 #make date column date format
 df_fort$Date<-as.Date(df_fort$Date , format = "%y%m$d")
+df_fort$Date<-ymd(df_fort$Date)
 #add flow cyto column
 flowcyto<- rep("Fortessa", length(df_fort$Date))
 df_fort<-cbind(df_fort, flowcyto)
@@ -83,6 +86,7 @@ df_fort<-df_fort[,c(1:4,10,11, 5:9)]
 colnames(df_ast)<-colnames(df_fort)
 # combine
 df<-rbind(df_ast, df_fort)
+
 
 #--------calculating cells/ ul and cells/ g soil-------
 counts<-counts%>%
@@ -120,11 +124,11 @@ df$Fraction<-factor(df$Fraction, levels = c("Bulk", "Rhizo", "Endo", "Nod"))
 #-------set colors--------
 mycols = c("#45924b", "#aac581", "#fffac9", "#f2a870", "#de425b")
 
-#-------n cells-------------
+#-------n cells figures -------------
 
 #bulk + rhizo by plant
 
- rhizobulk<- data %>%
+ rhizobulk<- df %>%
   filter(Plant!="Soil", Fraction!="Nod", Fraction!="Endo", !is.na(Fraction))
 rhizobulk$Fraction<-factor(rhizobulk$Fraction, levels = c("Bulk", "Rhizo"))  
 
@@ -136,22 +140,12 @@ svg(file="figures/bulkrhizo_clo.svg",width = 4, height=4 )
   scale_fill_manual(values = mycols)+
   theme_minimal(base_size = 22, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
-  facet_wrap(vars(Plant))+
+  facet_wrap(vars(flowcyto))+
   xlab("Plant")+
   ylab("Number Cells/g soil")+
   scale_y_log10(limits= c(1E7, 1E9))
   
 dev.off()
-
-rhizobulk<-rhizobulk%>% filter(Plant!="PEA")%>%
-mutate(log_cell_g_soil = log(cells_per_gram_soil))
-m1<-lm(log_cell_g_soil~Plant+Fraction+Plant*Fraction, data = rhizobulk)
-summary(m1)
-plot(m1)
-
-a1<-aov(lm1$cells_per_gram_soil~lm1$Plant)
-TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
-
 
 #Rhizo + bulk
 svg(file="figures/rhizobulk_a17.svg",width = 4, height=4 )
@@ -166,19 +160,7 @@ rhizobulk%>% filter(Plant!="A17")%>%
   #xlab("Plant")+
   ggtitle("Medicago")+
   ylab("Number Cells/ g soil")
-
-dev.off()
-
-#t  test
-lm1 <- data %>%
-  filter(Plant!="Soil", Fraction!="Endo", Fraction!="Nod", Incubation=="H")
-  t.test(cells_per_gram_soil~Fraction, data = lm1)
-  
-
-a1<-aov(lm1$cells_per_gram_soil~lm1$Fraction)
-TukeyHSD(a1, 'lm1$Fraction', conf.level = .95)
-
-
+# nodules + roots
 nodendo<-data %>%
   filter(Plant!="Soil", Fraction=="Nod"|Fraction == "Endo")
   nodendo$Fraction<-factor(nodendo$Fraction, levels = c("Endo", "Nod"))
@@ -196,7 +178,7 @@ svg(file="figures/nodendo_a17.svg",width = 4, height=4 )
   scale_y_log10(limits= c(1E6, 1E10))
 
 dev.off()
-
+#nod roots clover
 svg(file="figures/nodendos_clo.svg",width = 4, height=4 )
 nodendo%>% filter(Plant=="CLO")%>%
   ggplot( aes(x=Fraction, y=cells_per_plant)) +
@@ -212,31 +194,34 @@ nodendo%>% filter(Plant=="CLO")%>%
   scale_y_log10(limits= c(1E6, 1E10))
 dev.off()
 
+###-------- linear model for n cells------
 
-lm1 <- data %>%
-  filter(Plant!="Soil", Fraction!="Endo", Fraction!="Nod", Incubation=="H", Plant!="PEA")
-#t.test(cells_per_gram_soil~Plant, data = lm1)
+m1<-lm(cells_per_gram_soil~Plant+Fraction+Plant*Fraction, data = rhizobulk)
+summary(m1)
+plot(m1)
 
-a1<-aov(lm1$cells_per_gram_soil~lm1$Plant)
-TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
+# log transformed
+rhizobulk<-rhizobulk%>% filter(Plant!="PEA")%>%
+  mutate(log_cell_g_soil = log(cells_per_gram_soil))
+m1<-lm(log_cell_g_soil~Plant+Fraction+Plant*Fraction, data = rhizobulk)
+summary(m1)
+plot(m1)
+
+###--------mixed model for n cells---------#####
+
+cells_soil_mixed<- lmer(cells_per_gram_soil ~ Fraction + Plant + (1 | Date), data = rhizobulk)
+summary(cells_soil_mixed)
+
+confint(cells_soil_mixed)
 
 
-#t  test
-lm1 <- data %>%
-  filter(Plant!="Soil", Fraction!="Bulk", Fraction!="Rhizo", Incubation=="H")
-t.test(cells_per_ul~Fraction, data = lm1)
-
-
-
-#-----n active cells---------------
+#-----n active cells figures ---------------
 
 #bulk
-
 svg(file="figures/bulk_n_active_cells.avg",width = 6, height=6 )
 df %>%
   filter(Dyes == "BONCAT-SYTO") %>%
   filter(Fraction == "Bulk") %>%
- 
   ggplot( aes(x=Plant, y=n_Events_Boncat)) +
   geom_jitter(width = .2)+
   geom_boxplot(alpha=.5, fill = mycols[3], outlier.shape = NA)+
@@ -250,13 +235,6 @@ df %>%
   #scale_y_log10() + 
   ggtitle("Bulk Soil")
 dev.off()
-
-lm1 <- data %>%
-  filter(Plant!="Soil", Fraction=="Bulk", Incubation=="H")
-#t.test(cells_active_g_soil~Plant, data = lm1)
-
-a1<-aov(lm1$cells_active_g_soil~lm1$Plant)
-TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
 
 #Rhizo
 pdf(file="figures/rhizo_n_active_cells.pdf",width = 6, height=6 )
@@ -274,22 +252,6 @@ data %>%
   ylim(0, 3E8)+
   ggtitle("Rhizosphere Soil")
 dev.off()
-
-lm1 <- data %>%
-  filter(Plant!="Soil", Fraction=="Rhizo", Incubation=="H")
-#t.test(cells_active_g_soil~Plant, data = lm1)
-
-a1<-aov(lm1$cells_active_g_soil~lm1$Plant)
-TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
-
-
-lm1 <- data %>%
-  filter(Plant!="Soil", Fraction!="Endo", Fraction!="Nod", Incubation=="H")
-#t.test(cells_per_gram_soil~Plant, data = lm1)
-
-a1<-aov(lm1$cells_per_gram_soil~lm1$Plant)
-TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
-
 
 #Rhizo + bulk
 pdf(file="figures/rhizoandbulkactive.pdf",width = 6, height=6 )
@@ -324,20 +286,7 @@ data %>%
   ylab("Cells Active/ g soil")+
   scale_y_log10()
 ylim(0, 3E8)
-
 dev.off()
-
-
-
-
-
-
-#t  test
-lm1 <- data %>%
-  filter(Plant!="Soil", Fraction!="Endo", Fraction!="Nod", Incubation=="H")
-t.test(cells_active_g_soil~Fraction, data = lm1)
-
-
 
 #nod
 pdf(file="figures/nod_n_active_cells_logscale.pdf",width = 6, height=6 )
@@ -356,14 +305,6 @@ data %>%
   ggtitle("Nodule")
 dev.off()
   
-
-lm1 <- data %>%
-  filter(Plant!="Soil", Fraction=="Nod", Incubation=="H")
-
-a1<-aov(lm1$cells_active_per_ul~lm1$Plant)
-TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
-
-
 #endo
 pdf(file="figures/endo_nactive_cells.pdf",width = 6, height=6 )
 data %>%
@@ -381,39 +322,9 @@ data %>%
   ggtitle("Endo")
 dev.off()
 
-
-lm1 <- data %>%
-  filter(Plant!="Soil", Fraction=="Endo", Incubation=="H")
-
-a1<-aov(lm1$cells_active_per_ul~lm1$Plant)
-TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
-
-#is there an interaction with plant type?
-
-# log transformed linear model 
-colnames(data)
-
-NE<-data%>%filter(Plant!="PEA", Plant!="Soil", Treatment=="HPG", Fraction!="Endo", Fraction!="Nod")%>%
-  mutate(lg_cell_act_soil= log(cells_active_g_soil))
-  
-m1<-lm(lg_cell_act_soil~ Fraction + Plant+ Plant*Fraction, data = NE)
-anova(m1)
-
-
-
-NE<-data%>%filter(Plant!="PEA", Plant!="Soil", Treatment=="HPG", Fraction!="Endo", Fraction!="Nod")%>%
-  mutate(lg_cell_act_soil= log(cells_active_g_soil))
-
-m1<-lm(lg_cell_act_soil~ Fraction + Plant+ Plant*Fraction, data = NE)
-
-a1<-aov(m1)
-TukeyHSD(a1, conf.level = .95)
-
-
-#-------percent-------
+#-------percent active figures-------
 
 #all plants
-
 svg(file="figures/allfractions_percent.svg",width = 6, height=6 )
 data %>%
   filter(Plant!="Soil", Incubation=="H")%>%
@@ -429,8 +340,7 @@ data %>%
   #ylim(0, 3E8)
 dev.off()
 
-
-
+#log scale
 svg(file="figures/percentBONCATlog.svg",width = 14, height=6 )
 data %>%
   filter(Treatment == "HPG", Plant!= "Soil", Plant!="PEA")%>%
@@ -447,7 +357,7 @@ data %>%
   ggtitle("Percent BONCAT active")
 dev.off()
 
-
+#clover
 svg(file="figures/percentBONCATlog_clo.svg",width = 8, height=6 )
 data %>%
   filter(Treatment == "HPG", Plant=="CLO")%>%
@@ -465,6 +375,7 @@ data %>%
 dev.off()
 #combined figure
 
+#a17
 svg(file="figures/percentBONCAT_log_a17.svg",width = 8, height=6 )
 data %>%
   filter(Treatment == "HPG", Plant=="A17")%>%
@@ -480,18 +391,46 @@ data %>%
   scale_y_log10(limits= c())
 dev.off()
 
-#-------stats---------
+###-------linear model for n active cells-------
+#Soil
+df %>%
+  filter(Plant!="Soil", Fraction!="Endo", Fraction!="Nod")%>%
+  lm(n_Events_Boncat~ Fraction + Plant)
+
+a1<-aov(lm1$cells_active_per_ul~lm1$Plant)
+TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
+
+#--------log transformed linear model--------- 
+
+NE<-data%>%filter(Plant!="PEA", Plant!="Soil", Treatment=="HPG", Fraction!="Endo", Fraction!="Nod")%>%
+  mutate(lg_cell_act_soil= log(cells_active_g_soil))
+
+m1<-lm(lg_cell_act_soil~ Fraction + Plant+ Plant*Fraction, data = NE)
+anova(m1)
+
+NE<-data%>%filter(Plant!="PEA", Plant!="Soil", Treatment=="HPG", Fraction!="Endo", Fraction!="Nod")%>%
+  mutate(lg_cell_act_soil= log(cells_active_g_soil))
+
+m1<-lm(lg_cell_act_soil~ Fraction + Plant+ Plant*Fraction, data = NE)
+
+a1<-aov(m1)
+TukeyHSD(a1, conf.level = .95)
+
+#-------mixed model for active cells---------
+
 # make a smaller df for tests
-prop <- data %>%
-  mutate(Plant_rep = paste0(Plant, Number))%>%
-  filter(Plant!="Soil", Incubation=="H", Plant!="PEA")%>%
-  select(Plant, Plant_rep, Fraction, Prop_Active,  n_Events_Cells, n_Events_Boncat)%>%
-  mutate(n_failures = n_Events_Cells-n_Events_Boncat)%>%
-  mutate(Active = ifelse(Prop_Active<.0001, 0, 1 ))
+prop <- df %>%
+  #mutate(Plant_rep = paste0(Plant, Number))%>%
+  filter(Plant!="Soil", Dyes=="BONCAT-SYTO", Plant!="PEA") %>%
+  select(Plant, Fraction, Prop_Active,n_Events_Cells, n_Events_Boncat)
+  #mutate(n_failures = n_Events_Cells-n_Events_Boncat)%>%
+  #mutate(Active = ifelse(Prop_Active<.0001, 0, 1 ))
  
 
 # mixed model
 # Random effect = plantrep
+# Random effect = Date
+# Random effect = flow cyto
 # this would be a good way to account for if some plants are just more active than others...
 # doesn't work super well here tho because then i basically get a dif random effect for each sample
 # which doesn't make sense. 
