@@ -195,25 +195,25 @@ nodendo%>% filter(Plant=="CLO")%>%
 dev.off()
 
 ###-------- linear model for n cells------
-
 m1<-lm(cells_per_gram_soil~Plant+Fraction+Plant*Fraction, data = rhizobulk)
 summary(m1)
 plot(m1)
 
-# log transformed
-rhizobulk<-rhizobulk%>% filter(Plant!="PEA")%>%
-  mutate(log_cell_g_soil = log(cells_per_gram_soil))
-m1<-lm(log_cell_g_soil~Plant+Fraction+Plant*Fraction, data = rhizobulk)
+###-------log transformed-------#
+#seems to be the best model for this
+rhizobulk<-rhizobulk%>% filter(Plant!="PEA", Dyes=="BONCAT-SYTO")%>% 
+  mutate(log_cell_g_soil = log(cells_per_gram_soil), Date = as.factor(Date))
+m1<-lm(log_cell_g_soil~Plant+Fraction+Date+Plant*Fraction, data = rhizobulk)
 summary(m1)
 plot(m1)
 
 ###--------mixed model for n cells---------#####
 
-cells_soil_mixed<- lmer(cells_per_gram_soil ~ Fraction + Plant + (1 | Date), data = rhizobulk)
+cells_soil_mixed<- lmer(log(cells_per_gram_soil) ~ Fraction + Plant + (0|flowcyto), data = rhizobulk)
 summary(cells_soil_mixed)
-
+plot(cells_soil_mixed)
 confint(cells_soil_mixed)
-
+# varience of random effect is close to zero so this probably isn't the best model for the data.
 
 #-----n active cells figures ---------------
 
@@ -393,53 +393,40 @@ dev.off()
 
 ###-------linear model for n active cells-------
 #Soil
-df %>%
-  filter(Plant!="Soil", Fraction!="Endo", Fraction!="Nod")%>%
-  lm(n_Events_Boncat~ Fraction + Plant)
+soil<-df%>%filter(Plant!="PEA", Plant!="Soil", Fraction!="Endo", Fraction!="Nod")%>%
+  mutate(lg_cell_act_soil= log(cells_active_g_soil))
 
+lm1<-lm(n_Events_Boncat~ Fraction + Plant, data=soil)
+summary(lm1)
 a1<-aov(lm1$cells_active_per_ul~lm1$Plant)
 TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
 
 #--------log transformed linear model--------- 
 
-NE<-data%>%filter(Plant!="PEA", Plant!="Soil", Treatment=="HPG", Fraction!="Endo", Fraction!="Nod")%>%
-  mutate(lg_cell_act_soil= log(cells_active_g_soil))
+soil<-df%>%filter(Plant!="PEA", Plant!="Soil", Fraction!="Endo", Fraction!="Nod", Dyes=="BONCAT-SYTO")%>%
+  mutate(lg_cell_act_soil= log(cells_active_g_soil+1))
 
-m1<-lm(lg_cell_act_soil~ Fraction + Plant+ Plant*Fraction, data = NE)
+m1<-lm(lg_cell_act_soil~ Fraction + Plant+ Plant*Fraction, data = soil)
+plot(m1)
 anova(m1)
 
-NE<-data%>%filter(Plant!="PEA", Plant!="Soil", Treatment=="HPG", Fraction!="Endo", Fraction!="Nod")%>%
-  mutate(lg_cell_act_soil= log(cells_active_g_soil))
-
-m1<-lm(lg_cell_act_soil~ Fraction + Plant+ Plant*Fraction, data = NE)
-
-a1<-aov(m1)
-TukeyHSD(a1, conf.level = .95)
-
 #-------mixed model for active cells---------
-
+library(dplyr)
 # make a smaller df for tests
-prop <- df %>%
-  #mutate(Plant_rep = paste0(Plant, Number))%>%
+prop<-df %>%
   filter(Plant!="Soil", Dyes=="BONCAT-SYTO", Plant!="PEA") %>%
-  select(Plant, Fraction, Prop_Active,n_Events_Cells, n_Events_Boncat)
-  #mutate(n_failures = n_Events_Cells-n_Events_Boncat)%>%
-  #mutate(Active = ifelse(Prop_Active<.0001, 0, 1 ))
+  mutate(n_failures = n_Events_Cells-n_Events_Boncat)%>%
+  mutate(Active = ifelse(Prop_Active<.0001, 0, 1 ))
  
 
 # mixed model
-# Random effect = plantrep
 # Random effect = Date
 # Random effect = flow cyto
-# this would be a good way to account for if some plants are just more active than others...
-# doesn't work super well here tho because then i basically get a dif random effect for each sample
-# which doesn't make sense. 
-
-lmer(Prop_Active~Fraction+ (Fraction|Plant_rep), data = prop)
-
+m1<-lmer(Prop_Active~Fraction+ (Fraction|flowcyto), data = prop)
+summary(m1)
+plot(m1)
 
 # weighted glm instead
-
 m3<-glm(data= prop, Prop_Active~Plant+Fraction+Plant*Fraction -1, family=quasibinomial, weights = n_Events_Cells)
 summary(m3) 
 plot(m3)
