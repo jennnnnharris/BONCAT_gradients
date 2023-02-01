@@ -401,63 +401,65 @@ summary(lm1)
 a1<-aov(lm1$cells_active_per_ul~lm1$Plant)
 TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
 
-#--------log transformed linear model--------- 
+#--------log transformed linear model for active cells--------- 
 
 soil<-df%>%filter(Plant!="PEA", Plant!="Soil", Fraction!="Endo", Fraction!="Nod", Dyes=="BONCAT-SYTO")%>%
   mutate(lg_cell_act_soil= log(cells_active_g_soil+1))
 
 m1<-lm(lg_cell_act_soil~ Fraction + Plant+ Plant*Fraction, data = soil)
+summary(m1)
 plot(m1)
 anova(m1)
+# sig effect interaction of plant*fraction, trend of rhizo verse bulk
 
 #-------mixed model for active cells---------
-library(dplyr)
-# make a smaller df for tests
+# our data of boncat pos is a proprotion
+# df frame with # failures # successes and proportion of each
 prop<-df %>%
   filter(Plant!="Soil", Dyes=="BONCAT-SYTO", Plant!="PEA") %>%
   mutate(n_failures = n_Events_Cells-n_Events_Boncat)%>%
   mutate(Active = ifelse(Prop_Active<.0001, 0, 1 ))
  
-
+# it could possible that because each day I ran sampled on the flow Cyto they data is slightly different
+# I should run a mixed model with allowing the intercep to vary for Date
+# the intercept not the slope because I expect the relationship between the treatments to be the same but the baseline could vary.
 # mixed model
+# fixed effects
 # Random effect = Date
-# Random effect = flow cyto
-m1<-lmer(Prop_Active~Fraction+ (Fraction|flowcyto), data = prop)
+m1<-lmer(Prop_Active~Fraction +Plant+ Plant*Fraction + (1|Date),data = prop, )
 summary(m1)
 plot(m1)
+# random effect of  has pretty low varience (.0009)
+# Random effect = flow cyto
+m1<-lmer(Prop_Active~Fraction +Plant+ Plant*Fraction + (1|flowcyto),data = prop)
+summary(m1)
+plot(m1)
+# varience of random effect (.0006)
+# maybe just stick with date because it explains a lil more varience?
 
-# weighted glm instead
-m3<-glm(data= prop, Prop_Active~Plant+Fraction+Plant*Fraction -1, family=quasibinomial, weights = n_Events_Cells)
-summary(m3) 
-plot(m3)
-
-# 2 step glm / hurdle model
-
-# glm for active verse non active
-  m4<-glm(data= prop, Active~Plant+Fraction+Plant*Fraction -1, family = quasibinomial)
-  summary(m4)
-
-  Active<-filter(prop, Active=="1")
-  m5<-glm(data=Active, Prop_Active~Plant*Fraction, family = binomial, weights = n_Events_Cells)
-  summary(m5)
- 
-# random effect for plant  
-  
-glmm  
-   
+# modeling data as successes and failures
 # vector of failures and successes
+library(lme4)
   y<-cbind(prop$n_Events_Boncat, prop$n_failures)
-  
-  m1<-glm(y~prop$Plant*prop$Fraction - 1, binomial)
+  m1<-glmer(y~Plant+Fraction+Plant*Fraction+(1|flowcyto),
+            data=prop,
+            family="binomial")
   summary(m1)
   plot(m1)
-  ## residual deviance is 3931 with 49 degrees of freedom.
-  ## these should be equal. so will will do a quasi bonimial instead
-  
-  m1<-glm(y~prop$Fraction -1, quasibinomial)
+# random effect explain .207 variance
+# this AIC so 10200 so it is pretty terrible
+
+  y<-cbind(prop$n_Events_Boncat, prop$n_failures)
+  m1<-glmer(y~Plant+Fraction+Plant*Fraction+(1|Date),
+            data=prop,
+            family="binomial")
   summary(m1)
-  plot(m1)
+  plot(m1)  
+# random effect explained a lil less varience (.18)
+## residual deviance is higher than the degrees of freedom = model is over disposed
+## these should be equal. so will will do a quasi binomial instead
   
+
   m2<-glm(y~prop$Plant+prop$Fraction+prop$Plant*prop$Fraction -1, quasibinomial)
   summary(m2)
   plot(m2)
@@ -519,4 +521,17 @@ with(m1, cbind(res.deviance = deviance, df = df.residual,
 
 # the P value i very low indicating that the data doesn't fit the model well.
 
+#------some other models-------
+# weighted glm instead
+m3<-glm(data= prop, Prop_Active~Plant+Fraction+Plant*Fraction -1, family=quasibinomial, weights = n_Events_Cells)
+summary(m3) 
+plot(m3)
 
+# 2 step glm / hurdle model
+# glm for active verse non active
+  m4<-glm(data= prop, Active~Plant+Fraction+Plant*Fraction -1, family = quasibinomial)
+  summary(m4)
+
+  Active<-filter(prop, Active=="1")
+  m5<-glm(data=Active, Prop_Active~Plant*Fraction, family = binomial, weights = n_Events_Cells)
+  summary(m5)
