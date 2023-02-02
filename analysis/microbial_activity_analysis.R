@@ -53,7 +53,6 @@ nodules<-read.csv("Plant fitness/nodule_surface_area.csv")
 #import astrios data
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/Flow cyto/Astrios")
 df_ast<-read.csv("combined_metadata_included.csv")
-
 #------cleaning data-------
 
 # remove rows without BONCAT dyes + controls
@@ -89,6 +88,7 @@ df<-rbind(df_ast, df_fort)
 
 
 #--------calculating cells/ ul and cells/ g soil-------
+library(dplyr)
 counts<-counts%>%
   mutate(cells_per_ul_diluted = green_pos_count / Volume_taken_ul)%>%
   mutate(cells_per_ul = cells_per_ul_diluted * dilution_1_XXX)%>%
@@ -327,7 +327,7 @@ dev.off()
 #all plants
 svg(file="figures/allfractions_percent.svg",width = 6, height=6 )
 data %>%
-  filter(Plant!="Soil", Incubation=="H")%>%
+  filter(Plant!="Soil")%>%
   ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
   geom_boxplot(alpha=.7, outlier.shape = NA, fill= mycols[4])+
   geom_jitter(width = .2)+
@@ -391,63 +391,48 @@ data %>%
   scale_y_log10(limits= c())
 dev.off()
 
-###-------linear model for n active cells-------
-#Soil
-soil<-df%>%filter(Plant!="PEA", Plant!="Soil", Fraction!="Endo", Fraction!="Nod")%>%
-  mutate(lg_cell_act_soil= log(cells_active_g_soil))
-
-lm1<-lm(n_Events_Boncat~ Fraction + Plant, data=soil)
-summary(lm1)
-a1<-aov(lm1$cells_active_per_ul~lm1$Plant)
-TukeyHSD(a1, 'lm1$Plant', conf.level = .95)
-
-#--------log transformed linear model for active cells--------- 
-
-soil<-df%>%filter(Plant!="PEA", Plant!="Soil", Fraction!="Endo", Fraction!="Nod", Dyes=="BONCAT-SYTO")%>%
-  mutate(lg_cell_act_soil= log(cells_active_g_soil+1))
-
-m1<-lm(lg_cell_act_soil~ Fraction + Plant+ Plant*Fraction, data = soil)
-summary(m1)
-plot(m1)
-anova(m1)
-# sig effect interaction of plant*fraction, trend of rhizo verse bulk
-
-#-------mixed model for active cells---------
+#-------binomial model for active cells ---------
 # our data of boncat pos is a proprotion
-# df frame with # failures # successes and proportion of each
+# df frame with # failures # successes and proportion of each # i also got rid of an outlier past cook's distace
 prop<-df %>%
-  filter(Plant!="Soil", Dyes=="BONCAT-SYTO", Plant!="PEA") %>%
-  mutate(n_failures = n_Events_Cells-n_Events_Boncat)%>%
-  mutate(Active = ifelse(Prop_Active<.0001, 0, 1 ))
- 
+  filter(Plant!="Soil", Dyes=="BONCAT-SYTO", ID!="beads") %>%
+  #filter(Plant!="PEA")%>%
+  mutate(n_failures = n_Events_Cells-n_Events_Boncat)
+  #mutate(Active = ifelse(Prop_Active<.0001, 0, 1 ))
+# data exploration
+hist(prop$Prop_Active)
+hist(prop$n_Events_Cells)
+
+y<-cbind(prop$n_Events_Boncat, prop$n_failures)
+
+#----------binomial model--------- 
+
+m1<-glm(prop$Prop_Active~Plant+Fraction+Date,
+          data=prop,
+          family="binomial")
+summary(m1)
+plot(m1)  
+
+m3<-glm(data= prop, Prop_Active~Plant+Fraction+Date-1, family=binomial, weights = n_Events_Cells)
+summary(m3)
+
+##------Poisson model-------
+
+m1<-glm(prop$n_Events_Boncat~Plant+Fraction+Date+Plant*Fraction ,
+        data=prop,
+        family="poisson")
+summary(m1)
+
+
+#----------mixed model glmme-------
 # it could possible that because each day I ran sampled on the flow Cyto they data is slightly different
 # I should run a mixed model with allowing the intercep to vary for Date
 # the intercept not the slope because I expect the relationship between the treatments to be the same but the baseline could vary.
-# mixed model
-# fixed effects
 # Random effect = Date
-m1<-lmer(Prop_Active~Fraction +Plant+ Plant*Fraction + (1|Date),data = prop, )
+m1<-glmer(Prop_Active~Fraction +Plant+ Plant*Fraction + (1|Date),data = prop, binomial)
 summary(m1)
 plot(m1)
-# random effect of  has pretty low varience (.0009)
-# Random effect = flow cyto
-m1<-lmer(Prop_Active~Fraction +Plant+ Plant*Fraction + (1|flowcyto),data = prop)
-summary(m1)
-plot(m1)
-# varience of random effect (.0006)
-# maybe just stick with date because it explains a lil more varience?
-
 # modeling data as successes and failures
-# vector of failures and successes
-library(lme4)
-  y<-cbind(prop$n_Events_Boncat, prop$n_failures)
-  m1<-glmer(y~Plant+Fraction+Plant*Fraction+(1|flowcyto),
-            data=prop,
-            family="binomial")
-  summary(m1)
-  plot(m1)
-# random effect explain .207 variance
-# this AIC so 10200 so it is pretty terrible
 
   y<-cbind(prop$n_Events_Boncat, prop$n_failures)
   m1<-glmer(y~Plant+Fraction+Plant*Fraction+(1|Date),
@@ -455,19 +440,47 @@ library(lme4)
             family="binomial")
   summary(m1)
   plot(m1)  
-# random effect explained a lil less varience (.18)
 ## residual deviance is higher than the degrees of freedom = model is over disposed
-## these should be equal. so will will do a quasi binomial instead
+## these should be equal. so will will do a quasi binomial instead which u can't do in glmer
   
+#------quasibinomial glm ----------
 
-  m2<-glm(y~prop$Plant+prop$Fraction+prop$Plant*prop$Fraction -1, quasibinomial)
+# on proportion data
+  m2<-glm(Prop_Active~Plant+Fraction+Date, data=prop, quasibinomial)
   summary(m2)
   plot(m2)
   
   anova(m2, test= "F")  # significant interaction
   anova(m2, test= "Chisq")  
 
+# weighted glm instead
+  m3<-glm(data= prop, Prop_Active~Plant+Fraction+Date-1, family=quasibinomial, weights = n_Events_Cells)
+  summary(m3)
+  plot(m3)
+  anova(m3, test= "F")
 
+# glm on succeses and failures
+  
+  m4<-glm(data= prop, y~Plant+Fraction+Plant*Fraction+Date -1, family = quasibinomial)
+  summary(m4)  
+  plot(m4)
+    
+  # 2 step glm / hurdle model
+  # glm for active verse non active
+
+  
+  Active<-filter(prop, Active=="1")
+  m5<-glm(data=Active, Prop_Active~Plant*Fraction, family = binomial, weights = n_Events_Cells)
+  summary(m5)
+  
+  #poisson
+  m1<-glm(n_Events_Boncat~Fraction+ Plant + Plant*Fraction,  family= "poisson",
+          offset(n_Events_Cells), data= prop)
+  summary(m1)
+  with(m1, cbind(res.deviance = deviance, df = df.residual,
+                 p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+  
+  # the P value i very low indicating that the data doesn't fit the model well.
   
 # just look at this for each plant
   clo<-prop%>% filter(Plant == "CLO")
@@ -510,28 +523,6 @@ library(lme4)
   anova(m2, test= "LR")
   
   summary(glht(m2,mcp(Fraction = "Tukey")))
-  
 
-
-#poisson
-m1<-glm(Percent_Boncat_pos~Fraction+ Plant + Plant*Fraction,  family= "poisson", data= percent)
-summary(m1)
-with(m1, cbind(res.deviance = deviance, df = df.residual,
-               p = pchisq(deviance, df.residual, lower.tail=FALSE)))
-
-# the P value i very low indicating that the data doesn't fit the model well.
 
 #------some other models-------
-# weighted glm instead
-m3<-glm(data= prop, Prop_Active~Plant+Fraction+Plant*Fraction -1, family=quasibinomial, weights = n_Events_Cells)
-summary(m3) 
-plot(m3)
-
-# 2 step glm / hurdle model
-# glm for active verse non active
-  m4<-glm(data= prop, Active~Plant+Fraction+Plant*Fraction -1, family = quasibinomial)
-  summary(m4)
-
-  Active<-filter(prop, Active=="1")
-  m5<-glm(data=Active, Prop_Active~Plant*Fraction, family = binomial, weights = n_Events_Cells)
-  summary(m5)
