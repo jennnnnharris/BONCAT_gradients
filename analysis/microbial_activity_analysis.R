@@ -461,10 +461,11 @@ plot(m1)
 
 # glm on succeses and failures
   
-  m4<-glm(data= prop, y~Plant+Fraction+Plant*Fraction+Date -1, family = quasibinomial)
+  m4<-glm(data= prop, y~Plant+Fraction+Date -1, family = quasibinomial)
   summary(m4)  
   plot(m4)
-    
+  anova(m3, test= "F")
+  
   # 2 step glm / hurdle model
   # glm for active verse non active
 
