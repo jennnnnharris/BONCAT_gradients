@@ -1,0 +1,37 @@
+!/bin/bash
+
+#PBS -A open
+#PBS -N silva
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=8:00:00
+#PBS -l pmem=12gb
+#PBS -o silva.out
+#PBS -e silva.err
+
+
+#Get Started
+
+echo "Job started on $(hostname) at $(date)"
+
+#load modules
+module purge
+module load anaconda3
+source activate qiime2-2022.2
+
+#go to correct place
+cd /gpfs/group/ltb5167/default/JennHarris/BONCAT_16S
+
+
+#run job
+
+qiime feature-classifier classify-sklearn \
+  --i-classifier silva/silva-138-99-nb-classifier.qza \
+  --i-reads asvs/trimmed.dada2.qza \
+  --o-classification taxonomy.qza
+
+qiime metadata tabulate \
+  --m-input-file taxonomy.qza \
+  --o-visualization taxonomy.qzv
+
+
+echo "finished"
