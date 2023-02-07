@@ -120,9 +120,12 @@ df<-df%>%mutate(cells_active_per_ul= Percent_Boncat_pos*cells_per_ul,
 
 df$Fraction<-factor(df$Fraction, levels = c("Bulk", "Rhizo", "Endo", "Nod"))
 
+df<-df%>% mutate(Plant_long=recode(Plant, 'A17'='Medicago', 'CLO'='Clover','PEA'='Pea', .default='soil'))
+
 
 #-------set colors--------
 mycols = c("#45924b", "#aac581", "#fffac9", "#f2a870", "#de425b")
+mycols= c("#003f5c","#bc5090", "#ffa600")
 
 #-------n cells figures -------------
 
@@ -130,18 +133,24 @@ mycols = c("#45924b", "#aac581", "#fffac9", "#f2a870", "#de425b")
 
  rhizobulk<- df %>%
   filter(Plant!="Soil", Fraction!="Nod", Fraction!="Endo", !is.na(Fraction))
-rhizobulk$Fraction<-factor(rhizobulk$Fraction, levels = c("Bulk", "Rhizo"))  
+  rhizobulk$Fraction<-factor(rhizobulk$Fraction, levels = c("Bulk", "Rhizo"))
+  rhizobulk<-subset(rhizobulk, Prop_Active<.2)
+  rhizobulk<-subset(rhizobulk, cells_active_g_soil<1.5e+09)
+  rhizobulk<-subset(rhizobulk, cells_active_g_soil>0)
+  
+  
+  #remove outlier
 
-svg(file="figures/bulkrhizo_clo.svg",width = 4, height=4 )
-  rhizobulk %>% filter(Plant=="CLO")%>%
+
+svg(file="figures/bulkrhizo.svg",width = 4, height=4 )
+  rhizobulk %>%
   ggplot(aes(x=Fraction, y=cells_per_gram_soil)) +
-  geom_jitter(width = .2, size=2 )+
-  geom_boxplot(alpha=.5, fill = mycols[5], outlier.shape = NA)+
+  geom_jitter(width = .2, size=1 )+
+  geom_boxplot(alpha=.5, fill = "grey", outlier.shape = NA)+
   scale_fill_manual(values = mycols)+
-  theme_minimal(base_size = 22, )+
+  theme_bw(base_size = 22, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
-  facet_wrap(vars(flowcyto))+
-  xlab("Plant")+
+  #facet_wrap(vars(flowcyto))+
   ylab("Number Cells/g soil")+
   scale_y_log10(limits= c(1E7, 1E9))
   
@@ -160,6 +169,7 @@ rhizobulk%>% filter(Plant!="A17")%>%
   #xlab("Plant")+
   ggtitle("Medicago")+
   ylab("Number Cells/ g soil")
+
 # nodules + roots
 nodendo<-data %>%
   filter(Plant!="Soil", Fraction=="Nod"|Fraction == "Endo")
@@ -194,12 +204,13 @@ nodendo%>% filter(Plant=="CLO")%>%
   scale_y_log10(limits= c(1E6, 1E10))
 dev.off()
 
-###-------- linear model for n cells------
+###--------  model for n cells------
+#linear
 m1<-lm(cells_per_gram_soil~Plant+Fraction+Plant*Fraction, data = rhizobulk)
 summary(m1)
 plot(m1)
 
-###-------log transformed-------#
+#log
 #seems to be the best model for this
 rhizobulk<-rhizobulk%>% filter(Plant!="PEA", Dyes=="BONCAT-SYTO")%>% 
   mutate(log_cell_g_soil = log(cells_per_gram_soil), Date = as.factor(Date))
@@ -207,8 +218,7 @@ m1<-lm(log_cell_g_soil~Plant+Fraction+Date+Plant*Fraction, data = rhizobulk)
 summary(m1)
 plot(m1)
 
-###--------mixed model for n cells---------#####
-
+#mixed model
 cells_soil_mixed<- lmer(log(cells_per_gram_soil) ~ Fraction + Plant + (0|flowcyto), data = rhizobulk)
 summary(cells_soil_mixed)
 plot(cells_soil_mixed)
@@ -217,123 +227,145 @@ confint(cells_soil_mixed)
 
 #-----n active cells figures ---------------
 
-#bulk
-svg(file="figures/bulk_n_active_cells.avg",width = 6, height=6 )
-df %>%
+#rhizo bulk
+svg(file="figures/bulk_n_active_cells.svg",width = 6, height=6 )
+rhizobulk%>%
   filter(Dyes == "BONCAT-SYTO") %>%
-  filter(Fraction == "Bulk") %>%
-  ggplot( aes(x=Plant, y=n_Events_Boncat)) +
+  #filter(Fraction == "Bulk") %>%
+  ggplot( aes(x=Fraction, y=cells_active_g_soil)) +
   geom_jitter(width = .2)+
   geom_boxplot(alpha=.5, fill = mycols[3], outlier.shape = NA)+
   #scale_fill_manual(values = mycols)+
   theme_bw(base_size = 20, )+
   #theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #facet_wrap(~Fraction)+
-  xlab("Plant")+
-  #ylab("Number Active Cells/ gram of soil")+
+  facet_wrap(~Plant_long)+
+  #xlab("Plant")+
+  ylab("Number Active Cells/ gram of soil")+
   #ylim(0,3E8)+
-  #scale_y_log10() + 
+  scale_y_log10() + 
   ggtitle("Bulk Soil")
 dev.off()
 
-#Rhizo
-pdf(file="figures/rhizo_n_active_cells.pdf",width = 6, height=6 )
-data %>%
-  filter(Plant!="Soil", Fraction==("Rhizo"), Treatment=="HPG")%>%
+# pretty strong interaction of fraction * plant
+# you can see it in the figure
+#rhizo bulk
+svg(file="figures/bulk_n_active_cells.svg",width = 9, height= 5 )
+rhizobulk%>%
+  filter(Dyes == "BONCAT-SYTO") %>%
+  #filter(Fraction == "Bulk") %>%
+  ggplot( aes(x=Fraction, y=cells_active_g_soil)) +
+  geom_jitter(width = .2)+
+  geom_boxplot(alpha=.5, fill = "grey", outlier.shape = NA)+
+  #scale_fill_manual(values = mycols)+
+  theme_bw(base_size = 20, )+
+  #theme(axis.text.x = element_text(angle=60, hjust=1))+
+  facet_wrap(~Plant)+
+  #xlab("Plant")+
+  ylab("Number Active Cells/ gram of soil")+
+  #ylim(0,3E8)+
+  scale_y_log10()# ggtitle("Bulk Soil")
+dev.off()
+
+
+svg(file="figures/rhizo_n_active_cells.svg",width = 6, height=6 )
+rhizobulk%>%
+  filter(Dyes == "BONCAT-SYTO") %>%
+  filter(Fraction == "Rhizo") %>%
   ggplot( aes(x=Plant, y=cells_active_g_soil)) +
   geom_jitter(width = .2)+
-  geom_boxplot(alpha=.5, fill = mycols2,outlier.shape = NA)+
-  scale_fill_manual(values = mycols)+
+  geom_boxplot(alpha=.5, fill = "grey", outlier.shape = NA)+
+  #scale_fill_manual(values = mycols)+
   theme_bw(base_size = 20, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #facet_wrap(~Fraction)+
-  xlab("Plant")+
-  ylab("Number Active Cells/ gram soil")+
-  ylim(0, 3E8)+
-  ggtitle("Rhizosphere Soil")
+  #theme(axis.text.x = element_text(angle=60, hjust=1))+
+  #xlab("Plant")+
+  ylab("Number Active Cells/ gram of soil")+
+  #ylim(0,3E8)+
+  scale_y_log10() + 
+  ggtitle("Rhizosphere")
 dev.off()
 
-#Rhizo + bulk
-pdf(file="figures/rhizoandbulkactive.pdf",width = 6, height=6 )
-data %>%
-  filter(Plant!="Soil", Plant=="CLO", Fraction!="Endo", Fraction!="Nod", Incubation=="H")%>%
-  ggplot( aes(x=Fraction, y=cells_active_g_soil)) +
-  geom_jitter(width = .2)+
-  geom_boxplot(alpha=.5, outlier.shape = NA)+
-  scale_fill_manual(values = mycols)+
-  theme_bw(base_size = 20, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #facet_wrap(~Fraction)+
-  xlab("Plant")+
-  ylab("Cells Active/ g soil")+
-  scale_y_log10()
-  ylim(0, 3E8)
 
-dev.off()
+#--------model n active cells---------
+# lil model of this. 
+# I would consider these counts so poisson distribution seems appropriate
+# um but poisson doesn;t fit very well becuase we have so many counts like 1 million counts is alot for her
 
-#Rhizo + bulk
-svg(file="figures/rhizoandbulkactive.svg",width = 3, height=3 )
-data %>%
-  filter(Plant!="Soil", Plant=="A17", Fraction!="Endo", Fraction!="Nod", Incubation=="H")%>%
-  ggplot( aes(x=Fraction, y=cells_active_g_soil)) +
-  geom_jitter(width = .2)+
-  geom_boxplot(alpha=.5, outlier.shape = NA)+
-  scale_fill_manual(values = mycols)+
-  theme_bw(base_size = 20, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #facet_wrap(~Fraction)+
-  xlab("Plant")+
-  ylab("Cells Active/ g soil")+
-  scale_y_log10()
-ylim(0, 3E8)
-dev.off()
+hist(rhizobulk$cells_active_per_ul)
+m1<-glm(rhizobulk$cells_active_per_ul~Plant+Fraction+Date+Plant*Fraction ,
+        data=rhizobulk,
+        family="poisson")
+summary(m1)
+plot(m1)
 
-#nod
-pdf(file="figures/nod_n_active_cells_logscale.pdf",width = 6, height=6 )
-data %>%
-  filter(Plant!="Soil", Fraction=("Nod"), Treatment=="HPG")%>%
-  ggplot( aes(x=Plant, y=cells_active_per_ul)) +
-  geom_jitter(width = .2)+
-  geom_boxplot(alpha=.5, fill = mycols2, outlier.shape = NA)+
-  scale_fill_manual(values = mycols)+
-  theme_bw(base_size = 20, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  xlab("Plant")+
-  ylab("N Active Cells/ Surface Area cm^2")+
-  scale_y_log10()+
-  #ylim(0, 4E5)+
-  ggtitle("Nodule")
-dev.off()
-  
-#endo
-pdf(file="figures/endo_nactive_cells.pdf",width = 6, height=6 )
-data %>%
-  filter(Plant!="Soil", Fraction==("Endo"), Treatment=="HPG")%>%
-  ggplot( aes(x=Plant, y=cells_active_g_plant)) +
-  geom_jitter(width = .2)+
-  geom_boxplot(alpha=.5, fill = mycols2, outlier.shape = NA)+
-  scale_fill_manual(values = mycols)+
-  theme_bw(base_size = 20, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #facet_wrap(~Fraction)+
-  xlab("Plant")+
-  ylab("Number Active Cells/g plant")+
-  #ylim(0, 4E5)+
-  ggtitle("Endo")
-dev.off()
+# um but poisson doesn;t fit very well becuase we have so many counts like 1 million counts is alot for her
+# maybe i need to log transform
+
+#log transformed#
+#seems to be the best model for this
+hist(log(rhizobulk$cells_active_per_ul))
+# wooow so normal what a beauty
+m1<-lm(log(rhizobulk$cells_active_per_ul)
+  ~Plant+Fraction+Plant*Fraction, data = rhizobulk)
+summary(m1)
+plot(m1)
+
+# pretty strong interaction of fraction * plant
+#breaking it up by plant for the analysis
+#clo
+hist(log(clo$cells_active_per_ul))
+# pretty normal
+clo<-rhizobulk%>%filter(Plant=="CLO")
+m1<-lm(log(cells_active_per_ul)
+       ~Fraction, data=clo)
+summary(m1)
+plot(m1)
+# p = 1e-05
+#a17
+hist(log(a17$cells_active_per_ul))
+# ehh
+a17<-rhizobulk%>%filter(Plant=="A17")
+m1<-lm(log(cells_active_per_ul)
+            ~Fraction, data=clo)
+summary(m1)
+plot(m1)
+# p is very tiny
+#pea
+hist(log(pea$cells_active_per_ul))
+# ehh
+pea<-rhizobulk%>%filter(Plant=="PEA")
+m1<-lm(log(cells_active_per_ul)
+       ~Fraction, data=pea)
+summary(m1)
+plot(m1)
+# p is very tiny
+
+# differences by plants
+hist(log(rhizy$cells_active_per_ul))
+# wooow so normal what a beauty
+rhizy<-rhizobulk%>%filter(Fraction=="Rhizo")
+
+m1<-lm(log(rhizy$cells_active_per_ul)
+       ~Plant-1, data = rhizy)
+summary(m1)
+plot(m1)
+
+
 
 #-------percent active figures-------
 
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/data")
+
 #all plants
-svg(file="figures/allfractions_percent.svg",width = 6, height=6 )
-data %>%
-  filter(Plant!="Soil")%>%
+svg(file="figures/allfractions_percentwihtpea.svg",width = 9, height=6 )
+df %>%
+  filter(Plant!="Soil", Dyes=="BONCAT-SYTO")%>%
   ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
-  geom_boxplot(alpha=.7, outlier.shape = NA, fill= mycols[4])+
+  geom_boxplot(alpha=.7, outlier.shape = NA)+
   geom_jitter(width = .2)+
+  scale_color_manual(values = mycols[c(1,2,3)])+
   theme_bw(base_size = 20, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #facet_wrap(~Fraction)+
+  facet_wrap(~Plant_long)+
   scale_y_log10()+
   xlab("Fraction")+
   ylab("Percent Active")
@@ -391,7 +423,8 @@ data %>%
   scale_y_log10(limits= c())
 dev.off()
 
-#-------binomial model for active cells ---------
+#---------model for percent active cells ---------
+#binomial
 # our data of boncat pos is a proprotion
 # df frame with # failures # successes and proportion of each # i also got rid of an outlier past cook's distace
 prop<-df %>%
@@ -405,7 +438,7 @@ hist(prop$n_Events_Cells)
 
 y<-cbind(prop$n_Events_Boncat, prop$n_failures)
 
-#----------binomial model--------- 
+#binomial model
 
 m1<-glm(prop$Prop_Active~Plant+Fraction+Date,
           data=prop,
@@ -416,7 +449,7 @@ plot(m1)
 m3<-glm(data= prop, Prop_Active~Plant+Fraction+Date-1, family=binomial, weights = n_Events_Cells)
 summary(m3)
 
-##------Poisson model-------
+#Poisson model
 
 m1<-glm(prop$n_Events_Boncat~Plant+Fraction+Date+Plant*Fraction ,
         data=prop,
@@ -424,7 +457,7 @@ m1<-glm(prop$n_Events_Boncat~Plant+Fraction+Date+Plant*Fraction ,
 summary(m1)
 
 
-#----------mixed model glmme-------
+#mixed model glmme
 # it could possible that because each day I ran sampled on the flow Cyto they data is slightly different
 # I should run a mixed model with allowing the intercep to vary for Date
 # the intercept not the slope because I expect the relationship between the treatments to be the same but the baseline could vary.
@@ -443,10 +476,10 @@ plot(m1)
 ## residual deviance is higher than the degrees of freedom = model is over disposed
 ## these should be equal. so will will do a quasi binomial instead which u can't do in glmer
   
-#------quasibinomial glm ----------
-
+#quasibinomial glm
 # on proportion data
-  m2<-glm(Prop_Active~Plant+Fraction+Date, data=prop, quasibinomial)
+
+  m2<-glm(Prop_Active~Plant+Fraction+Plant*Fraction -1, data=prop, quasibinomial)
   summary(m2)
   plot(m2)
   
@@ -454,14 +487,14 @@ plot(m1)
   anova(m2, test= "Chisq")  
 
 # weighted glm instead
-  m3<-glm(data= prop, Prop_Active~Plant+Fraction+Date-1, family=quasibinomial, weights = n_Events_Cells)
+  m3<-glm(data= prop, Prop_Active~Plant+Fraction-1, family=quasibinomial, weights = n_Events_Cells)
   summary(m3)
   plot(m3)
   anova(m3, test= "F")
 
 # glm on succeses and failures
   
-  m4<-glm(data= prop, y~Plant+Fraction+Date -1, family = quasibinomial)
+  m4<-glm(data= prop, y~Plant+Fraction-1, family = quasibinomial)
   summary(m4)  
   plot(m4)
   anova(m3, test= "F")
@@ -526,4 +559,50 @@ plot(m1)
   summary(glht(m2,mcp(Fraction = "Tukey")))
 
 
-#------some other models-------
+#------Testing correlation of variables-------
+  
+data<-df[,c(1,3,6)]
+data<-filter(data, Dyes=="BONCAT-SYTO")
+data<-data[,c(1,2)]
+
+binary<-data%>% mutate(binary=recode(Fraction, 'Endo'='plant', 'Nod'='plant',.default='soil'))
+binary<-binary[-143, c(1,3)]
+
+data<-data.table::as.data.table(data)
+data<-data.table::dcast(data, Date~Fraction,fun.aggregate=length)
+data<-data[,3:6] 
+data<-as.matrix(data)
+soil<-rowSums(data[-1,c(1,2)])
+plant<-rowSums(data[-1,c(3,4)])
+
+data2<-cbind(soil, plant)
+# chi square test can be done if one of the categorical vars is binary (plant, soil)
+
+test<-chisq.test(data2)
+# X-squared = 54.12, df = 15, p-value = 2.509e-06
+# p is less than .05 so variable are independent.
+# we can normalize values on a line from 0 to 1 because chi square can because
+# Pearson’s χ2 maximum value depends on the sample size and the size of the contingency table
+
+library('DescTools')
+
+ContCoef(data2, correct = FALSE)
+ContCoef(data2, correct = TRUE)
+
+library('rcompanion')
+
+cramerV(data2)
+cramerV(data2, bias.correct = TRUE)
+
+install.packages("vcd")
+library('vcd')
+
+test<-assocstats(xtabs(~binary$Date + binary$binary))
+test
+#fishers exact test to see if date corr with sample type.
+
+fisher.test(data2)
+
+
+
+chisq.test(data)
