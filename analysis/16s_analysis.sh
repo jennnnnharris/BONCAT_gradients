@@ -156,7 +156,7 @@ qiime feature-classifier fit-classifier-naive-bayes \
 
 # test the classifier
 qiime feature-classifier classify-sklearn \
-  --i-classifier silva/silva-138-99-classifier.qza \
+  --i-classifier silva/silva-138-99-nb-classifier.qza \
   --i-reads asvs/trimmed.dada2.qza \
   --o-classification taxonomy.qza
 
