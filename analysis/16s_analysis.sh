@@ -13,7 +13,7 @@
 #logon to PSU cluster
 ssh jeh6121@submit.aci.ics.psu.edu
 #start interactive job
-qsub -I -A open -N filter -l nodes=1:ppn=10 -l pmem=8gb -l walltime=2:00:00
+qsub -I -A open -N filter -l nodes=1:ppn=10 -l pmem=8gb -l walltime=1:00:00
 # go to work directory
 cd /gpfs/group/ltb5167/default/JennHarris/BONCAT_16S
 #start conda
@@ -117,7 +117,7 @@ qiime tools export \
 biom convert -i asvs/asv_table/feature-table.biom -o asvs/asv_table/feature-table.tsv --to-tsv
 
 # export representative sequences 
-# t
+# 
 qiime tools export \
   --input-path ./asvs/trimmed.dada2.qza\
   --output-path asvs
@@ -186,24 +186,42 @@ qiime tools export \
   --output-path ./
 
 
-# phylogeny
+####### assign phylogeny ##########
+
+# another helpful tutorial https://john-quensen.com/tutorials/processing-16s-sequences-with-qiime2-and-dada2/
+
 
 qiime phylogeny align-to-tree-mafft-fasttree \
-  --i-sequences demux.trimmed.dada2.qza \
+  --i-sequences asvs/trimmed.dada2.qza \
   --o-alignment aligned-rep-seqs.qza \
   --o-masked-alignment masked-aligned-rep-seqs.qza \
   --o-tree unrooted-tree.qza \
   --o-rooted-tree rooted-tree.qza
 
+qiime tools export \
+--input-path unrooted-tree.qza \
+--output-path phyloseq
+qiime tools export \
+--input-path rooted-tree.qza \
+--output-path phyloseq
 
 #download things from the cluster to my pc
 
-# mkdir qzv_files
-# mv *qsv qzv_files
+mkdir qzv_files
+mv *.qzv qzv_files
 
-scp -r jeh6121@datamgr.aci.ics.psu.edu:/storage/work/jeh6121/TTC_16S/asv_table .
+#from the cluster I need:
+#1 metadata (usually called metadate.txt)
+#2 table of all the asvs (usually feature-table.tsv)
+#3 taxomony file (usually taxnomy.tsv)
 
-
+#optional
+#4 phylogeny tree output rooted tree
+#5 phylogeny unrooted tree
+#6 export representative sequences (called asvs/trimmed.dada2.tsv)
+qiime tools export \
+--input-path trimmed.dada2.qza \
+--output-path  /gpfs/group/ltb5167/default/JennHarris/BONCAT_16S/phyloseq
 
 
 
