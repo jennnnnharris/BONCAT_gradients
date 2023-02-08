@@ -35,8 +35,8 @@ library(hrbrthemes)
 
 ### Import Data ###
 
-taxon <- read.table("asv_table/taxonomy.tsv", sep="\t", header=T, row.names=1)
-otus <- read.table("asv_table/feature-table.tsv", sep="\t", header=T, row.names = 1 )
+taxon <- read.table("16s/taxonomy.tsv", sep="\t", header=T, row.names=1)
+otus <- read.table("16s/feature-table.tsv", sep="\t", header=T, row.names = 1 )
 metadat <- readxl::read_excel("metadata.xlsx")
 
 
