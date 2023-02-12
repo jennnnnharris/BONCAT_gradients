@@ -1,5 +1,5 @@
-#SampleID	Fraction	BONCAT	REP	Plant
-BEADS_S67	NA	NA	NA	NA
+SampleID	Fraction	BONCAT	REP	Plant
+BEADS_S67	ctl	ctl	NA	NA
 C10B-DNA_S4	Bulk	DNA	1	Clover
 C10E-POS_S60	Endo	POS	1	Clover
 C10N-POS_S65	Nod	POS	1	Clover
@@ -36,7 +36,7 @@ C7N-POS_S64	Nod	POS	5	Clover
 C7N-SYBR_S25	Nod	SYBR	5	Clover
 C7R-DNA_S14	Rhizo	DNA	5	Clover
 C7R-SYBR_S19	Rhizo	SYBR	5	Clover
-CTL_S66	NA	NA	NA	NA
+CTL_S66	ctl	ctl	NA	NA
 S10-DNA_S9	Bulk	DNA	1	Soil
 S2-DNA_S5	Bulk	DNA	2	Soil
 S3-DNA_S6	Bulk	DNA	3	Soil
