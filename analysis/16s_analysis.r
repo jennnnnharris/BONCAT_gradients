@@ -86,7 +86,7 @@ metadat<-mutate(metadat, fraction_BCAT = paste0(metadat$Fraction, metadat$BONCAT
 ## Plot ordination with factors coloured and shaped as you like # 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 
-svg(file="figures/16s/Pcoa.svg",width = 8, height=8 )
+svg(file="figures/16s/Pcoa.svg",width = 6, height=6 )
 #windows(title="PCoA on OTUs - Bray Curtis")
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of 16S OTU Bray Curtis",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))

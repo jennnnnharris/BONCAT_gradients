@@ -228,13 +228,13 @@ confint(cells_soil_mixed)
 #-----n active cells figures ---------------
 
 #rhizo bulk
-svg(file="figures/bulk_n_active_cells.svg",width = 6, height=6 )
+svg(file="figures/bulk_n_active_cells.svg",width = 9, height=6 )
 rhizobulk%>%
   filter(Dyes == "BONCAT-SYTO") %>%
   #filter(Fraction == "Bulk") %>%
   ggplot( aes(x=Fraction, y=cells_active_g_soil)) +
   geom_jitter(width = .2)+
-  geom_boxplot(alpha=.5, fill = mycols[3], outlier.shape = NA)+
+  geom_boxplot(alpha=.5, fill = mycols[2], outlier.shape = NA)+
   #scale_fill_manual(values = mycols)+
   theme_bw(base_size = 20, )+
   #theme(axis.text.x = element_text(angle=60, hjust=1))+
@@ -242,8 +242,8 @@ rhizobulk%>%
   #xlab("Plant")+
   ylab("Number Active Cells/ gram of soil")+
   #ylim(0,3E8)+
-  scale_y_log10() + 
-  ggtitle("Bulk Soil")
+  scale_y_log10()
+  #ggtitle("Bulk Soil")
 dev.off()
 
 # pretty strong interaction of fraction * plant
@@ -356,7 +356,7 @@ plot(m1)
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/data")
 
 #all plants
-svg(file="figures/allfractions_percentwihtpea.svg",width = 9, height=6 )
+svg(file="figures/allfractions_percentwihtpea.svg",width = 13, height=5 )
 df %>%
   filter(Plant!="Soil", Dyes=="BONCAT-SYTO")%>%
   ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
