@@ -35,10 +35,9 @@ library(hrbrthemes)
 
 ### Import Data ###
 
-taxon <- read.table("16s/taxonomy.tsv", sep="\t", header=T, row.names=1)
+taxon <- read.table("16s/taxonomy.txt", sep="\t", header=T, row.names=1)
 otus <- read.table("16s/feature-table.tsv", sep="\t", header=T, row.names = 1 )
 metadat <- read.delim("16s/metadata.txt", sep="\t", header = T, check.names=FALSE)
-
 
 ## Transpose OTU table ##
 otus.t <- t(otus)
@@ -138,9 +137,7 @@ plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
   
 # non homogenous variance 
 
-
-
-###### if I just look at rhizo is active verse no active different
+###### just look at rhizo is active vs. non active 
 
 test<-otus.perc[which(metadat$Fraction == "Rhizo"),]
 metadat_t<-metadat[which(metadat$Fraction == "Rhizo"),]
@@ -164,7 +161,45 @@ metadat_t<-metadat[which(metadat$Fraction == "Endo"),]
 otu.perm<- adonis2(test~ BONCAT, data = metadat_t, permutations = 999, method="bray")
 otu.perm
 #BONCAT    1  0.19218 0.58686 9.9433  0.014 *
-  
+
+#####Calculate diversity#######
+# make phyloseq object
+
+otus.t<-t(otus.r)
+metadat<-as.matrix(metadat)
+y<-metadat
+y<-colnames(otus.t)
+rownames(metadat) <- y
+metadat<-as.data.frame(metadat)
+
+
+Workshop_OTU <- otu_table(as.matrix(otus.t), taxa_are_rows = TRUE)
+Workshop_metadat <- sample_data(metadat)
+Workshop_taxo <- tax_table(as.matrix(taxon))
+Workshop.16S <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
+
+print(Workshop_OTU)
+
+taxa_names(Workshop_taxo)
+taxa_names(Workshop_OTU)
+sample_names(Workshop.16S)
+
+print(Workshop.16S)
+
+# diversity 
+
+estimate_richness(Workshop.16S, measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
+p <- plot_richness(Workshop.16S, "Fraction", measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
+
+
+p <- p + geom_boxplot(aes(fill = "Fraction")) + scale_fill_manual(values = c("#CBD588", "#5F7FC7", "orange","#DA5724", "#508578"))
+print(p)
+
+print(Workshop.16S)
+#phylogenic diversity
+
+
+
 
   
 
