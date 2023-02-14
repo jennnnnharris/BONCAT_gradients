@@ -2,10 +2,6 @@
 
 ### 1. Initial Setup ###
 
-### Set the working directory; modify to your own ###
-
-setwd("C:/Users/Jenn/OneDrive - The Pennsylvania State University/Documents/Github/BONCAT_gradients/data")
-
 ### Clear workspace ###
 
 rm(list=ls())
@@ -15,26 +11,34 @@ rm(list=ls())
 #source("http://bioconductor.org/biocLite.R")
 #biocLite("Heatplus")
 
-if (!require("BiocManager", quietly = TRUE))
-  install.packages("BiocManager")
+#if (!require("BiocManager", quietly = TRUE))
+ # install.packages("BiocManager")
+#BiocManager::install("phyloseq")
+BiocManager::install("Heatplus")
 
-BiocManager::install("phyloseq")
 
 ### Load required libraries ###
 
-library(ade4)
-library(vegan)
-library(RColorBrewer)
-library(phyloseq)
 library(gplots)
-library(Heatplus)
+library(ggplot2)
+library(vegan)
+library(plyr)
+library(RColorBrewer)
+library(reshape2)
+library(scales)
+library(data.table)
 library(dplyr)
-library(tidyverse)
+library(phyloseq)
+library(DT)
+library(Heatplus)
 library(viridis)
 library(hrbrthemes)
+library(ade4)
+
+## Set the working directory; modify to your own ###
+setwd("C:/Users/Jenn/OneDrive - The Pennsylvania State University/Documents/Github/BONCAT_gradients/data")
 
 ### Import Data ###
-
 taxon <- read.table("16s/taxonomy.txt", sep="\t", header=T, row.names=1)
 otus <- read.table("16s/feature-table.tsv", sep="\t", header=T, row.names = 1 )
 metadat <- read.delim("16s/metadata.txt", sep="\t", header = T, check.names=FALSE)
@@ -45,19 +49,20 @@ otus.t <- t(otus)
 ## order metadata
 metadat<-metadat[order(metadat$SampleID),]
 ## order otu table
-otu.t<-otus.t[order(row.names(otus.t)),]
+otus.t<-otus.t[order(row.names(otus.t)),]
 
 ## Determine minimum available reads per sample ##
-
 min(rowSums(otus.t))
 
 ### Rarefy to obtain even numbers of reads by sample ###
-
 set.seed(336)
 otus.r<-rrarefy(otus.t, 41610)
 
 ## Convert OTU numbers to percentages ##
 otus.perc<-otus.r/rowSums(otus.r)*100
+
+#set colors
+mycols=c("grey27","grey","#9795ff","#4406e2", "#ffb4f6","#e20a8f", "#695e00", "#6eda0a", "#0a7416" )
 
 
 #------- 1. Run PCoA analysis of entire dataset ------
@@ -72,14 +77,12 @@ otus.pcoa <- cmdscale(otus.bray, k=(nrow(otus.perc)-1), eig=TRUE)
 otus.p <- otus.pcoa$points[,1:2]
 
 # Calculate % variance explained by each axis #
-
 otus.eig<-otus.pcoa$eig
 perc.exp<-otus.eig/(sum(otus.eig))*100
 pe1<-perc.exp[1]
 pe2<-perc.exp[2]
 
 #to make coloring things easier I'm gong to added a combined fractionXboncat column no sure if i need this
-
 metadat<-mutate(metadat, fraction_BCAT = paste0(metadat$Fraction, metadat$BONCAT))
 
 ## Plot ordination with factors coloured and shaped as you like # 
@@ -106,42 +109,40 @@ dev.off()
 
 
 # permanova
-
 otu.perm<- adonis2(otus.perc~ Fraction*BONCAT, data = metadat, permutations = 999, method="bray")
 otu.perm
 # Fraction         4   8.3386 0.59802 18.4333  0.001 ***
 #  BONCAT           2   1.2988 0.09315  5.7422  0.001 ***
 #  Fraction:BONCAT  2   0.5742 0.04118  2.5387  0.126   
 
+#analysis of similarities
 otu.ano<- anosim(otus.perc, grouping =  metadat$Fraction, permutations = 999)
 summary(otu.ano)
 
+#test for dispersion between groups
 dispersion <- betadisper(otus.bray, group=metadat$Fraction)
 permutest(dispersion)
 plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
 #Groups     4 0.61336 0.153340 40.69    999  0.001 ***
- 
 # non homogeneous varience :( 
 
 dispersion <- betadisper(otus.bray, group=metadat$BONCAT)
 permutest(dispersion)
 plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
 #Groups     3 0.16064 0.053547 1.148    999  0.363
-
 # homogenous varience :)
 
 dispersion <- betadisper(otus.bray, group=metadat$fraction_BCAT)
 permutest(dispersion)
 plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
 #Groups     8 0.69417 0.086771 26.697    999  0.001 ***
-  
-# non homogenous variance 
+# non homogenous variance :(
 
-###### just look at rhizo is active vs. non active 
 
+##### subset data by fraction 
+#rhizo
 test<-otus.perc[which(metadat$Fraction == "Rhizo"),]
 metadat_t<-metadat[which(metadat$Fraction == "Rhizo"),]
-
 otu.perm<- adonis2(test~ BONCAT, data = metadat_y, permutations = 999, method="bray")
 otu.perm
 #BONCAT    2  0.97631 0.40122 3.6854  0.001 ***
@@ -149,57 +150,171 @@ otu.perm
 #nod
 test<-otus.perc[which(metadat$Fraction == "Nod"),]
 metadat_t<-metadat[which(metadat$Fraction == "Nod"),]
-
 otu.perm<- adonis2(test~ BONCAT, data = metadat_t, permutations = 999, method="bray")
 otu.perm
 #BONCAT    1  0.11358 0.58017 9.6736  0.024 *
 
-#nod
+#endo
 test<-otus.perc[which(metadat$Fraction == "Endo"),]
 metadat_t<-metadat[which(metadat$Fraction == "Endo"),]
-
 otu.perm<- adonis2(test~ BONCAT, data = metadat_t, permutations = 999, method="bray")
 otu.perm
 #BONCAT    1  0.19218 0.58686 9.9433  0.014 *
 
-#####Calculate diversity#######
-# make phyloseq object
+######------make phyloseq object-------#####
 
-otus.t<-t(otus.r)
+otus.phyloseq<- t(otus.t)
+taxon<-taxon[,1:7]
 metadat<-as.matrix(metadat)
 y<-metadat
 y<-colnames(otus.t)
 rownames(metadat) <- y
 metadat<-as.data.frame(metadat)
 
-
-Workshop_OTU <- otu_table(as.matrix(otus.t), taxa_are_rows = TRUE)
+#import it phyloseq
+Workshop_OTU <- otu_table(as.matrix(otus.t), taxa_are_rows = FALSE)
 Workshop_metadat <- sample_data(metadat)
 Workshop_taxo <- tax_table(as.matrix(taxon))
 Workshop.16S <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
 
-print(Workshop_OTU)
-
-taxa_names(Workshop_taxo)
-taxa_names(Workshop_OTU)
+#test it worked
 sample_names(Workshop.16S)
-
 print(Workshop.16S)
 
+#####2. Calculate diversity#######
 # diversity 
-
-estimate_richness(Workshop.16S, measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
+rich<-estimate_richness(Workshop.16S, measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
 p <- plot_richness(Workshop.16S, "Fraction", measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
-
-
 p <- p + geom_boxplot(aes(fill = "Fraction")) + scale_fill_manual(values = c("#CBD588", "#5F7FC7", "orange","#DA5724", "#508578"))
 print(p)
 
-print(Workshop.16S)
+# Chao 1
+p <- plot_richness(Workshop.16S, "Fraction", measures = c("Chao1"))
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/16s/chao1.svg",width = 5, height=4 )
+p +
+  geom_boxplot( fill = "#E3FBB7", outlier.shape = NA)+
+  #geom_jitter(width = .1, size=1 )+
+  theme_bw()
+dev.off()
+
+# diversity of active microbes in each fraction
+rich<-cbind(rich, metadat)
+rich<-as.data.frame(rich)
+colnames(rich)
+rich$Fraction<-factor(rich$Fraction, levels=c("Bulk", "Rhizo", "Endo", "Nod"))
+
+svg(file="figures/16s/chao1_active.svg",width = 5, height=4 )
+rich %>%
+  filter(Fraction!="ctl")%>%
+  ggplot(aes(x=Fraction, y=Chao1, fill=BONCAT))+
+  geom_boxplot() +
+  scale_fill_manual(values = c(mycols[c(1,8,5)]))+
+  geom_jitter(width = .1, size=1 )+
+  ylab("Chao1 Diversity")+
+  theme_bw()
+dev.off()
+
+
 #phylogenic diversity
+#https://mibwurrepo.github.io/R_for_Microbial_Ecology/Microbiome_tutorial_V2.html#alpha-diversity-calculations
 
 
+#### 3. Phyloseq and manipulation by taxonomy ####
+
+# get rid of taxa that aren; tin any samples
+Workshop.16S<-prune_taxa(taxa_sums(Workshop.16S) > 0, Workshop.16S)
+any(taxa_sums(Workshop.16S) == 0)
+
+#check n taxa
+ntaxa(Workshop.16S)
+rank_names(Workshop.16S)
+
+# remove chloroplast DNA
+Workshop.16S<-subset_taxa(Workshop.16S, Class!="Chloroplast")
+
+# We make a data table with information on the OTUs
+ps1.dt.taxa = data.table(tax_table(Workshop.16S),OTUabundance = taxa_sums(Workshop.16S),OTU = taxa_names(Workshop.16S))
+ps1.dt.tax.plot <- ggplot(ps1.dt.taxa, aes(OTUabundance)) + geom_histogram() + ggtitle("Histogram of OTU (unique sequence) counts") + theme_bw()
+print(ps1.dt.tax.plot)
+ggplot(ps1.dt.taxa, aes(OTUabundance)) + 
+  geom_histogram() +
+  ggtitle("Histogram of Total Counts") + 
+  xlim(0, 1000) + ylim (0,50) + theme_bw()
+
+#interacting with phyloseq object
+sample_variables(Workshop.16S)
+length(sample_variables(Workshop.16S))
+
+#what phyla are here?
+rank_names(Workshop.16S)
+get_taxa_unique(Workshop.16S, "Phyla")
+#how many of each taxa?
+taxa_sums(Workshop.16S)
+
+#select most abundant taxa
+topN = 100
+most_abundant_taxa = sort(taxa_sums(Workshop.16S), TRUE)[1:topN]
+print(most_abundant_taxa)
+GP20 = prune_taxa(names(most_abundant_taxa), Workshop.16S)
+length(get_taxa_unique(GP20, "Phyla"))
+print(get_taxa_unique(GP20, "Phyla"))
+
+#plot that
+windows()
+plot_bar(Workshop.16S, fill = "Phyla")
+print(get_taxa_unique(GP20, "Family"))
 
 
-  
+#### 100% plots ####
+
+#I think this is transposed?
+
+Actino <- subset_taxa(Workshop.16S, Phyla = "Actinobacteriota")
+Actino.sum<-rowSums(otu_table(Actino))
+Proteo <- subset_taxa(Workshop.16S, Phyla = "Proteobacteria")
+Proteo.sum<-rowSums(otu_table(Proteo))
+Acid <- subset_taxa(Workshop.16S, Phyla = "Acidobacteria")
+Acid.sum<-rowSums(otu_table(Acid))
+cyano <- subset_taxa(Workshop.16S, Phyla = "Cyanobacteria")
+cyano.sum<-rowSums(otu_table(cyano))
+Firmi <- subset_taxa(Workshop.16S, Phyla = "Firmicutes")
+Firmi.sum<-rowSums(otu_table(Firmi))
+Bact <- subset_taxa(Workshop.16S, Phyla = " Bacteroidota" )
+Bact.sum<-rowSums(otu_table(Bact))
+
+
+Other<-100-(Actino.sum+Acid.sum+Firmi.sum+Bact.sum+Proteo.sum+cyano.sum)
+
+phyl.mat<-cbind(Actino.sum,Proteo.sum,Acid.sum,Firmi.sum,Bact.sum,cyano.sum,Other)
+print(phyl.mat)
+phyl.ag<-aggregate(phyl.mat~metadat$Fraction,FUN=mean)
+
+rownames(phyl.ag)<-phyl.ag[,1]
+phyl.ag.2<-as.matrix(phyl.ag[,-1])
+
+phyl.ag.names<-rownames(phyl.ag)
+
+windows()
+barplot(apply(t(phyl.ag.2),2,rev),names=phyl.ag.names,col=c("#003f5c", "#444e86", "#955196","#dd5182","#ff6e54", "#ffa600"),horiz=FALSE,
+        ylab="Relative abundance (%)")
+# data wrangling  
+phyl.df<- as.data.frame(phyl.ag.2)
+phyl.df[,8]<-row.names(phyl.ag.2)
+phy.df.t<-gather(phyl.df, "taxa",value, 1:7)
+
+
+# Stacked + percent
+windows()
+ggplot(phy.df.t, aes(fill=taxa, y=value, x=V8)) + 
+  geom_bar(position="fill", stat="identity")+
+  scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
+  ggtitle("Top Phylum") +
+  theme_bw(base_size = 14) +
+  xlab("site")+
+  ylab("relative abundance %")
+
+
+# 
+
 
