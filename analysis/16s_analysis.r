@@ -166,8 +166,7 @@ otu.perm
 otus.phyloseq<- t(otus.t)
 taxon<-taxon[,1:7]
 metadat<-as.matrix(metadat)
-y<-metadat
-y<-colnames(otus.t)
+y<-colnames(otus)
 rownames(metadat) <- y
 metadat<-as.data.frame(metadat)
 
@@ -227,7 +226,6 @@ Workshop.16S<-prune_taxa(taxa_sums(Workshop.16S) > 0, Workshop.16S)
 any(taxa_sums(Workshop.16S) == 0)
 
 #check n taxa
-ntaxa(Workshop.16S)
 rank_names(Workshop.16S)
 
 # remove chloroplast DNA
@@ -241,6 +239,10 @@ ggplot(ps1.dt.taxa, aes(OTUabundance)) +
   geom_histogram() +
   ggtitle("Histogram of Total Counts") + 
   xlim(0, 1000) + ylim (0,50) + theme_bw()
+
+
+plot_bar(Workshop.16S, "Fraction", "Abundance", "Phyla", title=title)
+
 
 #interacting with phyloseq object
 sample_variables(Workshop.16S)
@@ -260,10 +262,21 @@ GP20 = prune_taxa(names(most_abundant_taxa), Workshop.16S)
 length(get_taxa_unique(GP20, "Phyla"))
 print(get_taxa_unique(GP20, "Phyla"))
 
-#plot that
+#lookign at ctl
 windows()
-plot_bar(Workshop.16S, fill = "Phyla")
+plot_bar(Workshop.16S, fill = "Phyla",facet_grid = "Fraction~.")
 print(get_taxa_unique(GP20, "Family"))
+sample_variables(Workshop.16S)
+
+#subet
+ctl<-subset_samples(Workshop.16S, Fraction=="ctl")
+
+# rm taxa that aren;t there
+any(taxa_sums(ctl) == 0)
+ctl<-prune_taxa(taxa_sums(ctl) > 0, ctl)
+
+ntaxa(ctl)
+get_taxa_unique(ctl, "Phyla")
 
 
 #### 100% plots ####
