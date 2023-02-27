@@ -174,13 +174,24 @@ metadat<-as.data.frame(metadat)
 Workshop_OTU <- otu_table(as.matrix(otus.t), taxa_are_rows = FALSE)
 Workshop_metadat <- sample_data(metadat)
 Workshop_taxo <- tax_table(as.matrix(taxon))
-Workshop.16S <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
+ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
 
 #test it worked
-sample_names(Workshop.16S)
-print(Workshop.16S)
+sample_names(ps)
+print(ps)
 
 #####2. Calculate diversity#######
+# is our diversity saturated? make rareifaction curve
+
+data(dune)
+
+head(dune)
+
+(otus.t)
+
+
+
+
 # diversity 
 rich<-estimate_richness(Workshop.16S, measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
 p <- plot_richness(Workshop.16S, "Fraction", measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))

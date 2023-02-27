@@ -118,9 +118,16 @@ df<-df%>%mutate(cells_active_per_ul= Percent_Boncat_pos*cells_per_ul,
                     cells_per_plant= cells_per_ul*ul_PBS,
                     Prop_Active = Percent_Boncat_pos/100)
 
+### recoding some names to be easier to understand
 df$Fraction<-factor(df$Fraction, levels = c("Bulk", "Rhizo", "Endo", "Nod"))
 
-df<-df%>% mutate(Plant_long=recode(Plant, 'A17'='Medicago', 'CLO'='Clover','PEA'='Pea', .default='soil'))
+df<-df%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
+
+df$Compartment<-factor(df$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodules"))
+
+df<-df%>% mutate(Plant=recode(Plant, 'A17'='Medicago', 'CLO'='Clover','PEA'='Pea', .default='soil'))
+
+
 
 
 #-------set colors--------
@@ -358,8 +365,8 @@ setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burg
 #all plants
 svg(file="figures/allfractions_percentwihtpea.svg",width = 13, height=5 )
 df %>%
-  filter(Plant!="Soil", Dyes=="BONCAT-SYTO")%>%
-  ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
+  filter(Plant!="soil", Dyes=="BONCAT-SYTO", flowcyto=="Fortessa")%>%
+  ggplot( aes(x=Compartment, y=Percent_Boncat_pos)) +
   geom_boxplot(alpha=.7, outlier.shape = NA)+
   geom_jitter(width = .2)+
   scale_color_manual(values = mycols[c(1,2,3)])+
@@ -367,7 +374,7 @@ df %>%
   theme(axis.text.x = element_text(angle=60, hjust=1))+
   facet_wrap(~Plant_long)+
   scale_y_log10()+
-  xlab("Fraction")+
+  xlab("compartment")+
   ylab("Percent Active")
   #ylim(0, 3E8)
 dev.off()
@@ -424,12 +431,11 @@ data %>%
 dev.off()
 
 #---------model for percent active cells ---------
-#binomial
-# our data of boncat pos is a proprotion
-# df frame with # failures # successes and proportion of each # i also got rid of an outlier past cook's distace
+# our data of boncat activity is a proportion
+# to model this data some functions require a df frame with # failures # successes and proportion of each 
+# i also got rid of an outlier past cook's distace
 prop<-df %>%
-  filter(Plant!="Soil", Dyes=="BONCAT-SYTO", ID!="beads") %>%
-  #filter(Plant!="PEA")%>%
+  filter(Plant!="Soil", Dyes=="BONCAT-SYTO", ID!="beads", flowcyto=='Fortessa') %>%
   mutate(n_failures = n_Events_Cells-n_Events_Boncat)
   #mutate(Active = ifelse(Prop_Active<.0001, 0, 1 ))
 # data exploration
@@ -438,126 +444,80 @@ hist(prop$n_Events_Cells)
 
 y<-cbind(prop$n_Events_Boncat, prop$n_failures)
 
-#binomial model
-
-m1<-glm(prop$Prop_Active~Plant+Fraction+Date,
-          data=prop,
-          family="binomial")
-summary(m1)
-plot(m1)  
-
-m3<-glm(data= prop, Prop_Active~Plant+Fraction+Date-1, family=binomial, weights = n_Events_Cells)
-summary(m3)
-
-#Poisson model
-
-m1<-glm(prop$n_Events_Boncat~Plant+Fraction+Date+Plant*Fraction ,
-        data=prop,
-        family="poisson")
-summary(m1)
-
-
-#mixed model glmme
+#mixed model
 # it could possible that because each day I ran sampled on the flow Cyto they data is slightly different
 # I should run a mixed model with allowing the intercep to vary for Date
 # the intercept not the slope because I expect the relationship between the treatments to be the same but the baseline could vary.
-# Random effect = Date
-m1<-glmer(Prop_Active~Fraction +Plant+ Plant*Fraction + (1|Date),data = prop, binomial)
-summary(m1)
-plot(m1)
-# modeling data as successes and failures
+# however, mixed models cannot have quasi binomial distribution. 
 
-  y<-cbind(prop$n_Events_Boncat, prop$n_failures)
   m1<-glmer(y~Plant+Fraction+Plant*Fraction+(1|Date),
             data=prop,
             family="binomial")
   summary(m1)
   plot(m1)  
+  
 ## residual deviance is higher than the degrees of freedom = model is over disposed
-## these should be equal. so will will do a quasi binomial instead which u can't do in glmer
-  
-#quasibinomial glm
-# on proportion data
+## these should be equal. so will will do a quasi binomial instead
+# however, mixed models cannot have quasi binomial distribution. 
+# I thought about including date as a fixed effect in my quasibinomial model, but date is very correlated with fraction. 
+# quasibinomial glm
 
-  m2<-glm(Prop_Active~Plant+Fraction+Plant*Fraction -1, data=prop, quasibinomial)
-  summary(m2)
-  plot(m2)
-  
-  anova(m2, test= "F")  # significant interaction
-  anova(m2, test= "Chisq")  
-
-# weighted glm instead
-  m3<-glm(data= prop, Prop_Active~Plant+Fraction-1, family=quasibinomial, weights = n_Events_Cells)
-  summary(m3)
-  plot(m3)
-  anova(m3, test= "F")
-
-# glm on succeses and failures
+# glm on success and failures
   
   m4<-glm(data= prop, y~Plant+Fraction-1, family = quasibinomial)
-  summary(m4)  
+  
+ 
   plot(m4)
-  anova(m3, test= "F")
-  
-  # 2 step glm / hurdle model
-  # glm for active verse non active
-
-  
-  Active<-filter(prop, Active=="1")
-  m5<-glm(data=Active, Prop_Active~Plant*Fraction, family = binomial, weights = n_Events_Cells)
-  summary(m5)
-  
-  #poisson
-  m1<-glm(n_Events_Boncat~Fraction+ Plant + Plant*Fraction,  family= "poisson",
-          offset(n_Events_Cells), data= prop)
-  summary(m1)
-  with(m1, cbind(res.deviance = deviance, df = df.residual,
-                 p = pchisq(deviance, df.residual, lower.tail=FALSE)))
-  
-  # the P value i very low indicating that the data doesn't fit the model well.
+    anova(m4, test= "F")
+##
+  #             Df Deviance Resid. Df Resid. Dev        F    Pr(>F)    
+  #   NULL                        82     379136                       
+  #   Plant     4   366488        78      12648 406.4890 < 2.2e-16 ***
+  #   Fraction  3     6564        75       6084   9.7079 1.729e-05 ***
+  #    ---
+  #     Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
+ summary(m4)  
+# Coefficients:
+  #                 Estimate Std. Error t value Pr(>|t|)    
+  #   PlantClover    -5.0073     0.9520  -5.260 1.32e-06 ***
+  #   PlantMedicago  -6.4578     1.1370  -5.680 2.43e-07 ***
+  #   PlantPea       -8.6241     1.3074  -6.596 5.25e-09 ***
+  #   Plantsoil      -6.9075     5.6773  -1.217  0.22754    
+  #   FractionRhizo  -0.3687     1.6752  -0.220  0.82639    
+  #   FractionEndo    2.8519     0.9962   2.863  0.00544 ** 
+  #   FractionNod     2.6623     0.9819   2.711  0.00831 ** 
   
 # just look at this for each plant
-  clo<-prop%>% filter(Plant == "CLO")
+# need to find a good post hoctest
+  clo<-prop%>% filter(Plant == "Clover")
   y<-cbind(clo$n_Events_Boncat, clo$n_failures)
   
   Fraction = clo$Fraction
   m3<-glm(y~Fraction, quasibinomial)
+ 
+  plot(m3)
+  anova(m3, test= "F")
+  summary(m3)
+ 
+  #pea
+  pea<-prop%>% filter(Plant == "Pea")
+  y<-cbind(pea$n_Events_Boncat, pea$n_failures)
+  
+  m3<-glm(y~pea$Fraction, quasibinomial)
+  anova(m3, test= "F")
   summary(m3)
   plot(m3)
   
-  anova(m3, test= "LR")
-  
- 
-  marginal = emmeans(m3, ~Fraction)
-  pairs(marginal, adjust = "tukey")
-
-  
-  summary(glht(m3,mcp(Fraction = "Tukey")))
-  summary(glht(age, mcp(age="Tukey")))
-  
-  
-  clo$Fraction<-factor(clo$Fraction, levels = c("Endo", "Nod", "Rhizo", "Bulk"))
-  #pea
-  pea<-prop%>% filter(Plant == "PEA")
-  y<-cbind(pea$n_Events_Boncat, pea$n_failures)
-  
-  m2<-glm(y~pea$Fraction, quasibinomial)
-  summary(m2)
-  plot(m2)
-  
   #A17
-  A17<-prop%>% filter(Plant == "A17")
+  A17<-prop%>% filter(Plant == "Medicago")
   y<-cbind(A17$n_Events_Boncat, A17$n_failures)
   
   Fraction = A17$Fraction
   m2<-glm(y~Fraction, quasibinomial)
+  anova(m3, test= "F")
   summary(m2)
   plot(m2)
   
-  anova(m2, test= "LR")
-  
-  summary(glht(m2,mcp(Fraction = "Tukey")))
-
 
 #------Testing correlation of variables-------
   
