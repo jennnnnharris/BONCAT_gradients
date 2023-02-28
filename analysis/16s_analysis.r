@@ -78,6 +78,29 @@ metadat$Compartment<-factor(metadat$Compartment, levels = c("Bulk_Soil", "Rhizos
 metadat<-metadat[, c(1,3:6)]
 metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active' ))
 
+#### rarefaction curve
+
+
+data(dune)
+min(rowSums(t(dune)))
+
+head(dune)
+specaccum
+
+sp<-specaccum(dune, method = "random", permutations = 100,
+          conditioned =TRUE, gamma = "jack1")
+
+sp$sites
+plot(sp$sites, sp$richness)
+#yay seemed to work with test data set
+
+row.names(otus.t)
+
+sp<-specaccum(otus.t, method = "random", permutations = 100,
+              conditioned =TRUE, gamma = "jack1")
+plot(sp$sites, sp$richness, xlab="sample", ylab = "# ASVs")
+
+
 #------- 1. Run PCoA analysis of entire dataset ------
 
 # Calculate Bray-Curtis distance between samples
@@ -194,15 +217,14 @@ ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
 sample_names(ps)
 print(ps)
 
+#rarafaction curve in phyloseq
+
+?rarecurve
+  
+rarecurve((otu_table(ps)), step=50, cex=0.5)
+
+
 #####2. Calculate diversity#######
-# is our diversity saturated? make rareifaction curve
-
-data(dune)
-
-head(dune)
-
-(otus.t)
-
 
 # diversity 
 rich<-estimate_richness(ps, measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
