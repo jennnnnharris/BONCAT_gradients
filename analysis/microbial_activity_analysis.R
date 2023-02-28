@@ -108,8 +108,7 @@ counts<-counts[c(2,4,8:13)]
 
 #merging boncat data and count data
 df<-left_join(df, counts, by = c("ID", "Plant", "Fraction"))
-#data<-left_join(data, nodules, by= c("Plant", "Number", "Fraction"))
-#data<-left_join(data, weights, by = c("Plant", "Number", "Fraction"))
+
 #calculate number of active cells
 ul_PBS = 10000
 
@@ -120,11 +119,8 @@ df<-df%>%mutate(cells_active_per_ul= Percent_Boncat_pos*cells_per_ul,
 
 ### recoding some names to be easier to understand
 df$Fraction<-factor(df$Fraction, levels = c("Bulk", "Rhizo", "Endo", "Nod"))
-
 df<-df%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
-
-df$Compartment<-factor(df$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodules"))
-
+df$Compartment<-factor(df$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
 df<-df%>% mutate(Plant=recode(Plant, 'A17'='Medicago', 'CLO'='Clover','PEA'='Pea', .default='soil'))
 
 
@@ -133,6 +129,11 @@ df<-df%>% mutate(Plant=recode(Plant, 'A17'='Medicago', 'CLO'='Clover','PEA'='Pea
 #-------set colors--------
 mycols = c("#45924b", "#aac581", "#fffac9", "#f2a870", "#de425b")
 mycols= c("#003f5c","#bc5090", "#ffa600")
+#colors from 16s 
+mycols1<- c("grey27", "#6eda0a")
+
+#----set directory for figures------
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/data")
 
 #-------n cells figures -------------
 
@@ -236,16 +237,16 @@ confint(cells_soil_mixed)
 
 #rhizo bulk
 svg(file="figures/bulk_n_active_cells.svg",width = 9, height=6 )
-rhizobulk%>%
-  filter(Dyes == "BONCAT-SYTO") %>%
-  #filter(Fraction == "Bulk") %>%
+df%>%
+  filter(Dyes == "BONCAT-SYTO", flowcyto=="Fortessa",Plant!="soil" ) %>%
+  filter(Compartment!="Nodule", Compartment!="Roots") %>%
   ggplot( aes(x=Fraction, y=cells_active_g_soil)) +
-  geom_jitter(width = .2)+
-  geom_boxplot(alpha=.5, fill = mycols[2], outlier.shape = NA)+
-  #scale_fill_manual(values = mycols)+
+  geom_jitter(width = .2, show.legend = FALSE)+
+  geom_boxplot(alpha=.5, outlier.shape = NA, show.legend = FALSE)+
+  #scale_fill_manual(values = mycols1)+
   theme_bw(base_size = 20, )+
   #theme(axis.text.x = element_text(angle=60, hjust=1))+
-  facet_wrap(~Plant_long)+
+  facet_wrap(~Plant)+
   #xlab("Plant")+
   ylab("Number Active Cells/ gram of soil")+
   #ylim(0,3E8)+
@@ -255,41 +256,7 @@ dev.off()
 
 # pretty strong interaction of fraction * plant
 # you can see it in the figure
-#rhizo bulk
-svg(file="figures/bulk_n_active_cells.svg",width = 9, height= 5 )
-rhizobulk%>%
-  filter(Dyes == "BONCAT-SYTO") %>%
-  #filter(Fraction == "Bulk") %>%
-  ggplot( aes(x=Fraction, y=cells_active_g_soil)) +
-  geom_jitter(width = .2)+
-  geom_boxplot(alpha=.5, fill = "grey", outlier.shape = NA)+
-  #scale_fill_manual(values = mycols)+
-  theme_bw(base_size = 20, )+
-  #theme(axis.text.x = element_text(angle=60, hjust=1))+
-  facet_wrap(~Plant)+
-  #xlab("Plant")+
-  ylab("Number Active Cells/ gram of soil")+
-  #ylim(0,3E8)+
-  scale_y_log10()# ggtitle("Bulk Soil")
-dev.off()
 
-
-svg(file="figures/rhizo_n_active_cells.svg",width = 6, height=6 )
-rhizobulk%>%
-  filter(Dyes == "BONCAT-SYTO") %>%
-  filter(Fraction == "Rhizo") %>%
-  ggplot( aes(x=Plant, y=cells_active_g_soil)) +
-  geom_jitter(width = .2)+
-  geom_boxplot(alpha=.5, fill = "grey", outlier.shape = NA)+
-  #scale_fill_manual(values = mycols)+
-  theme_bw(base_size = 20, )+
-  #theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #xlab("Plant")+
-  ylab("Number Active Cells/ gram of soil")+
-  #ylim(0,3E8)+
-  scale_y_log10() + 
-  ggtitle("Rhizosphere")
-dev.off()
 
 
 #--------model n active cells---------
@@ -372,7 +339,7 @@ df %>%
   scale_color_manual(values = mycols[c(1,2,3)])+
   theme_bw(base_size = 20, )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
-  facet_wrap(~Plant_long)+
+  facet_wrap(~Plant)+
   scale_y_log10()+
   xlab("compartment")+
   ylab("Percent Active")

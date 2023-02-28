@@ -64,6 +64,19 @@ otus.perc<-otus.r/rowSums(otus.r)*100
 #set colors
 mycols=c("grey27","grey","#9795ff","#4406e2", "#ffb4f6","#e20a8f", "#695e00", "#6eda0a", "#0a7416" )
 
+# rhizo, endo, nod, 
+#green , grey, purple , grey, pink, grey
+mycols3= c("#3aaf04", "grey","#4406e2", "grey" , "#ff50c8", "grey")
+
+# recode some names so they are easier to understand
+
+#Fraction = BONCAT active, Total cells
+#Compartments = 
+metadat$Fraction
+metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
+metadat$Compartment<-factor(metadat$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
+metadat<-metadat[, c(1,3:6)]
+metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active' ))
 
 #------- 1. Run PCoA analysis of entire dataset ------
 
@@ -83,7 +96,7 @@ pe1<-perc.exp[1]
 pe2<-perc.exp[2]
 
 #to make coloring things easier I'm gong to added a combined fractionXboncat column no sure if i need this
-metadat<-mutate(metadat, fraction_BCAT = paste0(metadat$Fraction, metadat$BONCAT))
+metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$BONCAT))
 
 ## Plot ordination with factors coloured and shaped as you like # 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
@@ -93,7 +106,7 @@ svg(file="figures/16s/Pcoa.svg",width = 6, height=6 )
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of 16S OTU Bray Curtis",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 points(otus.p, col=c("black"),
-       pch=c(21,21,22,23,24)[as.factor(metadat$Fraction)],
+       pch=c(21,21,22,23,24)[as.factor(metadat$Compartment)],
        lwd=1,cex=2,
        #bg=c("#003f5c","grey", "#bc5090", "#ffa600")[as.factor(metadat$BONCAT)])
        bg=c( "grey27","grey","#9795ff","#4406e2", "#ffb4f6","#e20a8f", "#695e00", "#6eda0a", "#0a7416" )[as.factor(metadat$fraction_BCAT)])
@@ -108,19 +121,20 @@ legend("top",legend=c("BulkDNA", "ctl", "EndoPOS", "EndoSYBR", "NodPOS", "NodSYB
 dev.off()
 
 
+
 # permanova
-otu.perm<- adonis2(otus.perc~ Fraction*BONCAT, data = metadat, permutations = 999, method="bray")
+otu.perm<- adonis2(otus.perc~ Compartment*BONCAT, data = metadat, permutations = 999, method="bray")
 otu.perm
 # Fraction         4   8.3386 0.59802 18.4333  0.001 ***
 #  BONCAT           2   1.2988 0.09315  5.7422  0.001 ***
 #  Fraction:BONCAT  2   0.5742 0.04118  2.5387  0.126   
 
 #analysis of similarities
-otu.ano<- anosim(otus.perc, grouping =  metadat$Fraction, permutations = 999)
+otu.ano<- anosim(otus.perc, grouping =  metadat$Compartment, permutations = 999)
 summary(otu.ano)
 
 #test for dispersion between groups
-dispersion <- betadisper(otus.bray, group=metadat$Fraction)
+dispersion <- betadisper(otus.bray, group=metadat$Compartment)
 permutest(dispersion)
 plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
 #Groups     4 0.61336 0.153340 40.69    999  0.001 ***
@@ -132,7 +146,7 @@ plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
 #Groups     3 0.16064 0.053547 1.148    999  0.363
 # homogenous varience :)
 
-dispersion <- betadisper(otus.bray, group=metadat$fraction_BCAT)
+dispersion <- betadisper(otus.bray, group=metadat$Compartment)
 permutest(dispersion)
 plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
 #Groups     8 0.69417 0.086771 26.697    999  0.001 ***
@@ -190,38 +204,30 @@ head(dune)
 (otus.t)
 
 
-
-
 # diversity 
-rich<-estimate_richness(Workshop.16S, measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
-p <- plot_richness(Workshop.16S, "Fraction", measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
+rich<-estimate_richness(ps, measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
+p <- plot_richness(ps, "Fraction", measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
 p <- p + geom_boxplot(aes(fill = "Fraction")) + scale_fill_manual(values = c("#CBD588", "#5F7FC7", "orange","#DA5724", "#508578"))
 print(p)
 
-# Chao 1
-p <- plot_richness(Workshop.16S, "Fraction", measures = c("Chao1"))
+# set wd for figures
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/chao1.svg",width = 5, height=4 )
-p +
-  geom_boxplot( fill = "#E3FBB7", outlier.shape = NA)+
-  #geom_jitter(width = .1, size=1 )+
-  theme_bw()
-dev.off()
 
 # diversity of active microbes in each fraction
 rich<-cbind(rich, metadat)
 rich<-as.data.frame(rich)
 colnames(rich)
-rich$Fraction<-factor(rich$Fraction, levels=c("Bulk", "Rhizo", "Endo", "Nod"))
+rich$Compartment<-factor(rich$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
 
-svg(file="figures/16s/chao1_active.svg",width = 5, height=4 )
+
+svg(file="figures/16s/alpha_diversity.svg",width = 5, height=4 )
 rich %>%
-  filter(Fraction!="ctl")%>%
-  ggplot(aes(x=Fraction, y=Chao1, fill=BONCAT))+
+  filter(BONCAT!="DNA", Fraction!="ctl")%>%
+  ggplot(aes(x=Compartment, y=Observed, fill=Fraction,))+
   geom_boxplot() +
-  scale_fill_manual(values = c(mycols[c(1,8,5)]))+
+  scale_fill_manual(values = c("grey27", "lightgrey"))+
   geom_jitter(width = .1, size=1 )+
-  ylab("Chao1 Diversity")+
+  ylab("Number of ASVs")+
   theme_bw()
 dev.off()
 
