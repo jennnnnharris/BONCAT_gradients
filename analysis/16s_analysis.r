@@ -123,12 +123,6 @@ ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
 sample_names(ps)
 print(ps)
 
-#rarafaction curve in phyloseq 
-# didn't work
-?rarecurve
-rarecurve((otu_table(ps)), sample=  step=50, cex=0.5)
-
-
 # remove chloroplast DNA
 ps<-subset_taxa(ps, Class!=" Chloroplast")
 ps<-subset_taxa(ps, Genus!=" Mitochondria")
@@ -139,10 +133,11 @@ ps
 
 # diversity 
 rich<-estimate_richness(ps, measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
-p <- plot_richness(ps, "Fraction", measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
-p <- p + geom_boxplot(aes(fill = "Fraction")) + scale_fill_manual(values = c("#CBD588", "#5F7FC7", "orange","#DA5724", "#508578"))
-print(p)
+windows()
+plot_richness(ps, "Fraction", measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))+
+geom_boxplot(aes(fill = "Fraction")) + scale_fill_manual(values = c("#CBD588", "#5F7FC7", "orange","#DA5724", "#508578"))
 
+windows
 # set wd for figures
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 

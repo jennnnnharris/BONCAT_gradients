@@ -1,6 +1,5 @@
 # flower Boncat
-# June 2021 
-# project update
+# March 2023
 #Jennifer Harris
 
 library(readxl)
@@ -14,6 +13,7 @@ library(lme4)
 library(multcompView)
 library(emmeans)
 library(multcomp)
+library(lmtest)
 
 ###-------oragnizing data Astrios----------
 
@@ -54,7 +54,6 @@ nodules<-read.csv("Plant fitness/nodule_surface_area.csv")
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/Flow cyto/Astrios")
 df_ast<-read.csv("combined_metadata_included.csv")
 #------cleaning data-------
-
 # remove rows without BONCAT dyes + controls
 df_ast<-subset(df_ast, Dyes!= "SYBR- no click")
 # add column for flow cyto machine
@@ -80,7 +79,6 @@ df_fort<-cbind(df_fort, Dyes)
 df_fort<-subset(df_fort, select=-c(Project,Incubation,Number, Volume_filtered_ul, Spin_Speed, COUNT, Treatment, Run_number))
 colnames(df_fort)
 df_fort<-df_fort[,c(1:4,10,11, 5:9)]
-
 #make column names the same
 colnames(df_ast)<-colnames(df_fort)
 # combine
@@ -123,9 +121,6 @@ df<-df%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizo
 df$Compartment<-factor(df$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
 df<-df%>% mutate(Plant=recode(Plant, 'A17'='Medicago', 'CLO'='Clover','PEA'='Pea', .default='soil'))
 
-
-
-
 #-------set colors--------
 mycols = c("#45924b", "#aac581", "#fffac9", "#f2a870", "#de425b")
 mycols= c("#003f5c","#bc5090", "#ffa600")
@@ -145,10 +140,6 @@ setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burg
   rhizobulk<-subset(rhizobulk, Prop_Active<.2)
   rhizobulk<-subset(rhizobulk, cells_active_g_soil<1.5e+09)
   rhizobulk<-subset(rhizobulk, cells_active_g_soil>0)
-  
-  
-  #remove outlier
-
 
 svg(file="figures/bulkrhizo.svg",width = 4, height=4 )
   rhizobulk %>%
@@ -177,40 +168,6 @@ rhizobulk%>% filter(Plant!="A17")%>%
   #xlab("Plant")+
   ggtitle("Medicago")+
   ylab("Number Cells/ g soil")
-
-# nodules + roots
-nodendo<-data %>%
-  filter(Plant!="Soil", Fraction=="Nod"|Fraction == "Endo")
-  nodendo$Fraction<-factor(nodendo$Fraction, levels = c("Endo", "Nod"))
-svg(file="figures/nodendo_a17.svg",width = 4, height=4 )
-  nodendo%>% filter(Plant=="A17")%>%
-  ggplot( aes(x=Fraction, y=cells_per_plant)) +
-  geom_jitter(width = .2, size=2 )+
-  geom_boxplot(alpha=.6, fill = mycols[5], outlier.shape = NA)+
-  scale_fill_manual(values = mycols)+
-  theme_minimal(base_size = 22, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  facet_wrap(vars(Plant))+
-  xlab("Plant")+
-  ylab("Number Cells/Plant")+
-  scale_y_log10(limits= c(1E6, 1E10))
-
-dev.off()
-#nod roots clover
-svg(file="figures/nodendos_clo.svg",width = 4, height=4 )
-nodendo%>% filter(Plant=="CLO")%>%
-  ggplot( aes(x=Fraction, y=cells_per_plant)) +
-  geom_jitter(width = .2, size=2 )+
-  geom_boxplot(alpha=.5, fill = mycols3[5], outlier.shape = NA)+
-  scale_fill_manual(values = mycols)+
-  theme_minimal(base_size = 22, )+
-  ggtitle("clo")+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #facet_wrap(vars(Plant))+
-  #xlab("Plant")+
-  ylab("Number Cells/Plant")+
-  scale_y_log10(limits= c(1E6, 1E10))
-dev.off()
 
 ###--------  model for n cells------
 #linear
@@ -253,11 +210,6 @@ df%>%
   scale_y_log10()
   #ggtitle("Bulk Soil")
 dev.off()
-
-# pretty strong interaction of fraction * plant
-# you can see it in the figure
-
-
 
 #--------model n active cells---------
 # lil model of this. 
@@ -324,7 +276,6 @@ summary(m1)
 plot(m1)
 
 
-
 #-------percent active figures-------
 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/data")
@@ -346,57 +297,6 @@ df %>%
   #ylim(0, 3E8)
 dev.off()
 
-#log scale
-svg(file="figures/percentBONCATlog.svg",width = 14, height=6 )
-data %>%
-  filter(Treatment == "HPG", Plant!= "Soil", Plant!="PEA")%>%
-  ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
-  geom_boxplot( alpha=.7, fill= mycols[4], outlier.shape = NA)+
-  geom_jitter(size = 1.5, width = .2)+
-  theme_minimal(base_size = 22, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #ylim(0, 50)+
-  xlab("Fraction")+
-  ylab("% Boncat Active")+
-  scale_y_log10(limits= c())+
-  facet_wrap(vars(Plant))+
-  ggtitle("Percent BONCAT active")
-dev.off()
-
-#clover
-svg(file="figures/percentBONCATlog_clo.svg",width = 8, height=6 )
-data %>%
-  filter(Treatment == "HPG", Plant=="CLO")%>%
-  ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
-  geom_boxplot( alpha=.7, fill= mycols[4], outlier.shape = NA)+
-  geom_jitter(size = 1.5, width = .2)+
-  theme_minimal(base_size = 22, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #ylim(0, 50)+
-  xlab("Fraction")+
-  ylab("% Boncat Active")+
-  scale_y_log10(limits= c())+
-  facet_wrap(vars(Plant))
-  #ggtitle("Percent BONCAT active")
-dev.off()
-#combined figure
-
-#a17
-svg(file="figures/percentBONCAT_log_a17.svg",width = 8, height=6 )
-data %>%
-  filter(Treatment == "HPG", Plant=="A17")%>%
-  ggplot( aes(x=Fraction, y=Percent_Boncat_pos)) +
-  geom_boxplot( alpha=.7, fill= mycols[4], outlier.shape = NA)+
-  geom_jitter(size = 1.5, width = .2)+
-  theme_minimal(base_size = 22, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #ylim(0, 50)+
-  xlab("Fraction")+
-  ylab("% Boncat Active")+
-  facet_wrap(vars(Plant))+
-  scale_y_log10(limits= c())
-dev.off()
-
 #---------model for percent active cells ---------
 # our data of boncat activity is a proportion
 # to model this data some functions require a df frame with # failures # successes and proportion of each 
@@ -408,7 +308,6 @@ prop<-df %>%
 # data exploration
 hist(prop$Prop_Active)
 hist(prop$n_Events_Cells)
-
 y<-cbind(prop$n_Events_Boncat, prop$n_failures)
 
 #mixed model
@@ -416,14 +315,12 @@ y<-cbind(prop$n_Events_Boncat, prop$n_failures)
 # I should run a mixed model with allowing the intercep to vary for Date
 # the intercept not the slope because I expect the relationship between the treatments to be the same but the baseline could vary.
 # however, mixed models cannot have quasi binomial distribution. 
-
   m1<-glmer(y~Plant+Fraction+Plant*Fraction+(1|Date),
             data=prop,
             family="binomial")
   summary(m1)
   plot(m1)  
-  
-## residual deviance is higher than the degrees of freedom = model is over disposed
+  ## residual deviance is higher than the degrees of freedom = model is over disposed
 ## these should be equal. so will will do a quasi binomial instead
 # however, mixed models cannot have quasi binomial distribution. 
 # I thought about including date as a fixed effect in my quasibinomial model, but date is very correlated with fraction. 
@@ -431,11 +328,9 @@ y<-cbind(prop$n_Events_Boncat, prop$n_failures)
 
 # glm on success and failures
   
-  m4<-glm(data= prop, y~Plant+Fraction-1, family = quasibinomial)
-  
- 
-  plot(m4)
-    anova(m4, test= "F")
+  m4<-glm(data= prop, y~Plant+Fraction+Plant*Fraction-1, family = quasibinomial)
+    #plot(m4)
+    anova(m4, test= "LRT")
 ##
   #             Df Deviance Resid. Df Resid. Dev        F    Pr(>F)    
   #   NULL                        82     379136                       
@@ -443,7 +338,7 @@ y<-cbind(prop$n_Events_Boncat, prop$n_failures)
   #   Fraction  3     6564        75       6084   9.7079 1.729e-05 ***
   #    ---
   #     Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- summary(m4)  
+ summary(m4)
 # Coefficients:
   #                 Estimate Std. Error t value Pr(>|t|)    
   #   PlantClover    -5.0073     0.9520  -5.260 1.32e-06 ***
@@ -453,19 +348,35 @@ y<-cbind(prop$n_Events_Boncat, prop$n_failures)
   #   FractionRhizo  -0.3687     1.6752  -0.220  0.82639    
   #   FractionEndo    2.8519     0.9962   2.863  0.00544 ** 
   #   FractionNod     2.6623     0.9819   2.711  0.00831 ** 
+ 
+ m4<-glm(data= prop, y~Plant+Fraction+Plant*Fraction-1, family = quasibinomial)
+ #plot(m4)
+ anova(m4, test= "LRT")
+ summary(m4)
+ 
+ m3 <- glm(data= prop, y~Plant+Fraction-1, family = quasibinomial)
+ lrtest(m4, m3)
+ glm
+ 
+ 
+ 
+ 
   
 # just look at this for each plant
 # need to find a good post hoctest
   clo<-prop%>% filter(Plant == "Clover")
   y<-cbind(clo$n_Events_Boncat, clo$n_failures)
-  
   Fraction = clo$Fraction
+  
   m3<-glm(y~Fraction, quasibinomial)
- 
-  plot(m3)
-  anova(m3, test= "F")
+  #plot(m3)
+  
+  # do you just subset it all the way and run liley hood ratio test?
+  anova(m3, test= "LRT")
   summary(m3)
- 
+  
+  
+  
   #pea
   pea<-prop%>% filter(Plant == "Pea")
   y<-cbind(pea$n_Events_Boncat, pea$n_failures)
