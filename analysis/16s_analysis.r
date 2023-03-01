@@ -80,125 +80,27 @@ metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= '
 
 #### rarefaction curve
 
-
+#with pracitce data
 data(dune)
-min(rowSums(t(dune)))
-
-head(dune)
-specaccum
-
 sp<-specaccum(dune, method = "random", permutations = 100,
           conditioned =TRUE, gamma = "jack1")
-
-sp$sites
 plot(sp$sites, sp$richness)
 #yay seemed to work with test data set
 
+#with my data
 row.names(otus.t)
-
 sp<-specaccum(otus.t, method = "random", permutations = 100,
               conditioned =TRUE, gamma = "jack1")
 plot(sp$sites, sp$richness, xlab="sample", ylab = "# ASVs")
 
+#rarecurve
+S <- specnumber(otus.t) # observed number of species
+raremax <- min(rowSums(otus.t))
+plot(otus.t, otus.r, xlab = "Observed No. of Species", ylab = "Rarefied No. of Species")
+abline(0, 1)
+rarecurve(otus.t, step = 20, sample = raremax, col = "blue", cex = 0.6)
 
-#------- 1. Run PCoA analysis of entire dataset ------
-
-# Calculate Bray-Curtis distance between samples
-otus.bray<-vegdist(otus.perc, method = "bray")
-
-# Perform PCoA analysis of BC distances #
-otus.pcoa <- cmdscale(otus.bray, k=(nrow(otus.perc)-1), eig=TRUE)
-
-# Store coordinates for first two axes in new variable #
-otus.p <- otus.pcoa$points[,1:2]
-
-# Calculate % variance explained by each axis #
-otus.eig<-otus.pcoa$eig
-perc.exp<-otus.eig/(sum(otus.eig))*100
-pe1<-perc.exp[1]
-pe2<-perc.exp[2]
-
-#to make coloring things easier I'm gong to added a combined fractionXboncat column no sure if i need this
-metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$BONCAT))
-
-## Plot ordination with factors coloured and shaped as you like # 
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-
-svg(file="figures/16s/Pcoa.svg",width = 6, height=6 )
-#windows(title="PCoA on OTUs - Bray Curtis")
-ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of 16S OTU Bray Curtis",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
-         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
-points(otus.p, col=c("black"),
-       pch=c(21,21,22,23,24)[as.factor(metadat$Compartment)],
-       lwd=1,cex=2,
-       #bg=c("#003f5c","grey", "#bc5090", "#ffa600")[as.factor(metadat$BONCAT)])
-       bg=c( "grey27","grey","#9795ff","#4406e2", "#ffb4f6","#e20a8f", "#695e00", "#6eda0a", "#0a7416" )[as.factor(metadat$fraction_BCAT)])
-
-#dark brown, grey, endo (light purple, dark purple), nod(light pink, darkpink ), rhizo(darkest green, light green, darkgreen)
-# BulkDNA ctlctl EndoPOS EndoSYBR NodPOS NodSYBR RhizoDNA RhizoPOS RhizoSYBR
-
-legend("top",legend=c("BulkDNA", "ctl", "EndoPOS", "EndoSYBR", "NodPOS", "NodSYBR", "RhizoDNA", "RhizoPOS", "RhizoSYBR"),
-  pch=c(16,16,15,15,18, 18,17,17,17),
-  cex=1.1, 
-  col=c("grey27","grey","#9795ff","#4406e2", "#ffb4f6","#e20a8f", "#695e00", "#6eda0a", "#0a7416" ))
-dev.off()
-
-
-
-# permanova
-otu.perm<- adonis2(otus.perc~ Compartment*BONCAT, data = metadat, permutations = 999, method="bray")
-otu.perm
-# Fraction         4   8.3386 0.59802 18.4333  0.001 ***
-#  BONCAT           2   1.2988 0.09315  5.7422  0.001 ***
-#  Fraction:BONCAT  2   0.5742 0.04118  2.5387  0.126   
-
-#analysis of similarities
-otu.ano<- anosim(otus.perc, grouping =  metadat$Compartment, permutations = 999)
-summary(otu.ano)
-
-#test for dispersion between groups
-dispersion <- betadisper(otus.bray, group=metadat$Compartment)
-permutest(dispersion)
-plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
-#Groups     4 0.61336 0.153340 40.69    999  0.001 ***
-# non homogeneous varience :( 
-
-dispersion <- betadisper(otus.bray, group=metadat$BONCAT)
-permutest(dispersion)
-plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
-#Groups     3 0.16064 0.053547 1.148    999  0.363
-# homogenous varience :)
-
-dispersion <- betadisper(otus.bray, group=metadat$Compartment)
-permutest(dispersion)
-plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
-#Groups     8 0.69417 0.086771 26.697    999  0.001 ***
-# non homogenous variance :(
-
-
-##### subset data by fraction 
-#rhizo
-test<-otus.perc[which(metadat$Fraction == "Rhizo"),]
-metadat_t<-metadat[which(metadat$Fraction == "Rhizo"),]
-otu.perm<- adonis2(test~ BONCAT, data = metadat_y, permutations = 999, method="bray")
-otu.perm
-#BONCAT    2  0.97631 0.40122 3.6854  0.001 ***
-
-#nod
-test<-otus.perc[which(metadat$Fraction == "Nod"),]
-metadat_t<-metadat[which(metadat$Fraction == "Nod"),]
-otu.perm<- adonis2(test~ BONCAT, data = metadat_t, permutations = 999, method="bray")
-otu.perm
-#BONCAT    1  0.11358 0.58017 9.6736  0.024 *
-
-#endo
-test<-otus.perc[which(metadat$Fraction == "Endo"),]
-metadat_t<-metadat[which(metadat$Fraction == "Endo"),]
-otu.perm<- adonis2(test~ BONCAT, data = metadat_t, permutations = 999, method="bray")
-otu.perm
-#BONCAT    1  0.19218 0.58686 9.9433  0.014 *
-
-######------make phyloseq object-------#####
+#####------make phyloseq object-------#####
 
 otus.phyloseq<- t(otus.t)
 taxon<-taxon[,1:7]
@@ -217,11 +119,10 @@ ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
 sample_names(ps)
 print(ps)
 
-#rarafaction curve in phyloseq
-
+#rarafaction curve in phyloseq 
+# didn't work
 ?rarecurve
-  
-rarecurve((otu_table(ps)), step=50, cex=0.5)
+rarecurve((otu_table(ps)), sample=  step=50, cex=0.5)
 
 
 # remove chloroplast DNA
@@ -229,11 +130,8 @@ ps<-subset_taxa(ps, Class!=" Chloroplast")
 ps<-subset_taxa(ps, Genus!=" Mitochondria")
 ps<-subset_taxa(ps, Genus!=" Chloroplast")
 
-
-
-
-
-#####2. Calculate diversity#######
+ps
+#####1. Calculate diversity#######
 
 # diversity 
 rich<-estimate_richness(ps, measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
@@ -267,7 +165,7 @@ dev.off()
 #https://mibwurrepo.github.io/R_for_Microbial_Ecology/Microbiome_tutorial_V2.html#alpha-diversity-calculations
 
 
-#### 3. Phyloseq and manipulation by taxonomy ####
+#####2. Phyloseq and manipulation by taxonomy ####
 
 # get rid of taxa that aren; tin any samples
 ps<-prune_taxa(taxa_sums(ps) > 0, ps)
@@ -374,11 +272,7 @@ tax_table(nod20)
 #genus in nodule  
 # c( " Allorhizobium-Neorhizobium-Pararhizobium-Rhizobium",  " Ensifer" , " Pseudomonas"  " Staphylococcus") 
 
-#### 100% plots ####
-
-#I think this is transposed?
-
-
+ ####100% plots ####
 rhizobiaceae <- subset_taxa(ps, Family ==  " Rhizobiaceae"  )
 rhizobia.sum<-rowSums(otu_table(rhizobiaceae))
 psuedo <- subset_taxa(ps, Family == " Pseudomonadaceae" )
@@ -424,7 +318,7 @@ ggplot(phy.df.t, aes(fill=taxa, y=value, x=V8)) +
   ylab("relative abundance %")
 
 
-# what if we did this by percent
+###### import percent abundance into phyloseq what if we did this by percent
 
 otus.phyloseq<- t(otus.perc)
 taxon<-taxon[,1:7]
@@ -449,7 +343,7 @@ ps<-subset_taxa(ps, Genus!=" Mitochondria")
 ps<-subset_taxa(ps, Genus!=" Chloroplast")
 
 #maybe try subsetting by sample?
-ps<-subset_samples(ps, Fraction ==  "BONCAT_Active"  )
+ps_active<-subset_samples(ps, Fraction ==  "BONCAT_Active"  )
 
 #### 100% plots ####
 
@@ -493,4 +387,114 @@ ggplot(phy.df.t, aes(fill=taxa, y=value, x=Compartment)) +
   ylab("relative abundance %")
   
 dev.off()
+
+
+######
+
+#------- 3. Run PCoA analysis of entire dataset ------
+
+#grab that phyloseq ojbect with the cholorplats removedd
+
+otu_table(ps)
+
+
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps), method = "bray")
+
+# Perform PCoA analysis of BC distances #
+otus.pcoa <- cmdscale(otus.bray, k=(nrow(otus.perc)-1), eig=TRUE)
+
+# Store coordinates for first two axes in new variable #
+otus.p <- otus.pcoa$points[,1:2]
+
+# Calculate % variance explained by each axis #
+otus.eig<-otus.pcoa$eig
+perc.exp<-otus.eig/(sum(otus.eig))*100
+pe1<-perc.exp[1]
+pe2<-perc.exp[2]
+
+#to make coloring things easier I'm gong to added a combined fractionXboncat column no sure if i need this
+metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
+metadat$compartment_BCAT<-as.factor(metadat$compartment_BCAT)
+levels(metadat$compartment_BCAT)
+
+## Plot ordination with factors coloured and shaped as you like # 
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+
+svg(file="figures/16s/Pcoa.svg",width = 6, height=6 )
+
+#windows(title="PCoA on OTUs - Bray Curtis")
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of 16S OTU Bray Curtis",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+points(otus.p, col=c("black"),
+       pch=c(21,21,22,23,24)[as.factor(metadat$Compartment)],
+       lwd=1,cex=2,
+       #bg=c("#003f5c","grey", "#bc5090", "#ffa600")[as.factor(metadat$BONCAT)])
+       bg=c( "#52311f","grey", "#f538de","#ffb4f6", "#276602", "#5ef507", "#dbfcc7", "#4406e2", "#a483f7"  )[metadat$compartment_BCAT])
+
+#dark brown, grey,  nod(light pink, darkpink ), rhizo(darkest green, dark green, light green,), endo (dark purple, light purple),
+# BulkDNA ctlctl EndoPOS EndoSYBR NodPOS NodSYBR RhizoDNA RhizoPOS RhizoSYBR
+
+legend("top",legend=c("Bulk_SoilTotal_DNA" ,  "ctl"  ,"NoduleBONCAT_Active" ,"NoduleTotal_Cells", 
+                      "RhizosphereBONCAT_Active","RhizosphereTotal_Cells", "RhizosphereTotal_DNA" ,"RootsBONCAT_Active"   ,   "RootsTotal_Cells"),
+       pch=c(16,16,15,15,18, 18,17,17,17),
+       cex=1.1, 
+       col=c( "#52311f","grey", "#f538de","#ffb4f6", "#276602", "#5ef507", "#dbfcc7", "#4406e2", "#a483f7"  ))
+
+dev.off()
+
+
+
+# permanova
+otu.perm<- adonis2(otus.perc~ Compartment*BONCAT, data = metadat, permutations = 999, method="bray")
+otu.perm
+# Fraction         4   8.3386 0.59802 18.4333  0.001 ***
+#  BONCAT           2   1.2988 0.09315  5.7422  0.001 ***
+#  Fraction:BONCAT  2   0.5742 0.04118  2.5387  0.126   
+
+#analysis of similarities
+otu.ano<- anosim(otus.perc, grouping =  metadat$Compartment, permutations = 999)
+summary(otu.ano)
+
+#test for dispersion between groups
+dispersion <- betadisper(otus.bray, group=metadat$Compartment)
+permutest(dispersion)
+plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
+#Groups     4 0.61336 0.153340 40.69    999  0.001 ***
+# non homogeneous varience :( 
+
+dispersion <- betadisper(otus.bray, group=metadat$BONCAT)
+permutest(dispersion)
+plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
+#Groups     3 0.16064 0.053547 1.148    999  0.363
+# homogenous varience :)
+
+dispersion <- betadisper(otus.bray, group=metadat$Compartment)
+permutest(dispersion)
+plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
+#Groups     8 0.69417 0.086771 26.697    999  0.001 ***
+# non homogenous variance :(
+
+
+##### subset data by fraction 
+#rhizo
+test<-otus.perc[which(metadat$Fraction == "Rhizo"),]
+metadat_t<-metadat[which(metadat$Fraction == "Rhizo"),]
+otu.perm<- adonis2(test~ BONCAT, data = metadat_y, permutations = 999, method="bray")
+otu.perm
+#BONCAT    2  0.97631 0.40122 3.6854  0.001 ***
+
+#nod
+test<-otus.perc[which(metadat$Fraction == "Nod"),]
+metadat_t<-metadat[which(metadat$Fraction == "Nod"),]
+otu.perm<- adonis2(test~ BONCAT, data = metadat_t, permutations = 999, method="bray")
+otu.perm
+#BONCAT    1  0.11358 0.58017 9.6736  0.024 *
+
+#endo
+test<-otus.perc[which(metadat$Fraction == "Endo"),]
+metadat_t<-metadat[which(metadat$Fraction == "Endo"),]
+otu.perm<- adonis2(test~ BONCAT, data = metadat_t, permutations = 999, method="bray")
+otu.perm
+#BONCAT    1  0.19218 0.58686 9.9433  0.014 *
   
