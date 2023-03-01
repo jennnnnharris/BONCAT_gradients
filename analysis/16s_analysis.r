@@ -77,6 +77,10 @@ metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhi
 metadat$Compartment<-factor(metadat$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
 metadat<-metadat[, c(1,3:6)]
 metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active' ))
+#to make coloring things easier I'm gong to added a combined fractionXboncat column no sure if i need this
+metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
+metadat$compartment_BCAT<-as.factor(metadat$compartment_BCAT)
+levels(metadat$compartment_BCAT)
 
 #### rarefaction curve
 
@@ -272,7 +276,7 @@ tax_table(nod20)
 #genus in nodule  
 # c( " Allorhizobium-Neorhizobium-Pararhizobium-Rhizobium",  " Ensifer" , " Pseudomonas"  " Staphylococcus") 
 
- ####100% plots ####
+####100% plots ######
 rhizobiaceae <- subset_taxa(ps, Family ==  " Rhizobiaceae"  )
 rhizobia.sum<-rowSums(otu_table(rhizobiaceae))
 psuedo <- subset_taxa(ps, Family == " Pseudomonadaceae" )
@@ -318,7 +322,7 @@ ggplot(phy.df.t, aes(fill=taxa, y=value, x=V8)) +
   ylab("relative abundance %")
 
 
-###### import percent abundance into phyloseq what if we did this by percent
+###### import percent abundance into phyloseq #####
 
 otus.phyloseq<- t(otus.perc)
 taxon<-taxon[,1:7]
@@ -342,10 +346,7 @@ ps<-subset_taxa(ps, Class!=" Chloroplast")
 ps<-subset_taxa(ps, Genus!=" Mitochondria")
 ps<-subset_taxa(ps, Genus!=" Chloroplast")
 
-#maybe try subsetting by sample?
-ps_active<-subset_samples(ps, Fraction ==  "BONCAT_Active"  )
-
-#### 100% plots ####
+#### 100% plots
 
 rhizobiaceae <- subset_taxa(ps, Family ==  " Rhizobiaceae"  )
 rhizobia.sum<-rowSums(otu_table(rhizobiaceae))
@@ -389,7 +390,65 @@ ggplot(phy.df.t, aes(fill=taxa, y=value, x=Compartment)) +
 dev.off()
 
 
-######
+######------- 100% plot for just active taxa---------
+
+#maybe try subsetting by sample?
+ps_active<-subset_samples(ps, Fraction !=  "Total_Cells")
+
+
+metadat_act<-subset(metadat, Fraction!="Total_Cells")
+
+# 100% plots 
+
+rhizobiaceae <- subset_taxa(ps_active, Family ==  " Rhizobiaceae"  )
+Rhizobiaceae<-rowSums(otu_table(rhizobiaceae))
+psuedo <- subset_taxa(ps_active, Family == " Pseudomonadaceae" )
+Pseudomonadaceae<-rowSums(otu_table(psuedo))
+staph <- subset_taxa(ps_active, Family == " Staphylococcaceae")
+Staphylococcaceae<-rowSums(otu_table(staph))
+burk <- subset_taxa(ps_active, Family == " Burkholderiaceae"  )
+Burkholderiaceae<-rowSums(otu_table(burk))
+sphing <- subset_taxa(ps_active, Family== " Sphingomonadaceae" )
+Sphingomonadaceae<-rowSums(otu_table(sphing))
+micro <- subset_taxa(ps_active, Family ==  " Micrococcaceae"   )
+Micrococcaceae<-rowSums(otu_table(micro))
+
+other<-100-(Rhizobiaceae+Pseudomonadaceae +Staphylococcaceae +Burkholderiaceae + Sphingomonadaceae + Micrococcaceae)
+
+
+
+
+phyl.mat<-cbind(Rhizobiaceae, Pseudomonadaceae, Staphylococcaceae, Burkholderiaceae,  Sphingomonadaceae , Micrococcaceae, other)
+print(phyl.mat)
+plyl.mat<-as.data.frame(phyl.mat)
+phyl.mat<-aggregate(phyl.mat~metadat_act$compartment_BCAT,FUN=mean)
+
+# data wrangling  
+phy.mat<-gather(phyl.mat, "taxa", value, 2:8)
+colnames(phy.mat)[1]<-"compartment_BCAT"
+
+phy.df<-phy.mat %>% group_by(compartment_BCAT, taxa) %>%
+  summarise(mean = mean(value), n = n())
+
+phy.df$compartment_BCAT<-factor(phy.df$compartment_BCAT, levels = c("NActl", "Bulk_SoilTotal_DNA",  "RhizosphereTotal_DNA","RhizosphereBONCAT_Active" ,"RootsBONCAT_Active",  "NoduleBONCAT_Active"   ))
+
+
+
+# Stacked + percent
+
+svg(file="figures/16s/top_active_taxa.svg",width = 8, height=6 )
+
+#windows()
+ggplot(phy.df, aes(fill=taxa, y=mean, x=compartment_BCAT)) + 
+  geom_bar(position="fill", stat= "identity")+
+  scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
+  ggtitle("Top Families") +
+  theme_bw(base_size = 14) +
+  theme(axis.text.x = element_text(angle=60, hjust=1))+
+  xlab("Compartment")+
+  ylab("relative abundance %")
+
+dev.off()
 
 #------- 3. Run PCoA analysis of entire dataset ------
 
