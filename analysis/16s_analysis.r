@@ -224,6 +224,15 @@ print(ps)
 rarecurve((otu_table(ps)), step=50, cex=0.5)
 
 
+# remove chloroplast DNA
+ps<-subset_taxa(ps, Class!=" Chloroplast")
+ps<-subset_taxa(ps, Genus!=" Mitochondria")
+ps<-subset_taxa(ps, Genus!=" Chloroplast")
+
+
+
+
+
 #####2. Calculate diversity#######
 
 # diversity 
@@ -261,86 +270,134 @@ dev.off()
 #### 3. Phyloseq and manipulation by taxonomy ####
 
 # get rid of taxa that aren; tin any samples
-Workshop.16S<-prune_taxa(taxa_sums(Workshop.16S) > 0, Workshop.16S)
-any(taxa_sums(Workshop.16S) == 0)
+ps<-prune_taxa(taxa_sums(ps) > 0, ps)
+any(taxa_sums(ps) == 0)
 
 #check n taxa
-rank_names(Workshop.16S)
-
-# remove chloroplast DNA
-Workshop.16S<-subset_taxa(Workshop.16S, Class!="Chloroplast")
-
-# We make a data table with information on the OTUs
-ps1.dt.taxa = data.table(tax_table(Workshop.16S),OTUabundance = taxa_sums(Workshop.16S),OTU = taxa_names(Workshop.16S))
-ps1.dt.tax.plot <- ggplot(ps1.dt.taxa, aes(OTUabundance)) + geom_histogram() + ggtitle("Histogram of OTU (unique sequence) counts") + theme_bw()
-print(ps1.dt.tax.plot)
-ggplot(ps1.dt.taxa, aes(OTUabundance)) + 
-  geom_histogram() +
-  ggtitle("Histogram of Total Counts") + 
-  xlim(0, 1000) + ylim (0,50) + theme_bw()
-
-
-plot_bar(Workshop.16S, "Fraction", "Abundance", "Phyla", title=title)
-
+rank_names(ps)
 
 #interacting with phyloseq object
-sample_variables(Workshop.16S)
-length(sample_variables(Workshop.16S))
+sample_variables(ps)
+length(sample_variables(ps))
 
 #what phyla are here?
-rank_names(Workshop.16S)
-get_taxa_unique(Workshop.16S, "Phyla")
+rank_names(ps)
+get_taxa_unique(ps, "Phyla")
 #how many of each taxa?
-taxa_sums(Workshop.16S)
+taxa_sums(ps)
+
+# Are some taxa rare?
+OTUabundance = as.numeric(taxa_sums(ps))
+ASV = taxa_names(ps)
+d1<-as.data.frame(OTUabundance)
+d1<-cbind(d1, ASV)
+ggplot(d1, aes(OTUabundance)) + 
+  geom_histogram() +
+  ggtitle("Histogram of Total Counts") + 
+  xlim(0, 20000) + ylim (0,50) + theme_bw()
+# most taxa are rare, but some are really abundant
 
 #select most abundant taxa
-topN = 100
-most_abundant_taxa = sort(taxa_sums(Workshop.16S), TRUE)[1:topN]
+topN = 10
+most_abundant_taxa = sort(taxa_sums(ps), TRUE)[1:topN]
 print(most_abundant_taxa)
-GP20 = prune_taxa(names(most_abundant_taxa), Workshop.16S)
-length(get_taxa_unique(GP20, "Phyla"))
+GP20 = prune_taxa(names(most_abundant_taxa), ps)
+length(get_taxa_unique(GP20, "Class"))
 print(get_taxa_unique(GP20, "Phyla"))
-
-#lookign at ctl
-windows()
-plot_bar(Workshop.16S, fill = "Phyla",facet_grid = "Fraction~.")
 print(get_taxa_unique(GP20, "Family"))
-sample_variables(Workshop.16S)
+tax_table(GP20)
 
-#subet
-ctl<-subset_samples(Workshop.16S, Fraction=="ctl")
+#negative ctl
 
-# rm taxa that aren;t there
+#subset
+ctl<-subset_samples(ps, SampleID=="CTL_S66")
+sample_variables(ps)
+# rm taxa that aren't there
 any(taxa_sums(ctl) == 0)
 ctl<-prune_taxa(taxa_sums(ctl) > 0, ctl)
-
+any(taxa_sums(ctl) == 0)
 ntaxa(ctl)
-get_taxa_unique(ctl, "Phyla")
+#who are the most abundant taxa?
 
+topN = 20
+most_abundant_taxa = sort(taxa_sums(ctl), TRUE)[1:topN]
+print(most_abundant_taxa)
+ctl20 = prune_taxa(names(most_abundant_taxa), ctl)
+length(get_taxa_unique(ctl20, "Family"))
+print(get_taxa_unique(ctl20, "Phyla"))
+get_taxa_unique(ctl20, "Genus")
+get_taxa_unique(ctl20, "Family")
+
+#beads
+#subset
+ctl<-subset_samples(ps, SampleID=="BEADS_S67")
+sample_variables(ps)
+# rm taxa that aren't there
+any(taxa_sums(ctl) == 0)
+ctl<-prune_taxa(taxa_sums(ctl) > 0, ctl)
+any(taxa_sums(ctl) == 0)
+ntaxa(ctl)
+#who are the most abundant taxa?
+
+topN = 20
+most_abundant_taxa = sort(taxa_sums(ctl), TRUE)[1:topN]
+print(most_abundant_taxa)
+ctl20 = prune_taxa(names(most_abundant_taxa), ctl)
+length(get_taxa_unique(ctl20, "Family"))
+print(get_taxa_unique(ctl20, "Phyla"))
+get_taxa_unique(ctl20, "Genus")
+get_taxa_unique(ctl20, "Family")
+
+#nodule
+#subset
+nod<-subset_samples(ps, Compartment=="Nodule")
+
+# rm taxa that aren't there
+any(taxa_sums(nod) == 0)
+nod<-prune_taxa(taxa_sums(nod) > 0, nod)
+any(taxa_sums(nod) == 0)
+ntaxa(nod)
+
+#who are most abundant taxa
+topN = 20
+most_abundant_taxa = sort(taxa_sums(nod), TRUE)[1:topN]
+print(most_abundant_taxa)
+nod20 = prune_taxa(names(most_abundant_taxa), nod)
+length(get_taxa_unique(nod20, "Class"))
+print(get_taxa_unique(nod20, "Phyla"))
+get_taxa_unique(nod20, "Genus")
+get_taxa_unique(nod20, "Family")
+get_taxa_unique(nod20, "Class")
+
+tax_table(nod20)
+
+#genus in nodule  
+# c( " Allorhizobium-Neorhizobium-Pararhizobium-Rhizobium",  " Ensifer" , " Pseudomonas"  " Staphylococcus") 
 
 #### 100% plots ####
 
 #I think this is transposed?
 
-Actino <- subset_taxa(Workshop.16S, Phyla = "Actinobacteriota")
-Actino.sum<-rowSums(otu_table(Actino))
-Proteo <- subset_taxa(Workshop.16S, Phyla = "Proteobacteria")
-Proteo.sum<-rowSums(otu_table(Proteo))
-Acid <- subset_taxa(Workshop.16S, Phyla = "Acidobacteria")
-Acid.sum<-rowSums(otu_table(Acid))
-cyano <- subset_taxa(Workshop.16S, Phyla = "Cyanobacteria")
-cyano.sum<-rowSums(otu_table(cyano))
-Firmi <- subset_taxa(Workshop.16S, Phyla = "Firmicutes")
-Firmi.sum<-rowSums(otu_table(Firmi))
-Bact <- subset_taxa(Workshop.16S, Phyla = " Bacteroidota" )
-Bact.sum<-rowSums(otu_table(Bact))
 
+rhizobiaceae <- subset_taxa(ps, Family ==  " Rhizobiaceae"  )
+rhizobia.sum<-rowSums(otu_table(rhizobiaceae))
+psuedo <- subset_taxa(ps, Family == " Pseudomonadaceae" )
+psuedo.sum<-rowSums(otu_table(psuedo))
+staph <- subset_taxa(ps, Family == " Staphylococcaceae")
+staph.sum<-rowSums(otu_table(staph))
+burk <- subset_taxa(ps, Family == " Burkholderiaceae"  )
+burk.sum<-rowSums(otu_table(burk))
+sphing <- subset_taxa(ps, Family== " Sphingomonadaceae" )
+sphing.sum<-rowSums(otu_table(sphing))
+micro <- subset_taxa(ps, Family ==  " Micrococcaceae"   )
+micro.sum<-rowSums(otu_table(micro))
 
-Other<-100-(Actino.sum+Acid.sum+Firmi.sum+Bact.sum+Proteo.sum+cyano.sum)
+other<-rowSums(otus.t)- (rhizobia.sum+psuedo.sum+staph.sum+burk.sum+sphing.sum+micro.sum)
 
-phyl.mat<-cbind(Actino.sum,Proteo.sum,Acid.sum,Firmi.sum,Bact.sum,cyano.sum,Other)
+  
+phyl.mat<-cbind(rhizobia.sum,psuedo.sum,staph.sum,burk.sum,sphing.sum, micro.sum, other)
 print(phyl.mat)
-phyl.ag<-aggregate(phyl.mat~metadat$Fraction,FUN=mean)
+phyl.ag<-aggregate(phyl.mat~metadat$Compartment,FUN=mean)
 
 rownames(phyl.ag)<-phyl.ag[,1]
 phyl.ag.2<-as.matrix(phyl.ag[,-1])
@@ -367,6 +424,73 @@ ggplot(phy.df.t, aes(fill=taxa, y=value, x=V8)) +
   ylab("relative abundance %")
 
 
-# 
+# what if we did this by percent
+
+otus.phyloseq<- t(otus.perc)
+taxon<-taxon[,1:7]
+metadat<-as.matrix(metadat)
+y<-colnames(otus)
+rownames(metadat) <- y
+metadat<-as.data.frame(metadat)
+
+#import it phyloseq
+Workshop_OTU <- otu_table(as.matrix(otus.perc), taxa_are_rows = FALSE)
+Workshop_metadat <- sample_data(metadat)
+Workshop_taxo <- tax_table(as.matrix(taxon))
+ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
+
+#test it worked
+sample_names(ps)
+print(ps)
+
+# remove chloroplast DNA
+ps<-subset_taxa(ps, Class!=" Chloroplast")
+ps<-subset_taxa(ps, Genus!=" Mitochondria")
+ps<-subset_taxa(ps, Genus!=" Chloroplast")
+
+#maybe try subsetting by sample?
+ps<-subset_samples(ps, Fraction ==  "BONCAT_Active"  )
+
+#### 100% plots ####
+
+rhizobiaceae <- subset_taxa(ps, Family ==  " Rhizobiaceae"  )
+rhizobia.sum<-rowSums(otu_table(rhizobiaceae))
+psuedo <- subset_taxa(ps, Family == " Pseudomonadaceae" )
+psuedo.sum<-rowSums(otu_table(psuedo))
+staph <- subset_taxa(ps, Family == " Staphylococcaceae")
+staph.sum<-rowSums(otu_table(staph))
+burk <- subset_taxa(ps, Family == " Burkholderiaceae"  )
+burk.sum<-rowSums(otu_table(burk))
+sphing <- subset_taxa(ps, Family== " Sphingomonadaceae" )
+sphing.sum<-rowSums(otu_table(sphing))
+micro <- subset_taxa(ps, Family ==  " Micrococcaceae"   )
+micro.sum<-rowSums(otu_table(micro))
+
+other<-100-(rhizobia.sum+psuedo.sum+staph.sum+burk.sum+sphing.sum+micro.sum)
 
 
+phyl.mat<-cbind(rhizobia.sum, psuedo.sum, staph.sum, burk.sum, sphing.sum, micro.sum, other)
+print(phyl.mat)
+phyl.mat<-aggregate(phyl.mat~metadat$Compartment,FUN=mean)
+
+colnames(phyl.mat)[1]<- "Compartment"
+# data wrangling  
+phy.df.t<-gather(phyl.mat, "taxa", value, 2:8)
+
+phy.df.t %>% group_by(Compartment, taxa) %>%
+summarise(mean = mean(value), n = n())
+
+# Stacked + percent
+
+svg(file="figures/16s/top_taxa.svg",width = 6, height=5 )
+
+ggplot(phy.df.t, aes(fill=taxa, y=value, x=Compartment)) + 
+  geom_bar(position="fill", stat= "identity")+
+  scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
+  ggtitle("Top Families") +
+  theme_bw(base_size = 14) +
+  xlab("Compartment")+
+  ylab("relative abundance %")
+  
+dev.off()
+  
