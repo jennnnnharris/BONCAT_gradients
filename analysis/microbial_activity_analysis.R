@@ -233,6 +233,7 @@ hist(log(rhizobulk$cells_active_per_ul))
 m1<-lm(log(rhizobulk$cells_active_per_ul)
   ~Plant+Fraction+Plant*Fraction, data = rhizobulk)
 summary(m1)
+anova(m1)
 plot(m1)
 
 # pretty strong interaction of fraction * plant
@@ -328,9 +329,14 @@ y<-cbind(prop$n_Events_Boncat, prop$n_failures)
 
 # glm on success and failures
   
-  m4<-glm(data= prop, y~Plant+Fraction+Plant*Fraction-1, family = quasibinomial)
+  m4<-glm(data= prop, y~Plant, family = quasibinomial)
     #plot(m4)
     anova(m4, test= "LRT")
+    m5<-glm(data= prop, y~Plant+Fraction, family = quasibinomial)
+    #plot(m4)
+    anova(m5, test= "LRT")
+    lrtest(m5, m4)
+    
 ##
   #             Df Deviance Resid. Df Resid. Dev        F    Pr(>F)    
   #   NULL                        82     379136                       
@@ -354,9 +360,10 @@ y<-cbind(prop$n_Events_Boncat, prop$n_failures)
  anova(m4, test= "LRT")
  summary(m4)
  
- m3 <- glm(data= prop, y~Plant+Fraction-1, family = quasibinomial)
- lrtest(m4, m3)
+ m3 <- glm(data= prop, y~Plant+Fraction, family = binomial)
+ lrtest(m3)
  glm
+ anova(m3, test= "Chisq")
  
  
  
