@@ -45,7 +45,6 @@ metadat <- read.delim("16s/metadata.txt", sep="\t", header = T, check.names=FALS
 
 ## Transpose OTU table ##
 otus.t <- t(otus)
-
 ## order metadata
 metadat<-metadat[order(metadat$SampleID),]
 ## order otu table
@@ -84,25 +83,23 @@ levels(metadat$compartment_BCAT)
 
 #### rarefaction curve
 
-#with pracitce data
-data(dune)
-sp<-specaccum(dune, method = "random", permutations = 100,
-          conditioned =TRUE, gamma = "jack1")
-plot(sp$sites, sp$richness)
-#yay seemed to work with test data set
 
-#with my data
-row.names(otus.t)
-sp<-specaccum(otus.t, method = "random", permutations = 100,
-              conditioned =TRUE, gamma = "jack1")
-plot(sp$sites, sp$richness, xlab="sample", ylab = "# ASVs")
 
 #rarecurve
 S <- specnumber(otus.t) # observed number of species
 raremax <- min(rowSums(otus.t))
 plot(otus.t, otus.r, xlab = "Observed No. of Species", ylab = "Rarefied No. of Species")
 abline(0, 1)
-rarecurve(otus.t, step = 20, sample = raremax, col = "blue", cex = 0.6)
+rare<-rarecurve(otus.t, step = 20, sample = raremax, col = "blue", cex = 0.6)
+
+## seee stack over flow
+lapply(rare, function(x)){
+  b<- as.data.frame(x)
+  b<- data.frame(OTU, b[,1])
+}
+
+
+# get rarecurve?
 
 #####------make phyloseq object-------#####
 
@@ -127,8 +124,11 @@ print(ps)
 ps<-subset_taxa(ps, Class!=" Chloroplast")
 ps<-subset_taxa(ps, Genus!=" Mitochondria")
 ps<-subset_taxa(ps, Genus!=" Chloroplast")
-
+# get rid of taxa that aren; in any samples
+ps<-prune_taxa(taxa_sums(ps) > 0, ps)
+any(taxa_sums(ps) == 0)
 ps
+
 #####1. Calculate diversity#######
 
 # diversity 
@@ -137,7 +137,7 @@ windows()
 plot_richness(ps, "Fraction", measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))+
 geom_boxplot(aes(fill = "Fraction")) + scale_fill_manual(values = c("#CBD588", "#5F7FC7", "orange","#DA5724", "#508578"))
 
-windows
+
 # set wd for figures
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 
@@ -149,6 +149,7 @@ rich$Compartment<-factor(rich$Compartment, levels = c("Bulk_Soil", "Rhizosphere"
 
 
 svg(file="figures/16s/alpha_diversity.svg",width = 5, height=4 )
+windows()
 rich %>%
   filter(BONCAT!="DNA", Fraction!="ctl")%>%
   ggplot(aes(x=Compartment, y=Observed, fill=Fraction,))+
@@ -159,16 +160,40 @@ rich %>%
   theme_bw()
 dev.off()
 
+# look at what's in the endophyte
+
+rich %>%
+  filter(BONCAT!="DNA", Fraction!="ctl", Compartment== "Roots", REP!=1)%>%
+  ggplot(aes(x=Fraction, y=Observed, col=REP))+
+  #geom_boxplot() +
+  #geom_line( x=Fraction, y=Observed, col= rep )
+  #scale_fill_manual(values = c("grey27", "lightgrey"))+
+  geom_jitter(width = .1, size=1 )+
+  ylab("Number of ASVs")+
+  theme_bw()
+
+root_total<-subset_samples(ps, compartment_BCAT=="RootsTotal_Cells")
+root_total<-prune_taxa(taxa_sums(root_total) > 0, root_total)
+any(taxa_sums(root_total) == 0)
+root_total
+tax_table(root_total)
+total<-as.data.table(otu_table(root_total))
+t(total)
+
+root_active<-subset_samples(ps, compartment_BCAT=="RootsBONCAT_Active")
+root_active<-prune_taxa(taxa_sums(root_active) > 0, root_active)
+any(taxa_sums(root) == 0)
+tt<-as.data.table(tax_table(root_active))
+ot<-as.data.table(otu_table(root_active))
+t(ot)
+root_active<-cbind(ot,tt)
+
 
 #phylogenic diversity
 #https://mibwurrepo.github.io/R_for_Microbial_Ecology/Microbiome_tutorial_V2.html#alpha-diversity-calculations
 
 
 #####2. Phyloseq and manipulation by taxonomy ####
-
-# get rid of taxa that aren; tin any samples
-ps<-prune_taxa(taxa_sums(ps) > 0, ps)
-any(taxa_sums(ps) == 0)
 
 #check n taxa
 rank_names(ps)
@@ -447,11 +472,6 @@ dev.off()
 
 #------- 3. Run PCoA analysis of entire dataset ------
 
-#grab that phyloseq ojbect with the cholorplats removedd
-
-otu_table(ps)
-
-
 # Calculate Bray-Curtis distance between samples
 otus.bray<-vegdist(otu_table(ps), method = "bray")
 
@@ -496,6 +516,62 @@ legend("top",legend=c("Bulk_SoilTotal_DNA" ,  "ctl"  ,"NoduleBONCAT_Active" ,"No
        col=c( "#52311f","grey", "#f538de","#ffb4f6", "#276602", "#5ef507", "#dbfcc7", "#4406e2", "#a483f7"  ))
 
 dev.off()
+
+# subset by groups
+ps_plant<-ps %>% subset_samples(Compartment !=  "Rhizosphere") %>%
+  subset_samples(Compartment!="Bulk_Soil")
+any(taxa_sums(ps_plant) == 0)
+ps_plant<-prune_taxa(taxa_sums(ps_plant) > 0, ps_plant)
+
+sample_data(ps_plant)
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps_plant), method = "bray")
+# Perform PCoA analysis of BC distances #
+otus.pcoa <- cmdscale(otus.bray, k=(nrow(otus.perc)-1), eig=TRUE)
+# Store coordinates for first two axes in new variable #
+otus.p <- otus.pcoa$points[,1:2]
+# Calculate % variance explained by each axis #
+otus.eig<-otus.pcoa$eig
+perc.exp<-otus.eig/(sum(otus.eig))*100
+pe1<-perc.exp[1]
+pe2<-perc.exp[2]
+#to make coloring things easier I'm gong to added a combined fractionXboncat column no sure if i need this
+metadat_pl<-metadat%>% filter(Compartment !="Rhizosphere") %>% filter(Compartment!="Bulk_Soil")
+metadat_pl$compartment_BCAT<-droplevels(metadat_pl$compartment_BCAT)
+
+## Plot ordination with factors coloured and shaped as you like # 
+#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+#svg(file="figures/16s/Pcoa.svg",width = 6, height=6 )
+windows(title="PCoA on plant asvs- Bray Curtis")
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of 16S OTU Bray Curtis",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+points(otus.p, col=c("black"),
+       pch=c(21,22,23,24)[as.factor(metadat_pl$compartment_BCAT)],
+       lwd=1,cex=2)
+       #bg=c("#003f5c","grey", "#bc5090", "#ffa600")[as.factor(metadat$BONCAT)])
+       #bg=c( "#52311f","grey", "#f538de","#ffb4f6", "#276602", "#5ef507", "#dbfcc7", "#4406e2", "#a483f7"  )[metadat$compartment_BCAT])
+
+#dark brown, grey,  nod(light pink, darkpink ), rhizo(darkest green, dark green, light green,), endo (dark purple, light purple),
+# BulkDNA ctlctl EndoPOS EndoSYBR NodPOS NodSYBR RhizoDNA RhizoPOS RhizoSYBR
+
+legend("top",legend=c("Bulk_SoilTotal_DNA" ,  "ctl"  ,"NoduleBONCAT_Active" ,"NoduleTotal_Cells", 
+                      "RhizosphereBONCAT_Active","RhizosphereTotal_Cells", "RhizosphereTotal_DNA" ,"RootsBONCAT_Active"   ,   "RootsTotal_Cells"),
+       pch=c(16,16,15,15,18, 18,17,17,17),
+       cex=1.1, 
+       col=c( "#52311f","grey", "#f538de","#ffb4f6", "#276602", "#5ef507", "#dbfcc7", "#4406e2", "#a483f7"  ))
+
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
 
 
 
