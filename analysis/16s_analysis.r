@@ -40,11 +40,11 @@ setwd("C:/Users/Jenn/OneDrive - The Pennsylvania State University/Documents/Gith
 
 ### Import Data ###
 taxon <- read.table("16s/taxonomy.txt", sep="\t", header=T, row.names=1)
-otus <- read.table("16s/feature-table.tsv", sep="\t", header=T, row.names = 1 )
+otus.raw <- read.table("16s/feature-table.tsv", sep="\t", header=T, row.names = 1 )
 metadat <- read.delim("16s/metadata.txt", sep="\t", header = T, check.names=FALSE)
 
 ## Transpose OTU table ##
-otus.t <- t(otus)
+otus.t <- t(otus.raw)
 ## order metadata
 metadat<-metadat[order(metadat$SampleID),]
 ## order otu table
@@ -56,29 +56,6 @@ min(rowSums(otus.t))
 ### Rarefy to obtain even numbers of reads by sample ###
 set.seed(336)
 otus.r<-rrarefy(otus.t, 41610)
-
-## Convert OTU numbers to percentages ##
-otus.perc<-otus.r/rowSums(otus.r)*100
-
-#set colors
-mycols=c("grey27","grey","#9795ff","#4406e2", "#ffb4f6","#e20a8f", "#695e00", "#6eda0a", "#0a7416" )
-
-# rhizo, endo, nod, 
-#green , grey, purple , grey, pink, grey
-mycols3= c("#3aaf04", "grey","#4406e2", "grey" , "#ff50c8", "grey")
-
-# recode some names so they are easier to understand
-#Fraction = BONCAT active, Total cells
-#Compartments = 
-metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
-metadat$Compartment<-factor(metadat$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
-metadat<-metadat[, c(1,3:6)]
-metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active' ))
-#to make coloring things easier I'm gong to added a combined fractionXboncat column no sure if i need this
-metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
-metadat$compartment_BCAT<-as.factor(metadat$compartment_BCAT)
-levels(metadat$compartment_BCAT)
-
 ############------------ rarefaction curve------------############
 
 #rarecurve
@@ -87,14 +64,32 @@ raremax <- min(rowSums(otus.t))
 plot(otus.t, otus.r, xlab = "Observed No. of Species", ylab = "Rarefied No. of Species")
 abline(0, 1)
 out<-rarecurve(otus.t, step = 20, sample = raremax, col = "blue", cex = 0.6)
-# get rarecurve?
+
+## Convert OTU numbers to percentages ##
+#otus.perc<-otus.r/rowSums(otus.r)*100
+
+#set colors
+#mycols=c("grey27","grey","#9795ff","#4406e2", "#ffb4f6","#e20a8f", "#695e00", "#6eda0a", "#0a7416" )
+
+# rhizo, endo, nod, 
+#green , grey, purple , grey, pink, grey
+#mycols3= c("#3aaf04", "grey","#4406e2", "grey" , "#ff50c8", "grey")
+
+# recode some names so they are easier to understand
+metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
+#metadat$Compartment<-factor(metadat$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
+metadat<-metadat[, c(1,3:6)]
+metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
+#to make coloring things easier I'm gong to added a combined fractionXboncat column 
+metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
+metadat$compartment_BCAT<-as.factor(metadat$compartment_BCAT)
 
 #####------make phyloseq object with rarefied data -------#####
 
 otus.phyloseq<- t(otus.r)
 taxon<-taxon[,1:7]
 metadat<-as.matrix(metadat)
-y<-colnames(otus)
+y<-colnames(otus.raw)
 rownames(metadat) <- y
 metadat<-as.data.frame(metadat)
 
@@ -107,6 +102,7 @@ ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
 #test it worked
 sample_names(ps)
 print(ps)
+# 15027 taxa
 
 # remove chloroplast DNA
 ps<-subset_taxa(ps, Class!=" Chloroplast")
@@ -116,121 +112,138 @@ ps<-subset_taxa(ps, Genus!=" Chloroplast")
 ps<-prune_taxa(taxa_sums(ps) > 0, ps)
 any(taxa_sums(ps) == 0)
 ps
+# 14833 taxa
 
+otus<-as.data.frame(t(as.data.frame(otu_table(ps))))
+taxon<-as.data.frame(tax_table(ps))
 
 #################------ calculating inactive fraction---------------####
 #### remove taxa from bulk soil
 ps1<- subset_samples(ps,Fraction !="Total_DNA" )
 ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
 any(taxa_sums(ps1) == 0)
-otu_table(ps1)
 ps1
+# 7289 taxa
 
 # subset total cell and active fraction
 ps.Total<- subset_samples(ps1,Fraction =="Total_Cells" )
-otu_table(ps.Total)
 ps.Total
 otu_total<-as.data.frame(t(as.data.frame(otu_table(ps.Total))))
+otu_total
+# length #7289
+#       C10N.SYBR_S26 C10R.SYBR_S20 C1E.SYBR_S21 C1N.SYBR_S13 
+# taxa1  139581          1430        62828       126909  
+# taxa2  19537           179         8553        17541
+# taxa3  78                0         4336        22797
 
 ps.Active<- subset_samples(ps1,Fraction =="BONCAT_Active" )
 ps.Active
 otu_active<-as.data.frame(t(as.data.frame(otu_table(ps.Active))))
 otu_active<-rowSums(otu_active)
+# length 7289
+# taxa1 10000
+# taxa2 0
+# taxa3 0 
 
 #subset
 #Inactive<- total- active
 # all the taxa that are in the total fraction but not in active are the "inactive fraction"
+# this gives all the row that have zero values, length = 4001
 inactive<-which(otu_active==0)
 otu_inactive<-otu_total[inactive,]
+#length 4001
+#       C10N.SYBR_S26 C10R.SYBR_S20 C1E.SYBR_S21 C1N.SYBR_S13 
+# taxa1  0              47          0            0  
+# taxa2  0              0           0            0
+# taxa3  0              22          0            0
+#
+#
 
 # change colnames
-n<-c("C10N_inactive", "C10R_inactive", "C1E_inactive"  ,"C1N_inactive" , "C1R_inactive",  "C2E_inactive" , "C2N_inactive"  ,"C2R_inactive" , "C5E_inactive", 
-"C5R_inactive",  "C7E_inactive",  "C7N_inactive",  "C7R_inactive" )
+n<-c("C10N.inactive", "C10R.inactive", "C1E.inactive"  ,"C1N.inactive" , "C1R.inactive",  "C2E.inactive" , "C2N.inactive"  ,"C2R.inactive" , "C5E.inactive", 
+"C5R.inactive",  "C7E.inactive",  "C7N.inactive",  "C7R.inactive" )
 colnames(otu_inactive)<- n
 
 # append the original dataset by adding the inactive taxa
 #make an asvs col to join by
-otus.t<-as.data.frame(t(otus.r))
-y<-row.names(otus.t)
-otus.t<-mutate(otus.t, asvs= y)
+y<-row.names(otus)
+otus<-mutate(otus, asvs= y)
+
 y<-row.names(otu_inactive)
-otu.inactive<-mutate(otu.inactive, asvs= y)
+otu_inactive<-mutate(otu_inactive, asvs= y)
 
 # join data frames
-otus<-full_join(otu.inactive, otus.t)
+otus<-full_join(otu_inactive, otus)
+# as row names from the asvs bit
 y<-otus$asvs
 row.names(otus) <- y
+otus<-select(otus, -asvs)
+otus
+# make all the asvs that are NA in the inactive fraction zeros
+otus[is.na(otus)] <- 0
 
-
+rownames(otus)
+colnames(otus)
 # append metadata
 
+
 metadat <- read.delim("16s/metadata_w_inactive.txt", sep="\t", header = T, check.names=FALSE)
-metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
-metadat$Compartment<-factor(metadat$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
+metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule', 'ctl'='ctl'))
 metadat<-metadat[, c(1,3:6)]
-metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active' ))
+metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
+
 #to make coloring things easier I'm gong to added a combined fractionXboncat column no sure if i need this
 metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
-metadat$compartment_BCAT<-as.factor(metadat$compartment_BCAT)
-levels(metadat$compartment_BCAT)
+metadat<-select(metadat, -BONCAT)
 
 ## order metadata
 metadat<-metadat[order(metadat$SampleID),]
+metadat$SampleID
 ## order otu table
-otus<-otus[order(row.names(otus)),]
-otus<-select(otus, -asvs)
+otus<-otus[, order(colnames(otus))]
+colnames(otus)
+
+## Convert OTU numbers to percentages ##
+otus.perc<-otus/rowSums(otus)*100
 
 
 #####------make phyloseq object with rarefied data + inactive fraction -------#####
 
-
 otus.phyloseq<- t(otus)
-taxon<-taxon[,1:7]
+head(otus.phyloseq)
 metadat<-as.matrix(metadat)
 y<-colnames(otus)
 rownames(metadat) <- y
 metadat<-as.data.frame(metadat)
 
 #import it phyloseq
-Workshop_OTU <- otu_table(otus.phyloseq, taxa_are_rows = FALSE)
+Workshop_OTU <- otu_table(as.matrix(otus.phyloseq), taxa_are_rows = FALSE)
 Workshop_metadat <- sample_data(metadat)
-Workshop_taxo <- tax_table(as.matrix(taxon))
+Workshop_taxo <- tax_table(as.matrix(taxon)) # this taxon file is from the prev phyloseq object length = 14833
 ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
+
 
 #test it worked
 sample_names(ps)
 print(ps)
 
-# remove chloroplast DNA
-ps<-subset_taxa(ps, Class!=" Chloroplast")
-ps<-subset_taxa(ps, Genus!=" Mitochondria")
-ps<-subset_taxa(ps, Genus!=" Chloroplast")
-# get rid of taxa that aren; in any samples
-ps<-prune_taxa(taxa_sums(ps) > 0, ps)
-any(taxa_sums(ps) == 0)
-ps
-
-
-
-
 #####1. Calculate diversity#######
-
-
-
-
-
-
-# diversity 
-rich<-estimate_richness(ps, measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))
-windows()
-plot_richness(ps, "Fraction", measures = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"))+
-geom_boxplot(aes(fill = "Fraction")) + scale_fill_manual(values = c("#CBD588", "#5F7FC7", "orange","#DA5724", "#508578"))
-
 
 # set wd for figures
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 
+
+# diversity 
+rich<-estimate_richness(ps, measures = c("Observed", "Shannon", "Simpson", "InvSimpson" ))
+
+svg(file="figures/16s/diversity.svg",width = 10, height=6 )
+#windows()
+plot_richness(ps, "Fraction", measures = c("Observed","Shannon", "Simpson", "InvSimpson")) +
+geom_boxplot(aes(fill = "Fraction")) + scale_fill_manual(values = c("#CBD588", "#5F7FC7", "orange","#DA5724", "#508578"))
+dev.off()
+
 # diversity of active microbes in each fraction
+
 rich<-cbind(rich, metadat)
 rich<-as.data.frame(rich)
 colnames(rich)
@@ -241,12 +254,12 @@ svg(file="figures/16s/alpha_diversity.svg",width = 5, height=4 )
 windows()
 rich %>%
   filter(BONCAT!="DNA", Fraction!="ctl")%>%
-  ggplot(aes(x=Compartment, y=Observed, fill=Fraction,))+
+  ggplot(aes(x=compartment_BCAT, y=Observed))+
   geom_boxplot() +
-  scale_fill_manual(values = c("grey27", "lightgrey"))+
-  geom_jitter(width = .1, size=1 )+
-  ylab("Number of ASVs")+
-  theme_bw()
+  #scale_fill_manual(values = c("grey27", "lightgrey"))+
+  #geom_jitter(width = .1, size=1 )+
+  theme(axis.text.x = element_text(angle=60, hjust=1))+
+  ylab("Number of ASVs")
 dev.off()
 
 # look at what's in the endophyte
@@ -561,11 +574,12 @@ dev.off()
 
 #------- 3. Run PCoA analysis of entire dataset ------
 
+
 # Calculate Bray-Curtis distance between samples
 otus.bray<-vegdist(otu_table(ps), method = "bray")
 
 # Perform PCoA analysis of BC distances #
-otus.pcoa <- cmdscale(otus.bray, k=(nrow(otus.perc)-1), eig=TRUE)
+otus.pcoa <- cmdscale(otus.bray, k=(ncol(otus)-1), eig=TRUE)
 
 # Store coordinates for first two axes in new variable #
 otus.p <- otus.pcoa$points[,1:2]
@@ -576,21 +590,16 @@ perc.exp<-otus.eig/(sum(otus.eig))*100
 pe1<-perc.exp[1]
 pe2<-perc.exp[2]
 
-#to make coloring things easier I'm gong to added a combined fractionXboncat column no sure if i need this
-metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
-metadat$compartment_BCAT<-as.factor(metadat$compartment_BCAT)
-levels(metadat$compartment_BCAT)
-
 ## Plot ordination with factors coloured and shaped as you like # 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 
-svg(file="figures/16s/Pcoa.svg",width = 6, height=6 )
+#svg(file="figures/16s/Pcoa.svg",width = 6, height=6 )
 
-#windows(title="PCoA on OTUs - Bray Curtis")
+windows(title="PCoA on OTUs - Bray Curtis")
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of 16S OTU Bray Curtis",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 points(otus.p, col=c("black"),
-       pch=c(21,21,22,23,24)[as.factor(metadat$Compartment)],
+       pch=c(20,21,22,23,24)[as.factor(metadat$Fraction)],
        lwd=1,cex=2,
        #bg=c("#003f5c","grey", "#bc5090", "#ffa600")[as.factor(metadat$BONCAT)])
        bg=c( "#52311f","grey", "#f538de","#ffb4f6", "#276602", "#5ef507", "#dbfcc7", "#4406e2", "#a483f7"  )[metadat$compartment_BCAT])
@@ -604,14 +613,48 @@ legend("top",legend=c("Bulk_SoilTotal_DNA" ,  "ctl"  ,"NoduleBONCAT_Active" ,"No
        cex=1.1, 
        col=c( "#52311f","grey", "#f538de","#ffb4f6", "#276602", "#5ef507", "#dbfcc7", "#4406e2", "#a483f7"  ))
 
+#dev.off()
+
+#------------active verse inactive---------
+
+# subset
+p<-otus.p[which(metadat$Fraction != "Total_Cells"),]
+
+# subset metadata
+metadat_in<-metadat%>% filter(Fraction !="Total_Cells") 
+as.factor(metadat_in$Compartment)
+as.factor(metadat_in$Fraction)
+as.factor(metadat_in$compartment_BCAT)
+levels(as.factor(metadat_in$compartment_BCAT))
+
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/16s/Pcoa.svg",width = 6, height=6 )
+
+windows(title="PCoA on plant asvs- Bray Curtis")
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of 16S OTU Bray Curtis",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+points(p, col=c("black"),
+       pch=c(21,22,23,24, 25)[as.factor(metadat_in$Fraction)],
+       lwd=1,cex=2,
+       bg=c("#739AFF", "white", "#DC267F", "#DC267F", "#785EF0", "#785EF0" , "#785EF0", "#FFB000", "#FFB000")[as.factor(metadat_in$compartment_BCAT)])
+
+
+legend("top",legend=c( "Bulk_SoilTotal_DNA" ,      "ctlctl"   ,  "NoduleBONCAT_Active"    ,  "NoduleInactive"     ,      "RhizosphereBONCAT_Active",
+                       "RhizosphereInactive","RhizosphereTotal_DNA" ,    "RootsBONCAT_Active"   ,    "RootsInactive"),
+       pch=c(2,0,1, 5, 1, 5 , 2, 1, 5  ),
+       col= c("#739AFF", "black", "#DC267F", "#DC267F", "#785EF0", "#785EF0" , "#785EF0", "#FFB000", "#FFB000")       )
+
 dev.off()
+
+
 
 #------------subset by groups------------
 # Store coordinates for axes 3 adn 4 in new variable #
-otus.p <- otus.pcoa$points[,4:5]
+otus.p <- otus.pcoa$points[,1:4]
 
 # subset
-plant.p<-otus.p[which(metadat$Compartment == "Nodule"| metadat$Compartment == "Roots"),]
+plant.p<-otus.p[which(metadat$Fraction != "Total_Cells"),]
+plant.p<-plant.p[which(metadat_in$Compartment == "Nodule"| metadat_in$Compartment == "Roots" ),]
 
 # Calculate % variance explained by each axis #
 otus.eig<-otus.pcoa$eig
@@ -621,22 +664,27 @@ pe3<-perc.exp[3]
 pe4<-perc.exp[4]
 pe5<-perc.exp[5]
 #to make coloring things easier I'm gong to added a combined fractionXboncat column no sure if i need this
-metadat_pl<-metadat%>% filter(Compartment !="Rhizosphere") %>% filter(Compartment!="Bulk_Soil")
-metadat_pl$compartment_BCAT<-droplevels(metadat_pl$compartment_BCAT)
+metadat_pl<-metadat%>% filter(Compartment !="Rhizosphere") %>% filter(Compartment!="Bulk_Soil") %>% filter(Fraction != "Total_Cells")
 
+as.factor(metadat_pl$Fraction)
+as.factor(metadat_pl$Compartment)
 ## Plot ordination with factors coloured and shaped as you like # 
 #setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 #svg(file="figures/16s/Pcoa.svg",width = 6, height=6 )
 windows(title="PCoA on plant asvs- Bray Curtis")
-ordiplot(otus.pcoa,choices=c(4,5), type="none", main="PCoA of 16S OTU Bray Curtis",xlab=paste("PCoA4 (",round(pe4,2),"% variance explained)"),
-         ylab=paste("PCoA5 (",round(pe5,2),"% variance explained)"))
-points(plant.p, col=c("black"),
-       pch=c(21,22,23,24)[as.factor(metadat_pl$compartment_BCAT)],
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of 16S OTU Bray Curtis",xlab=paste("PCoA1 (",round(pe1, 2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+points(plant.p, display = Sample_ID
+       pch=c(21,22,22)[as.factor(metadat_pl$Fraction)],
        lwd=1,cex=2,
-       bg=c("#f538de","#ffb4f6", "#4406e2", "#a483f7")[as.factor(metadat_pl$compartment_BCAT)])
+       col=c("black", "#DC267F", "#FFB000")[as.factor(metadat_pl$Compartment)]
+       text(display = metadat_pl$SampleID))
 
-#dark brown, grey,  nod(light pink, darkpink ), rhizo(darkest green, dark green, light green,), endo (dark purple, light purple),
-# BulkDNA ctlctl EndoPOS EndoSYBR NodPOS NodSYBR RhizoDNA RhizoPOS RhizoSYBR
+# roots = gold
+# nodules = magenta
+# ctl = white
+#active = circle
+# inactive = square
 
 legend("top",legend=c("Bulk_SoilTotal_DNA" ,  "ctl"  ,"NoduleBONCAT_Active" ,"NoduleTotal_Cells", 
                       "RhizosphereBONCAT_Active","RhizosphereTotal_Cells", "RhizosphereTotal_DNA" ,"RootsBONCAT_Active"   ,   "RootsTotal_Cells"),
