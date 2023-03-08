@@ -65,6 +65,27 @@ plot(otus.t, otus.r, xlab = "Observed No. of Species", ylab = "Rarefied No. of S
 abline(0, 1)
 out<-rarecurve(otus.t, step = 20, sample = raremax, col = "blue", cex = 0.6)
 
+## build plots
+col <- c("black")
+lty <- c("solid")
+lwd <- rep(1, 42)
+pars <- expand.grid(col = col, lty = lty, lwd = lwd, 
+                    stringsAsFactors = FALSE)
+Nmax <- sapply(out, function(x) max(attr(x, "Subsample")))
+Smax <- sapply(out, max)
+
+# save
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/16s/rarecurve.svg",width = 6, height=6 )
+plot(c(1, max(Nmax)), c(1, max(Smax)), xlab = "Number of Sequences",
+     ylab = "ASV", type = "n")
+abline(v = raremax)
+for (i in seq_along(out)) {
+  N <- attr(out[[i]], "Subsample")
+  with(pars, lines(N, out[[i]], col = col[i], lty = lty[i], lwd = lwd[i]))
+}
+
+dev.off()
 ## Convert OTU numbers to percentages ##
 #otus.perc<-otus.r/rowSums(otus.r)*100
 
