@@ -1,5 +1,5 @@
 SampleID	Fraction	BONCAT	REP	Plant
-BEADS_S67	ctl	ctl	1	NOPLANT
+BEADS_S67	beads	beads	1	NOPLANT
 C10B.DNA_S4	Bulk	DNA	1	Clover
 C10E.POS_S60	Endo	POS	1	Clover
 C10N.POS_S65	Nod	POS	1	Clover
