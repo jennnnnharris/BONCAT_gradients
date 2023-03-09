@@ -4,12 +4,10 @@
 
 library(readxl)
 library(tidyverse)
-library(lubridate)
-library(ggplot2)
-library(forcats)
 library(dplyr)
-library(Hmisc)
-library(lme4)
+library(lubridate)
+library(Hmisc) 
+library(lme4) # for generalized linear models
 library(multcompView)
 library(emmeans)
 library(multcomp)
@@ -86,16 +84,12 @@ df<-rbind(df_ast, df_fort)
 
 
 #--------calculating cells/ ul and cells/ g soil-------
-library(dplyr)
 counts<-counts%>%
   mutate(cells_per_ul_diluted = green_pos_count / Volume_taken_ul)%>%
   mutate(cells_per_ul = cells_per_ul_diluted * dilution_1_XXX)%>%
   mutate(cells_per_gram_soil= ifelse( Fraction == "Bulk" | Fraction == "Rhizo", cells_per_ul*5000, NA))
 
-# filtering for the cols we need from the surface area data
-nodules<-nodules%>% select(c("Count", "Total.Area", "Plant", "Number", "Fraction"))
-weights<-weights%>% mutate(Fraction = "Endo") %>% select("Plant", "Number", "abovegrnd_biomass_g", "Fraction")          
-
+    
 #filter data, taking just the row and cols we need
 completeFun <- function(data, desiredCols) {
   completeVec <- complete.cases(data[, desiredCols])
@@ -120,6 +114,8 @@ df$Fraction<-factor(df$Fraction, levels = c("Bulk", "Rhizo", "Endo", "Nod"))
 df<-df%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
 df$Compartment<-factor(df$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
 df<-df%>% mutate(Plant=recode(Plant, 'A17'='Medicago', 'CLO'='Clover','PEA'='Pea', .default='soil'))
+df$Fraction
+df$Compartment
 
 #-------set colors--------
 mycols = c("#45924b", "#aac581", "#fffac9", "#f2a870", "#de425b")
@@ -213,26 +209,12 @@ dev.off()
 
 #--------model n active cells---------
 # lil model of this. 
-# I would consider these counts so poisson distribution seems appropriate
-# um but poisson doesn;t fit very well becuase we have so many counts like 1 million counts is alot for her
-
-hist(rhizobulk$cells_active_per_ul)
-m1<-glm(rhizobulk$cells_active_per_ul~Plant+Fraction+Date+Plant*Fraction ,
-        data=rhizobulk,
-        family="poisson")
-summary(m1)
-plot(m1)
-
-# um but poisson doesn;t fit very well becuase we have so many counts like 1 million counts is alot for her
-# maybe i need to log transform
-
 #log transformed#
 #seems to be the best model for this
 hist(log(rhizobulk$cells_active_per_ul))
 # wooow so normal what a beauty
 m1<-lm(log(rhizobulk$cells_active_per_ul)
   ~Plant+Fraction+Plant*Fraction, data = rhizobulk)
-summary(m1)
 anova(m1)
 plot(m1)
 
@@ -241,40 +223,36 @@ plot(m1)
 #clo
 hist(log(clo$cells_active_per_ul))
 # pretty normal
-clo<-rhizobulk%>%filter(Plant=="CLO")
-m1<-lm(log(cells_active_per_ul)
-       ~Fraction, data=clo)
-summary(m1)
-plot(m1)
-# p = 1e-05
-#a17
-hist(log(a17$cells_active_per_ul))
-# ehh
-a17<-rhizobulk%>%filter(Plant=="A17")
-m1<-lm(log(cells_active_per_ul)
-            ~Fraction, data=clo)
-summary(m1)
-plot(m1)
-# p is very tiny
+clo<-rhizobulk%>%filter(Plant=="Clover")
+m1<-lm(log(clo$cells_active_per_ul)
+       ~clo$Fraction)
+anova(m1)
+# this code below does the same thing
+a<-aov(log(clo$cells_active_per_ul)
+    ~clo$Fraction)
+summary(a)
+
 #pea
 hist(log(pea$cells_active_per_ul))
 # ehh
-pea<-rhizobulk%>%filter(Plant=="PEA")
+pea<-rhizobulk%>%filter(Plant=="Pea")
 m1<-lm(log(cells_active_per_ul)
        ~Fraction, data=pea)
-summary(m1)
-plot(m1)
+anova(m1)
 # p is very tiny
 
-# differences by plants
-hist(log(rhizy$cells_active_per_ul))
-# wooow so normal what a beauty
-rhizy<-rhizobulk%>%filter(Fraction=="Rhizo")
 
-m1<-lm(log(rhizy$cells_active_per_ul)
-       ~Plant-1, data = rhizy)
-summary(m1)
-plot(m1)
+
+
+#a17
+hist(log(a17$cells_active_per_ul))
+# ehh
+a17<-rhizobulk%>%filter(Plant=="Medicago")
+m1<-lm(log(a17$cells_active_per_ul)
+            ~a17$Fraction)
+anova(m1)
+# p is very tiny
+
 
 
 #-------percent active figures-------
@@ -308,101 +286,170 @@ prop<-df %>%
   #mutate(Active = ifelse(Prop_Active<.0001, 0, 1 ))
 # data exploration
 hist(prop$Prop_Active)
+hist(log(prop$Prop_Active))
 hist(prop$n_Events_Cells)
 y<-cbind(prop$n_Events_Boncat, prop$n_failures)
 
-#mixed model
-# it could possible that because each day I ran sampled on the flow Cyto they data is slightly different
-# I should run a mixed model with allowing the intercep to vary for Date
-# the intercept not the slope because I expect the relationship between the treatments to be the same but the baseline could vary.
-# however, mixed models cannot have quasi binomial distribution. 
-  m1<-glmer(y~Plant+Fraction+Plant*Fraction+(1|Date),
-            data=prop,
-            family="binomial")
-  summary(m1)
-  plot(m1)  
-  ## residual deviance is higher than the degrees of freedom = model is over disposed
-## these should be equal. so will will do a quasi binomial instead
-# however, mixed models cannot have quasi binomial distribution. 
+# mixed models cannot have quasi binomial distribution. 
+# I need a quasibinomial model because residual deviance is higher than the degrees of freedom = model is over disposed
 # I thought about including date as a fixed effect in my quasibinomial model, but date is very correlated with fraction. 
-# quasibinomial glm
+# quasibinomial glm on success and failures
 
-# glm on success and failures
-  
-  m4<-glm(data= prop, y~Plant, family = quasibinomial)
-    #plot(m4)
-    anova(m4, test= "LRT")
-    m5<-glm(data= prop, y~Plant+Fraction, family = quasibinomial)
-    #plot(m4)
-    anova(m5, test= "LRT")
-    lrtest(m5, m4)
-    
-##
-  #             Df Deviance Resid. Df Resid. Dev        F    Pr(>F)    
-  #   NULL                        82     379136                       
-  #   Plant     4   366488        78      12648 406.4890 < 2.2e-16 ***
-  #   Fraction  3     6564        75       6084   9.7079 1.729e-05 ***
-  #    ---
-  #     Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- summary(m4)
-# Coefficients:
-  #                 Estimate Std. Error t value Pr(>|t|)    
-  #   PlantClover    -5.0073     0.9520  -5.260 1.32e-06 ***
-  #   PlantMedicago  -6.4578     1.1370  -5.680 2.43e-07 ***
-  #   PlantPea       -8.6241     1.3074  -6.596 5.25e-09 ***
-  #   Plantsoil      -6.9075     5.6773  -1.217  0.22754    
-  #   FractionRhizo  -0.3687     1.6752  -0.220  0.82639    
-  #   FractionEndo    2.8519     0.9962   2.863  0.00544 ** 
-  #   FractionNod     2.6623     0.9819   2.711  0.00831 ** 
+ m1<-glm(data= prop, y~Plant+Fraction+Plant*Fraction, family = quasibinomial)
+ anova(m1, test= "LRT")  
+ anova(m1, test= "Chisq")
+
+# Df Deviance Resid. Df Resid. Dev  Pr(>Chi)    
+# NULL                              81    20968.2              
+# Plant           3   8320.2        78    12648.0 < 2.2e-16 ***
+# Fraction        3   6564.4        75     6083.6 1.177e-15 ***
+# Plant:Fraction  6   1283.1        69     4800.5   0.02756 * 
  
- m4<-glm(data= prop, y~Plant+Fraction+Plant*Fraction-1, family = quasibinomial)
- #plot(m4)
- anova(m4, test= "LRT")
- summary(m4)
- 
- m3 <- glm(data= prop, y~Plant+Fraction, family = binomial)
- lrtest(m3)
- glm
- anova(m3, test= "Chisq")
- 
- 
- 
- 
-  
-# just look at this for each plant
-# need to find a good post hoctest
-  clo<-prop%>% filter(Plant == "Clover")
+# significant interaction 
+# break into each plant 
+# clover  
+clo<-prop%>% filter(Plant == "Clover")
   y<-cbind(clo$n_Events_Boncat, clo$n_failures)
   Fraction = clo$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT")
   
-  m3<-glm(y~Fraction, quasibinomial)
-  #plot(m3)
+# bulk verse rhizosphere
+  clo1<-clo%>% filter(Fraction!="Endo") %>% filter(Fraction!="Nod")
+  y<-cbind(clo1$n_Events_Boncat, clo1$n_failures)
+  Fraction = clo1$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT")
+    
+# bulk verse endo
+  clo1<-clo%>% filter(Fraction!="Rhizo") %>% filter(Fraction!="Nod")
+  y<-cbind(clo1$n_Events_Boncat, clo1$n_failures)
+  Fraction = clo1$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT")
   
-  # do you just subset it all the way and run liley hood ratio test?
-  anova(m3, test= "LRT")
-  summary(m3)
+# bulk verse nodules
+  clo1<-clo%>% filter(Fraction!="Rhizo") %>% filter(Fraction!="Endo")
+  y<-cbind(clo1$n_Events_Boncat, clo1$n_failures)
+  Fraction = clo1$Fraction
+    m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT")  
+
+# rhizo verse endo
+  clo1<-clo%>% filter(Fraction!="Bulk") %>% filter(Fraction!="Nod")
+  y<-cbind(clo1$n_Events_Boncat, clo1$n_failures)
+  Fraction = clo1$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT") 
   
+# rhizo verse nodules
+  clo1<-clo%>% filter(Fraction!="Bulk") %>% filter(Fraction!="Endo")
+  y<-cbind(clo1$n_Events_Boncat, clo1$n_failures)
+  Fraction = clo1$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT") 
   
+# endo verse nodules  
+  clo1<-clo%>% filter(Fraction!="Bulk") %>% filter(Fraction!="Rhizo")
+  y<-cbind(clo1$n_Events_Boncat, clo1$n_failures)
+  Fraction = clo1$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT") 
   
-  #pea
+######pea
   pea<-prop%>% filter(Plant == "Pea")
   y<-cbind(pea$n_Events_Boncat, pea$n_failures)
+  Fraction = pea$Fraction
+
+  # bulk verse rhizosphere
+  pea1<-pea %>% filter(Fraction!="Endo") %>% filter(Fraction!="Nod")
+  y<-cbind(pea1$n_Events_Boncat, pea1$n_failures)
+  Fraction = pea1$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT")
   
-  m3<-glm(y~pea$Fraction, quasibinomial)
-  anova(m3, test= "F")
-  summary(m3)
-  plot(m3)
+  # bulk verse endo
+  pea1<-pea %>% filter(Fraction!="Rhizo") %>% filter(Fraction!="Nod")
+  y<-cbind(pea1$n_Events_Boncat, pea1$n_failures)
+  Fraction = pea1$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT")
   
-  #A17
+  # bulk verse nodules
+  pea1<-pea %>% filter(Fraction!="Rhizo") %>% filter(Fraction!="Endo")
+  y<-cbind(pea1$n_Events_Boncat, pea1$n_failures)
+  Fraction = pea1$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT")  
+  
+  # rhizo verse endo
+  pea1<-pea %>% filter(Fraction!="Bulk") %>% filter(Fraction!="Nod")
+  y<-cbind(pea1$n_Events_Boncat, pea1$n_failures)
+  Fraction = pea1$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT") 
+  
+  # rhizo verse nodules
+  pea1<- pea %>% filter(Fraction!="Bulk") %>% filter(Fraction!="Endo")
+  y<-cbind(pea1$n_Events_Boncat, pea1$n_failures)
+  Fraction = pea1$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT") 
+  
+  # endo verse nodules  
+  pea1<-pea %>% filter(Fraction!="Bulk") %>% filter(Fraction!="Rhizo")
+  y<-cbind(pea1$n_Events_Boncat, pea1$n_failures)
+  Fraction = pea1$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT")   
+  
+  
+#######A17
   A17<-prop%>% filter(Plant == "Medicago")
   y<-cbind(A17$n_Events_Boncat, A17$n_failures)
-  
   Fraction = A17$Fraction
-  m2<-glm(y~Fraction, quasibinomial)
-  anova(m3, test= "F")
-  summary(m2)
-  plot(m2)
   
+# bulk verse rhizosphere
+  A171<-A17 %>% filter(Fraction!="Endo") %>% filter(Fraction!="Nod")
+  y<-cbind(A171$n_Events_Boncat, A171$n_failures)
+  Fraction = A171$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT")
+  
+# bulk verse endo
+  A171<-A17 %>% filter(Fraction!="Rhizo") %>% filter(Fraction!="Nod")
+  y<-cbind(A171$n_Events_Boncat, A171$n_failures)
+  Fraction = A171$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT")
+  
+  # bulk verse nodules
+  A171<-A17 %>% filter(Fraction!="Rhizo") %>% filter(Fraction!="Endo")
+  y<-cbind(A171$n_Events_Boncat, A171$n_failures)
+  Fraction = A171$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT")  
+  
+  # rhizo verse endo
+  A171<-A17 %>% filter(Fraction!="Bulk") %>% filter(Fraction!="Nod")
+  y<-cbind(A171$n_Events_Boncat, A171$n_failures)
+  Fraction = A171$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT") 
+  
+  # rhizo verse nodules
+  A171<- A17 %>% filter(Fraction!="Bulk") %>% filter(Fraction!="Endo")
+  y<-cbind(A171$n_Events_Boncat, A171$n_failures)
+  Fraction = A171$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT") 
+  
+  # endo verse nodules  
+  A171<-A17 %>% filter(Fraction!="Bulk") %>% filter(Fraction!="Rhizo")
+  y<-cbind(A171$n_Events_Boncat, A171$n_failures)
+  Fraction = A171$Fraction
+  m2<-glm(y~Fraction, quasibinomial)
+  anova(m2, test= "LRT") 
 
 #------Testing correlation of variables-------
   
