@@ -199,6 +199,7 @@ rownames(otus)
 colnames(otus)
 # append metadata
 
+setwd("C:/Users/Jenn/OneDrive - The Pennsylvania State University/Documents/Github/BONCAT_gradients/data")
 metadat <- read.delim("16s/metadata_w_inactive.txt", sep="\t", header = T, check.names=FALSE)
 metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule', 'ctl'='ctl'))
 metadat<-metadat[, c(1,3:6)]
@@ -593,7 +594,7 @@ dev.off()
 otus.bray<-vegdist(otu_table(ps), method = "bray")
 
 # Perform PCoA analysis of BC distances #
-otus.pcoa <- cmdscale(otus.bray, k=(ncol(otus)-1), eig=TRUE)
+otus.pcoa <- cmdscale(otus.bray, k=(55-1), eig=TRUE)
 
 # Store coordinates for first two axes in new variable #
 otus.p <- otus.pcoa$points[,1:2]
@@ -811,28 +812,24 @@ dev.off()
 
 
 
-
-
-
-
-
 #########-------------- permanova----------------#########
-otu.perm<- adonis2(otus.perc~ Compartment*BONCAT, data = metadat, permutations = 999, method="bray")
+
+otu.p.t <- t(otus.perc)
+otu.perm<- adonis2(otu.p.t~ Compartment*Fraction, data = metadat, permutations = 999, method="bray")
+
 otu.perm
 # Fraction         4   8.3386 0.59802 18.4333  0.001 ***
 #  BONCAT           2   1.2988 0.09315  5.7422  0.001 ***
 #  Fraction:BONCAT  2   0.5742 0.04118  2.5387  0.126   
 
 #analysis of similarities
-otu.ano<- anosim(otus.perc, grouping =  metadat$Compartment, permutations = 999)
+otu.ano<- anosim(otu.p.t, grouping =  metadat$Compartment, permutations = 999)
 summary(otu.ano)
 
 #test for dispersion between groups
 dispersion <- betadisper(otus.bray, group=metadat$Compartment)
 permutest(dispersion)
 plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
-#Groups     4 0.61336 0.153340 40.69    999  0.001 ***
-# non homogeneous varience :( 
 
 dispersion <- betadisper(otus.bray, group=metadat$BONCAT)
 permutest(dispersion)
@@ -848,24 +845,28 @@ plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
 
 
 ##### subset data by fraction 
-#rhizo
-test<-otus.perc[which(metadat$Fraction == "Rhizo"),]
-metadat_t<-metadat[which(metadat$Fraction == "Rhizo"),]
-otu.perm<- adonis2(test~ BONCAT, data = metadat_y, permutations = 999, method="bray")
+#rhizo active ver inactive
+test<-otu.p.t[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_Cells" & metadat$Fraction != "Total_DNA"),]
+metadat_y<-metadat[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_Cells" & metadat$Fraction != "Total_DNA") ,]
+otu.perm<- adonis2(test~ Fraction, data = metadat_y, permutations = 999, method="bray")
 otu.perm
-#BONCAT    2  0.97631 0.40122 3.6854  0.001 ***
+#rhizo active ver total DNA
+test<-otu.p.t[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_Cells" & metadat$Fraction != "Inactive"),]
+metadat_y<-metadat[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_Cells" & metadat$Fraction != "Inactive") ,]
+otu.perm<- adonis2(test~ Fraction, data = metadat_y, permutations = 999, method="bray")
+otu.perm
+
 
 #nod
-test<-otus.perc[which(metadat$Fraction == "Nod"),]
-metadat_t<-metadat[which(metadat$Fraction == "Nod"),]
-otu.perm<- adonis2(test~ BONCAT, data = metadat_t, permutations = 999, method="bray")
+
+test<-otu.p.t[which(metadat$Compartment == "Nodule" &  metadat$Fraction != "Total_Cells" ),]
+metadat_y<-metadat[which(metadat$Compartment == "Nodule" & metadat$Fraction != "Total_Cells" ),]
+otu.perm<- adonis2(test~ Fraction, data = metadat_y, permutations = 999, method="bray")
 otu.perm
-#BONCAT    1  0.11358 0.58017 9.6736  0.024 *
 
 #endo
-test<-otus.perc[which(metadat$Fraction == "Endo"),]
-metadat_t<-metadat[which(metadat$Fraction == "Endo"),]
-otu.perm<- adonis2(test~ BONCAT, data = metadat_t, permutations = 999, method="bray")
+test<-otu.p.t[which(metadat$Compartment== "Roots" & metadat$Fraction != "Total_Cells" ),]
+metadat_y<-metadat[which(metadat$Compartment == "Roots" & metadat$Fraction != "Total_Cells" ),]
+otu.perm<- adonis2(test~ Fraction, data = metadat_y, permutations = 999, method="bray")
 otu.perm
-#BONCAT    1  0.19218 0.58686 9.9433  0.014 *
-  
+
