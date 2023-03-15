@@ -140,13 +140,10 @@ ps1
 
 # subset total cell and active fraction
 ps.Total<- subset_samples(ps1,Fraction =="Total_Cells" )
-ps.Total
 otu_total<-as.data.frame(t(as.data.frame(otu_table(ps.Total))))
-colnames(otu_total)
 # boncat pos table doesn't have C7Rpos, so I'll remove that from the table
 
 otu_total<-select(otu_total, -C7R.SYBR_S19)
-colnames(otu_total)
 # length #7185
 #       C10N.SYBR_S26 C10R.SYBR_S20 C1E.SYBR_S21 C1N.SYBR_S13 
 # taxa1  139581          1430        62828       126909  
@@ -154,14 +151,11 @@ colnames(otu_total)
 # taxa3  78                0         4336        22797
 
 ps.Active<- subset_samples(ps1,Fraction =="BONCAT_Active" )
-ps.Active
 otu_active<-as.data.frame(t(as.data.frame(otu_table(ps.Active))))
-colnames(otu_active)
 ## missing some sample from sybr for C10 E and C5 N
 ## so i think I'll just remove those ones and won't have a value for inactive for those samples
 otu_active<-select(otu_active, -C10E.POS_S60, -C5N.POS_S63)
 
-colnames(otu_active)
 #sum<-rowSums(otu_active)
 # length 7185
 # taxa1 10000
@@ -271,12 +265,10 @@ geom_boxplot(aes(fill = "Fraction")) + scale_fill_manual(values = c("#CBD588", "
 dev.off()
 
 # diversity of active microbes in each fraction
-
 rich<-cbind(rich, metadat)
 rich<-as.data.frame(rich)
 colnames(rich)
 rich$Compartment<-factor(rich$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
-
 
 reorder(compartment_BCAT, -Observed)
 
@@ -292,8 +284,6 @@ rich %>%
   ylab("Number of ASVs")+
   xlab("Compartment")
 dev.off()
-
-
 
 rich<- rich %>%  filter(Plant!="NOPLANT", Fraction!="Inactive")
 
@@ -314,9 +304,6 @@ rich %>%
   ylab("Number of ASVs")+
   xlab("Compartment")
 dev.off()
-
-
-
 
 
 # look at what's in the endophyte
