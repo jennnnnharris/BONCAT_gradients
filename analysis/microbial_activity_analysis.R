@@ -242,8 +242,6 @@ anova(m1)
 # p is very tiny
 
 
-
-
 #a17
 hist(log(a17$cells_active_per_ul))
 # ehh
@@ -296,6 +294,7 @@ y<-cbind(prop$n_Events_Boncat, prop$n_failures)
 # quasibinomial glm on success and failures
 
  m1<-glm(data= prop, y~Plant+Fraction+Plant*Fraction, family = quasibinomial)
+ m1
  anova(m1, test= "LRT")  
  anova(m1, test= "Chisq")
 

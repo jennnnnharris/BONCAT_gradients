@@ -41,7 +41,7 @@ S10.DNA_S9	Bulk	DNA	1	Soil
 S2.DNA_S5	Bulk	DNA	2	Soil
 S3.DNA_S6	Bulk	DNA	3	Soil
 S8.DNA_S7	Bulk	DNA	4	Soil
-C10N.inactive	Rhizo	Inactive	1	Clover
+C10N.inactive	Nod	Inactive	1	Clover
 C10R.inactive	Rhizo	Inactive	1	Clover
 C1E.inactive	Endo	Inactive	2	Clover
 C1N.inactive	Nod	Inactive	2	Clover
@@ -53,4 +53,3 @@ C5E.inactive	Endo	Inactive	4	Clover
 C5R.inactive	Rhizo	Inactive	4	Clover
 C7E.inactive	Endo	Inactive	5	Clover
 C7N.inactive	Nod	Inactive	5	Clover
-C7R.inactive	Rhizo	Inactive	5	Clover

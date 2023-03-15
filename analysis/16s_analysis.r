@@ -89,8 +89,7 @@ dev.off()
 ## Convert OTU numbers to percentages ##
 #otus.perc<-otus.r/rowSums(otus.r)*100
 
-
-# recode some names so they are easier to understand
+######--- recode metadata----- ########
 metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
 metadat<-metadat[, c(1,3:6)]
 metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
@@ -136,12 +135,18 @@ ps1<- subset_samples(ps,Fraction !="Total_DNA" )
 ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
 any(taxa_sums(ps1) == 0)
 ps1
+
 # 7185 taxa
 
 # subset total cell and active fraction
 ps.Total<- subset_samples(ps1,Fraction =="Total_Cells" )
 ps.Total
 otu_total<-as.data.frame(t(as.data.frame(otu_table(ps.Total))))
+colnames(otu_total)
+# boncat pos table doesn't have C7Rpos, so I'll remove that from the table
+
+otu_total<-select(otu_total, -C7R.SYBR_S19)
+colnames(otu_total)
 # length #7185
 #       C10N.SYBR_S26 C10R.SYBR_S20 C1E.SYBR_S21 C1N.SYBR_S13 
 # taxa1  139581          1430        62828       126909  
@@ -151,29 +156,39 @@ otu_total<-as.data.frame(t(as.data.frame(otu_table(ps.Total))))
 ps.Active<- subset_samples(ps1,Fraction =="BONCAT_Active" )
 ps.Active
 otu_active<-as.data.frame(t(as.data.frame(otu_table(ps.Active))))
-otu_active<-rowSums(otu_active)
+colnames(otu_active)
+## missing some sample from sybr for C10 E and C5 N
+## so i think I'll just remove those ones and won't have a value for inactive for those samples
+otu_active<-select(otu_active, -C10E.POS_S60, -C5N.POS_S63)
+
+colnames(otu_active)
+#sum<-rowSums(otu_active)
 # length 7185
 # taxa1 10000
 # taxa2 0
 # taxa3 0 
 
+
 #subset
 #Inactive<- total- active
-# all the taxa that are in the total fraction but not in active are the "inactive fraction"
-# this gives all the row that have zero values, length = 4001
-inactive<-which(otu_active==0)
-otu_inactive<-otu_total[inactive,]
-#length 3945
+otu_inactive<-otu_total-otu_active
+
+# all the taxa that are higher in the active fraction than the inactive fraction (negative )are == to zero 
+
+otu_inactive[otu_inactive<0]<-0
+otu_inactive
+
+#length 7185
 #       C10N.SYBR_S26 C10R.SYBR_S20 C1E.SYBR_S21 C1N.SYBR_S13 
 # taxa1  0              47          0            0  
 # taxa2  0              0           0            0
 # taxa3  0              22          0            0
 #
 #
-
+colnames(otu_inactive)
 # change colnames
-n<-c("C10N.inactive", "C10R.inactive", "C1E.inactive"  ,"C1N.inactive" , "C1R.inactive",  "C2E.inactive" , "C2N.inactive"  ,"C2R.inactive" , "C5E.inactive", 
-"C5R.inactive",  "C7E.inactive",  "C7N.inactive",  "C7R.inactive" )
+n<-c("C10N.inactive", "C10R.inactive", "C1E.inactive"  ,"C1N.inactive" , "C1R.inactive", "C2E.inactive" , "C2N.inactive"  ,"C2R.inactive" , "C5E.inactive", 
+"C5R.inactive",  "C7E.inactive",  "C7N.inactive" )
 colnames(otu_inactive)<- n
 
 # append the original dataset by adding the inactive taxa
@@ -211,11 +226,9 @@ metadat<-select(metadat, -BONCAT)
 
 ## order metadata
 metadat<-metadat[order(metadat$SampleID),]
-metadat$SampleID
 metadat
 ## order otu table
 otus<-otus[, order(colnames(otus))]
-colnames(otus)
 
 ## Convert OTU numbers to percentages ##
 otus.perc<-otus/rowSums(otus)*100
@@ -224,7 +237,7 @@ otus.perc<-otus/rowSums(otus)*100
 #####------make phyloseq object with rarefied data + inactive fraction -------#####
 
 otus.phyloseq<- t(otus)
-head(otus.phyloseq)
+#head(otus.phyloseq)
 metadat<-as.matrix(metadat)
 y<-colnames(otus)
 rownames(metadat) <- y
@@ -594,7 +607,7 @@ dev.off()
 otus.bray<-vegdist(otu_table(ps), method = "bray")
 
 # Perform PCoA analysis of BC distances #
-otus.pcoa <- cmdscale(otus.bray, k=(55-1), eig=TRUE)
+otus.pcoa <- cmdscale(otus.bray, k=(54-1), eig=TRUE)
 
 # Store coordinates for first two axes in new variable #
 otus.p <- otus.pcoa$points[,1:2]
@@ -605,38 +618,13 @@ perc.exp<-otus.eig/(sum(otus.eig))*100
 pe1<-perc.exp[1]
 pe2<-perc.exp[2]
 
-## Plot ordination with factors coloured and shaped as you like # 
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-
-#svg(file="figures/16s/Pcoa.svg",width = 6, height=6 )
-
-windows(title="PCoA on OTUs - Bray Curtis")
-ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of 16S OTU Bray Curtis",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
-         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
-points(otus.p, col=c("black"),
-       pch=c(20,21,22,23,24)[as.factor(metadat$Fraction)],
-       lwd=1,cex=2,
-       #bg=c("#003f5c","grey", "#bc5090", "#ffa600")[as.factor(metadat$BONCAT)])
-       bg=c( "#52311f","grey", "#f538de","#ffb4f6", "#276602", "#5ef507", "#dbfcc7", "#4406e2", "#a483f7"  )[metadat$compartment_BCAT])
-
-#dark brown, grey,  nod(light pink, darkpink ), rhizo(darkest green, dark green, light green,), endo (dark purple, light purple),
-# BulkDNA ctlctl EndoPOS EndoSYBR NodPOS NodSYBR RhizoDNA RhizoPOS RhizoSYBR
-
-legend("top",legend=c("Bulk_SoilTotal_DNA" ,  "ctl"  ,"NoduleBONCAT_Active" ,"NoduleTotal_Cells", 
-                      "RhizosphereBONCAT_Active","RhizosphereTotal_Cells", "RhizosphereTotal_DNA" ,"RootsBONCAT_Active"   ,   "RootsTotal_Cells"),
-       pch=c(16,16,15,15,18, 18,17,17,17),
-       cex=1.1, 
-       col=c( "#52311f","grey", "#f538de","#ffb4f6", "#276602", "#5ef507", "#dbfcc7", "#4406e2", "#a483f7"  ))
-
-#dev.off()
-
-#------------active verse inactive---------
+#------------plant verse soil---------
 
 # subset
-p<-otus.p[which(metadat$Fraction != "Total_Cells"),]
+p<-otus.p[which(metadat$Fraction != "Total_Cells" & metadat$Fraction != "Inactive"),]
 
 # subset metadata
-metadat_in<-metadat%>% filter(Fraction !="Total_Cells") 
+metadat_in<-metadat%>% filter(Fraction !="Total_Cells" & metadat$Fraction != "Inactive" ) 
 as.factor(metadat_in$Compartment)
 as.factor(metadat_in$Fraction)
 as.factor(metadat_in$compartment_BCAT)
@@ -644,15 +632,15 @@ levels(as.factor(metadat_in$compartment_BCAT))
 levels(as.factor(metadat_in$Fraction))
 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/Pcoa.svg",width = 7, height=6 )
+svg(file="figures/16s/pcoa/Pcoa_plantvsoil_raw.svg",width = 7, height=6 )
 
 windows(title="PCoA on plant asvs- Bray Curtis", width = 7, height = 6)
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis dissimilarities",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 points(p, col=c("black"),
-       pch=c(22,21,0,24, 23 )[as.factor(metadat_in$Fraction)],
+       pch=c(22,21,0, 23 )[as.factor(metadat_in$Fraction)],
        lwd=1,cex=2,
-       bg=c("black", "#739AFF", "white", "#DC267F", "#DC267F", "#785EF0", "#785EF0" , "#785EF0", "#FFB000", "#FFB000")[as.factor(metadat_in$compartment_BCAT)])
+       bg=c("black", "#739AFF", "white", "#DC267F", "#785EF0", "#785EF0" , "#FFB000")[as.factor(metadat_in$compartment_BCAT)])
 
 
 legend("top",legend=c("beads", "Bulk_SoilTotal_DNA" ,      "neg control"   ,  "NoduleBONCAT_Active"    ,  "NoduleInactive"     ,      "RhizosphereBONCAT_Active",
@@ -664,9 +652,105 @@ legend("top",legend=c("beads", "Bulk_SoilTotal_DNA" ,      "neg control"   ,  "N
 
 dev.off()
 
+#####-------active verse inactive---------------
+
+# subset
+p<-otus.p[which(metadat$Fraction != "Total_Cells"),]
 
 
-#------------subset by groups------------
+# subset metadata
+metadat_in<-metadat%>% filter(Fraction !="Total_Cells") 
+
+metadat%>% filter(Fraction == "Inactive")
+as.factor(metadat_in$Compartment)
+as.factor(metadat_in$Fraction)
+as.factor(metadat_in$compartment_BCAT)
+levels(as.factor(metadat_in$compartment_BCAT))
+levels(as.factor(metadat_in$Fraction))
+
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/16s/pcoa/pcoa_all_raw.svg",width = 7, height=6 )
+
+windows(title="PCoA on plant asvs- Bray Curtis", width = 7, height = 6)
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis dissimilarities",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+points(p, col=c("black"),
+       pch=c(22,21,0,24, 23 )[as.factor(metadat_in$Fraction)],
+       lwd=1,cex=2,
+       bg=c("black", "#739AFF", "white", "#DC267F", "#DC267F", "#785EF0", "#785EF0" , "#785EF0", "#FFB000", "#FFB000")[as.factor(metadat_in$compartment_BCAT)])
+
+
+legend("bottom",legend=c("beads", "Bulk_SoilTotal_DNA" ,      "neg control"   ,  "NoduleBONCAT_Active"    ,  "NoduleInactive"     ,      "RhizosphereBONCAT_Active",
+                      "RhizosphereInactive","RhizosphereTotal_DNA" ,    "RootsBONCAT_Active"   ,    "RootsInactive"),
+       pch=c(15,5,0,1,2 , 1, 2 , 5, 1, 2),
+       col= c("black", "#739AFF", "black", "#DC267F", "#DC267F", "#785EF0", "#785EF0" , "#785EF0", "#FFB000", "#FFB000"),
+       bty = "n",
+       inset = c(.05, 0))
+
+dev.off()
+
+
+
+##########-------run a new pcoa on just soil <3--------###########
+######forget this pc3 and pc 4 stufff for rn
+ps
+ps2<-subset_samples(ps, Compartment !=  "Nodule" & Compartment != "Roots")
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+
+# Perform PCoA analysis of BC distances #
+otus.pcoa <- cmdscale(otus.bray, k=(28-1), eig=TRUE)
+
+# Store coordinates for first two axes in new variable #
+otus.p <- otus.pcoa$points[,1:2]
+
+# Calculate % variance explained by each axis #
+otus.eig<-otus.pcoa$eig
+perc.exp<-otus.eig/(sum(otus.eig))*100
+pe1<-perc.exp[1]
+pe2<-perc.exp[2]
+
+# subset metadata
+metadat2<-metadat%>% filter(Compartment !=  "Nodule" & Compartment != "Roots") 
+
+as.factor(metadat2$Compartment)
+as.factor(metadat2$Fraction)
+as.factor(metadat2$compartment_BCAT)
+levels(as.factor(metadat2$compartment_BCAT))
+levels(as.factor(metadat2$Fraction))
+
+#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/16s/pcoa/soil_raw.svg",width = 6, height=6 )
+windows(title="PCoA on asvs- Bray Curtis", width = 7, height = 6)
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+points(otus.p[,1:2],
+       pch=c(22,21,0,24, 25, 23)[as.factor(metadat2$Fraction)],
+       lwd=1,cex=2,
+       bg=c("black","#739AFF", "white", "#785EF0", "#785EF0",  "#785EF0", "#785EF0" )[as.factor(metadat2$compartment_BCAT)])
+
+# bulk soil = blue
+# rhizzo = purple
+# ctl = white
+# bead = black
+# active = circle
+# inactive = trangle
+legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR control",  "Rhizosphere BONCAT_Active" , "Rhizosphere Inactive",  "Rhizosphere Total DNA"), 
+       pch=c(15,5, 0, 1,2,5),
+       cex=1.1, 
+       col=c("black", "#739AFF",  "black", "#785EF0", "#785EF0",  "#785EF0"),
+       bty = "n")
+
+dev.off()
+
+
+
+
+# pc 3 and 4
 # Store coordinates for axes 3 adn 4 in new variable #
 otus.p <- otus.pcoa$points[,1:4]
 
@@ -857,16 +941,27 @@ otu.perm<- adonis2(test~ Fraction, data = metadat_y, permutations = 999, method=
 otu.perm
 
 
-#nod
-
+#nod active verse inactive
 test<-otu.p.t[which(metadat$Compartment == "Nodule" &  metadat$Fraction != "Total_Cells" ),]
 metadat_y<-metadat[which(metadat$Compartment == "Nodule" & metadat$Fraction != "Total_Cells" ),]
 otu.perm<- adonis2(test~ Fraction, data = metadat_y, permutations = 999, method="bray")
 otu.perm
 
-#endo
+#endo active verse inactive
 test<-otu.p.t[which(metadat$Compartment== "Roots" & metadat$Fraction != "Total_Cells" ),]
 metadat_y<-metadat[which(metadat$Compartment == "Roots" & metadat$Fraction != "Total_Cells" ),]
 otu.perm<- adonis2(test~ Fraction, data = metadat_y, permutations = 999, method="bray")
 otu.perm
 
+
+#active roots verse nodules
+test<-otu.p.t[which(metadat$Compartment != "Rhizosphere" &  metadat$Compartment != "Bulk_Soil" & metadat$Fraction == "BONCAT_Active"),]
+metadat_y<-metadat[which(metadat$Compartment != "Rhizosphere" & metadat$Compartment != "Bulk_Soil" &   metadat$Fraction == "BONCAT_Active") ,]
+otu.perm<- adonis2(test~ Compartment, data = metadat_y, permutations = 999, method="bray")
+otu.perm
+
+#active roots verse rhizo
+test<-otu.p.t[which(metadat$Compartment != "Rhizosphere" &  metadat$Compartment != "Bulk_Soil" & metadat$Fraction == "BONCAT_Active"),]
+metadat_y<-metadat[which(metadat$Compartment != "Rhizosphere" & metadat$Compartment != "Bulk_Soil" &   metadat$Fraction == "BONCAT_Active") ,]
+otu.perm<- adonis2(test~ Compartment, data = metadat_y, permutations = 999, method="bray")
+otu.perm
