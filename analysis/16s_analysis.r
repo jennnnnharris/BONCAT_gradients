@@ -264,7 +264,7 @@ setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burg
 # diversity 
 rich<-estimate_richness(ps, measures = c("Observed", "Shannon", "Simpson", "InvSimpson" ))
 
-svg(file="figures/16s/diversity.svg",width = 10, height=6 )
+svg(file="figures/16s/diversity.svg",width = 10, height=4 )
 #windows()
 plot_richness(ps, "Fraction", measures = c("Observed","Shannon", "Simpson", "InvSimpson")) +
 geom_boxplot(aes(fill = "Fraction")) + scale_fill_manual(values = c("#CBD588", "#5F7FC7", "orange","#DA5724", "#508578"))
@@ -278,17 +278,46 @@ colnames(rich)
 rich$Compartment<-factor(rich$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
 
 
-svg(file="figures/16s/alpha_diversity.svg",width = 5, height=4 )
+reorder(compartment_BCAT, -Observed)
+
+svg(file="figures/16s/total_alpha_diversity.svg",width = 5, height=4 )
 windows()
 rich %>%
-  filter(BONCAT!="DNA", Fraction!="ctl")%>%
-  ggplot(aes(x=compartment_BCAT, y=Observed))+
+  filter(Plant!="NOPLANT", Fraction!="Inactive", Fraction!="BONCAT_Active")%>%
+  ggplot(aes(x=reorder(compartment_BCAT,-Observed), y=Observed, fill = Fraction))+
   geom_boxplot() +
-  #scale_fill_manual(values = c("grey27", "lightgrey"))+
-  #geom_jitter(width = .1, size=1 )+
+  scale_fill_manual(values = c("grey27", "lightgrey"))+
+  geom_jitter(width = .1, size=1 )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
-  ylab("Number of ASVs")
+  ylab("Number of ASVs")+
+  xlab("Compartment")
 dev.off()
+
+
+
+rich<- rich %>%  filter(Plant!="NOPLANT", Fraction!="Inactive")
+
+rich$compartment_BCAT <-factor(rich$compartment_BCAT, levels = c("Bulk_SoilTotal_DNA", "RhizosphereTotal_DNA", "RhizosphereTotal_Cells", "RhizosphereBONCAT_Active",
+           "RootsTotal_Cells"   ,  "RootsBONCAT_Active" , "NoduleTotal_Cells" ,  "NoduleBONCAT_Active" ))          
+
+# total + active 
+svg(file="figures/16s/active_alpha_diversity_2.svg",width = 6, height=4 )
+windows()
+rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
+  ggplot(aes(x=compartment_BCAT, y=Observed, fill = Fraction, col= Fraction))+
+  geom_boxplot() +
+  scale_colour_manual(values = c( "orange",  "black", "black"))+
+  scale_fill_manual( values = c("gold", "grey27", "lightgrey"))+
+  geom_jitter(width = .1, size=1 )+
+  theme(axis.text.x = element_text(angle=60, hjust=1))+
+  ylab("Number of ASVs")+
+  xlab("Compartment")
+dev.off()
+
+
+
+
 
 # look at what's in the endophyte
 
