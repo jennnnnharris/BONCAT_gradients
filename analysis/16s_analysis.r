@@ -685,7 +685,7 @@ levels(as.factor(metadat_in$compartment_BCAT))
 levels(as.factor(metadat_in$Fraction))
 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/pcoa/pcoa_all_raw.svg",width = 7, height=6 )
+#svg(file="figures/16s/pcoa/pcoa_all_raw.svg",width = 7, height=6 )
 
 windows(title="PCoA on plant asvs- Bray Curtis", width = 7, height = 6)
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis dissimilarities",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
@@ -764,157 +764,12 @@ legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR cont
 dev.off()
 
 
-
-
-# pc 3 and 4
-# Store coordinates for axes 3 adn 4 in new variable #
-otus.p <- otus.pcoa$points[,1:4]
-
-# subset
-plant.p<-otus.p[which(metadat$Fraction != "Total_Cells"),]
-plant.p<-plant.p[which(metadat_in$Compartment !="Rhizosphere" & metadat_in$Compartment !="Bulk_Soil" ),]
-
-# Calculate % variance explained by each axis #
-otus.eig<-otus.pcoa$eig
-perc.exp<-otus.eig/(sum(otus.eig))*100
-pe1<-perc.exp[1]
-pe2<-perc.exp[2]
-pe3<-perc.exp[3]
-pe4<-perc.exp[4]
-pe5<-perc.exp[5]
-#to make coloring things easier I'm gong to added a combined fractionXboncat column no sure if i need this
-metadat_pl<-metadat%>% filter(Compartment !="Rhizosphere") %>% filter(Compartment!="Bulk_Soil") %>% filter(Fraction != "Total_Cells")
-
-as.factor(metadat_pl$Fraction)
-as.factor(metadat_pl$Compartment)
-as.factor(metadat_pl$compartment_BCAT)
-## Plot ordination with factors coloured and shaped as you like # 
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/Pc1.pc2.plants.svg",width = 6, height=6 )
-windows(title="PCoA on plant asvs- Bray Curtis", width = 7, height = 6)
-ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of 16S OTU Bray Curtis",xlab=paste("PCoA1 (",round(pe1, 2),"% variance explained)"),
-         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
-points(plant.p,
-       pch=c(22,21,0,24)[as.factor(metadat_pl$Fraction)],
-       lwd=1,cex=2,
-       bg=c("black", "white", "#DC267F", "#DC267F",  "#FFB000", "#FFB000")[as.factor(metadat_pl$compartment_BCAT)])
-# roots = gold
-# nodules = magenta
-# ctl = white
-#active = circle
-# inactive = trangle
-
-legend("top",legend=c("Flow cyto control",  " PCR control",  "NoduleBONCAT_Active" , "NoduleInactive",  "RootsBONCAT_Active",  "RootsInactive"), 
-       pch=c(15,0,1,2,1,2 ),
-       cex=1.1, 
-       col=c("black", "black", "#DC267F", "#DC267F",  "#FFB000", "#FFB000"  ),
-       inset = c(.2, 0),
-       bty = "n")
-
-dev.off()
-
-#############--------- plants pc3 pc 4--------------------
-
-## Plot ordination with factors coloured and shaped as you like # 
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-#svg(file="figures/16s/Pc3.pc4.plants.svg",width = 7, height=6 )
-
-windows(title="PCoA on plant asvs- Bray Curtis", width = 7, height = 6)
-ordiplot(otus.pcoa,choices=c(3,4), type="none", main="PCoA of 16S OTU Bray Curtis",xlab=paste("PCoA3 (",round(pe3, 2),"% variance explained)"),
-         ylab=paste("PCoA4 (",round(pe4,2),"% variance explained)"))
-points(plant.p[,3:4],
-       pch=c(22,21,0,24)[as.factor(metadat_pl$Fraction)],
-       lwd=1,cex=2,
-       bg=c("black", "white", "#DC267F", "#DC267F",  "#FFB000", "#FFB000")[as.factor(metadat_pl$compartment_BCAT)])
-# roots = gold
-# nodules = magenta
-# ctl = white
-#active = circle
-# inactive = trangle
-
-legend("top",legend=c("Flow cyto control",  " PCR control",  "NoduleBONCAT_Active" , "NoduleInactive",  "RootsBONCAT_Active",  "RootsInactive"), 
-       pch=c(15,0,1,2,1,2 ),
-       cex=1.1, 
-       col=c("black", "black", "#DC267F", "#DC267F",  "#FFB000", "#FFB000"  ),
-       inset = c(.2, 0),
-       bty = "n")
-
-dev.off()
-
-##################### soil and rhizosphere #############
-# Store coordinates for axes 3 adn 4 in new variable #
-otus.p <- otus.pcoa$points[,1:4]
-
-# subset
-soil.p<-otus.p[which(metadat$Fraction != "Total_Cells"),]
-soil.p<-soil.p[which(metadat_in$Compartment !="Nodule" & metadat_in$Compartment !="Roots" ),]
-
-# Calculate % variance explained by each axis #
-otus.eig<-otus.pcoa$eig
-perc.exp<-otus.eig/(sum(otus.eig))*100
-pe1<-perc.exp[1]
-pe2<-perc.exp[2]
-pe3<-perc.exp[3]
-pe4<-perc.exp[4]
-pe5<-perc.exp[5]
-#to make coloring things easier I'm gong to added a combined fractionXboncat column no sure if i need this
-metadat_so<-metadat%>% filter(Compartment !="Nodule") %>% filter(Compartment!="Roots") %>% filter(Fraction != "Total_Cells")
-
-as.factor(metadat_so$Fraction)
-as.factor(metadat_so$Compartment)
-as.factor(metadat_so$compartment_BCAT)
-## Plot ordination with factors coloured and shaped as you like # 
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/Pc2.pc3.soil.svg",width = 6, height=6 )
-windows(title="PCoA on plant asvs- Bray Curtis", width = 7, height = 6)
-ordiplot(otus.pcoa,choices=c(2,3), type="none", main="PCoA of Bray Curtis",xlab=paste("PCoA2(",round(pe2, 2),"% variance explained)"),
-         ylab=paste("PCoA3 (",round(pe3,2),"% variance explained)"))
-points(soil.p[,2:3],
-       pch=c(22,21,0,24, 23)[as.factor(metadat_so$Fraction)],
-       lwd=1,cex=2,
-       bg=c("black","#739AFF", "white", "#785EF0", "#785EF0",  "#785EF0")[as.factor(metadat_so$compartment_BCAT)])
-# bulk soil = blue
-# rhizzo = purple
-# ctl = white
-# bead = black
-# active = circle
-# inactive = trangle
-legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR control",  "Rhizosphere BONCAT_Active" , "Rhizosphere Inactive",  "Rhizosphere Total DNA"), 
-       pch=c(15,5, 0, 1,2,5),
-       cex=1.1, 
-       col=c("black", "#739AFF",  "black", "#785EF0", "#785EF0",  "#785EF0"),
-       bty = "n")
-
-dev.off()
-
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/Pc3.pc4.soil.svg",width = 6, height=6 )
-windows(title="PCoA on plant asvs- Bray Curtis", width = 7, height = 6)
-ordiplot(otus.pcoa,choices=c(3,4), type="none", main="PCoA of 16S OTU Bray Curtis",xlab=paste("PCoA3(",round(pe3, 2),"% variance explained)"),
-         ylab=paste("PCoA4 (",round(pe4,2),"% variance explained)"))
-points(soil.p[,3:4],
-       pch=c(22,21,0,24, 23)[as.factor(metadat_so$Fraction)],
-       lwd=1,cex=2,
-       bg=c("black","#739AFF", "white", "#785EF0", "#785EF0",  "#785EF0")[as.factor(metadat_so$compartment_BCAT)])
-# bulk soil = blue
-# rhizzo = purple
-# ctl = white
-# bead = black
-# active = circle
-# inactive = trangle
-legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR control",  "Rhizosphere BONCAT_Active" , "Rhizosphere Inactive",  "Rhizosphere Total DNA"), 
-       pch=c(15,5, 0, 1,2,5),
-       cex=1.1, 
-       col=c("black", "#739AFF",  "black", "#785EF0", "#785EF0",  "#785EF0"),
-       bty = "n")
-
-dev.off()
-
-
-
 #########-------------- permanova----------------#########
 
+
+
 otu.p.t <- t(otus.perc)
+nrow(otu.p.t)
 otu.perm<- adonis2(otu.p.t~ Compartment*Fraction, data = metadat, permutations = 999, method="bray")
 
 otu.perm

@@ -42,12 +42,16 @@ qiime demux summarize \
 #trimming adapters
 # illumina AGATCGGAAGAGC
 
+# slightly edited:
+
 qiime cutadapt trim-paired \
     --i-demultiplexed-sequences 16S.qza  \
-    --p-cores 1 \
-    --p-adapter-f ^GTGYCAGCMGCCGCGGTAA...AAACTYAAAKRAATTGRCGG \
-    --p-adapter-r ^CCGYCAATTYMTTTRAGTTT...TTACCGCGGCKGCTGRCAC \
-    --p-error-rate 0.1 \
+    --p-cores -6 \
+    --p-adapter-f GTGYCAGCMGCCGCGGTAA \
+    --p-adapter-r GGACTACNVGGGTWTCTAA \
+    --p-error-rate 0.2 \
+    --p-match-adapter-wildcards \
+    --p-discard-untrimmed \
     --p-overlap 3 \
     --verbose \
     --o-trimmed-sequences 16Strimmed.qza
@@ -63,7 +67,6 @@ qiime cutadapt trim-paired \
 #library(Biostrings)
 # CCGTCAATTCMTTTRAGTTT...CCGCGGCKGCTGGCAC
 #reverseComplement(DNAString("GTGCCAGCMGCCGCGG...AAACTYAAAKGAATTGACGG"))
-
 
 qiime cutadapt trim-paired \
   --p-cores 6 \
@@ -93,7 +96,7 @@ qiime dada2 denoise-paired \
     --p-max-ee-f 2 \
     --p-max-ee-r 4 \
     --p-n-reads-learn 1000000 \
-    --p-chimera-method pooled \
+    --p-chimera-method consensus \
     --o-table ./asvs/table-dada2.qza \
     --o-representative-sequences ./asvs/trimmed.dada2.qza \
     --o-denoising-stats ./asvs/stats.dada2.qza

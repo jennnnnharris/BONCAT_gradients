@@ -18,16 +18,18 @@ source activate qiime2-2022.2
 
 cd /gpfs/group/ltb5167/default/JennHarris/BONCAT_16S
 
+# try decreasing length  to wear 25th percentile drops below 30
+
 qiime dada2 denoise-paired \
     --i-demultiplexed-seqs ./16S.trimmed.primer.qza \
     --p-n-threads 0 \
     --p-trunc-q 2 \
-    --p-trunc-len-f 220 \
-    --p-trunc-len-r 220 \
+    --p-trunc-len-f 210 \
+    --p-trunc-len-r 210 \
     --p-max-ee-f 2 \
-    --p-max-ee-r 4 \
+    --p-max-ee-r 2 \
     --p-n-reads-learn 1000000 \
-    --p-chimera-method pooled \
+    --p-chimera-method consensus \
     --o-table table-dada2.qza \
     --o-representative-sequences ./asvs/trimmed.dada2.qza \
     --o-denoising-stats ./asvs/stats.dada2.qza
