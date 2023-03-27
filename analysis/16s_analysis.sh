@@ -13,7 +13,7 @@
 #logon to PSU cluster
 ssh jeh6121@submit.aci.ics.psu.edu
 #start interactive job
-qsub -I -A open -N filter -l nodes=1:ppn=10 -l pmem=8gb -l walltime=1:00:00
+qsub -I -A open -N filter -l nodes=1:ppn=10 -l pmem=8gb -l walltime=2:00:00
 # go to work directory
 cd /gpfs/group/ltb5167/default/JennHarris/BONCAT_16S
 #start conda
@@ -91,10 +91,10 @@ qiime dada2 denoise-paired \
     --i-demultiplexed-seqs ./16S.trimmed.primer.qza \
     --p-n-threads 0 \
     --p-trunc-q 2 \
-    --p-trunc-len-f 220 \
-    --p-trunc-len-r 220 \
+    --p-trunc-len-f 205 \
+    --p-trunc-len-r 205 \
     --p-max-ee-f 2 \
-    --p-max-ee-r 4 \
+    --p-max-ee-r 5 \
     --p-n-reads-learn 1000000 \
     --p-chimera-method consensus \
     --o-table ./asvs/table-dada2.qza \

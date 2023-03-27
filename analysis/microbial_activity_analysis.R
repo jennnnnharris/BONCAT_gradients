@@ -295,6 +295,7 @@ y<-cbind(prop$n_Events_Boncat, prop$n_failures)
 
  m1<-glm(data= prop, y~Plant+Fraction+Plant*Fraction, family = quasibinomial)
  m1
+ 
  anova(m1, test= "LRT")  
  anova(m1, test= "Chisq")
 
