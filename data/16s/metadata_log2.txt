@@ -1,0 +1,13 @@
+SampleID	Fraction	REP
+C10N	Nod	1
+C10R	Rhizo	1
+C1E	Endo	2
+C1N	Nod	2
+C1R	Rhizo	2
+C2E	Endo	3
+C2N	Nod	3
+C2R	Rhizo	3
+C5E	Endo	4
+C5R	Rhizo	4
+C7E	Endo	5
+C7N	Nod	5

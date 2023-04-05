@@ -108,7 +108,7 @@ Workshop_taxo <- tax_table(as.matrix(taxon))
 ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
 
 #test it worked
-sample_names(ps)
+#sample_names(ps)
 print(ps)
 # 15027 taxa
 
@@ -125,19 +125,37 @@ ps
 otus<-as.data.frame(t(as.data.frame(otu_table(ps))))
 taxon<-as.data.frame(tax_table(ps))
 
-#################------ calculating inactive fraction---------------####
+
+#################------ fold change total to active---------------####
 #### remove taxa from bulk soil
-ps1<- subset_samples(ps,Fraction !="Total_DNA" )
+ps1<- subset_samples(ps,Fraction !="Total_DNA"& Fraction!="beads" & Fraction !="ctl" ) 
 ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
 any(taxa_sums(ps1) == 0)
 ps1
+# 6189 taxa
 
-# 7185 taxa
+#Who are the most abundant taxa minus the total DNA
+#who are most abundant taxa
+topN = 200
+most_abundant_taxa = sort(taxa_sums(ps1), TRUE)[1:topN]
+print(most_abundant_taxa)
+Top_tax = prune_taxa(names(most_abundant_taxa), ps1)
+length(get_taxa_unique(Top_tax, "Class"))
+length(get_taxa_unique(Top_tax, "Phyla"))
+length(get_taxa_unique(Top_tax, "Genus"))
+length(get_taxa_unique(Top_tax, "Family"))
+tax_table(Top_tax)
+otu_table(Top_tax)
+
+
 
 # subset total cell and active fraction
 ps.Total<- subset_samples(ps1,Fraction =="Total_Cells" )
 otu_total<-as.data.frame(t(as.data.frame(otu_table(ps.Total))))
 # boncat pos table doesn't have C7Rpos, so I'll remove that from the table
+
+head(otu_total)
+
 
 otu_total<-select(otu_total, -C7R.SYBR_S19)
 # length #7185
@@ -152,6 +170,7 @@ otu_active<-as.data.frame(t(as.data.frame(otu_table(ps.Active))))
 ## so i think I'll just remove those ones and won't have a value for inactive for those samples
 otu_active<-select(otu_active, -C10E.POS_S60, -C5N.POS_S63)
 
+head(otu_active)
 #sum<-rowSums(otu_active)
 # length 7185
 # taxa1 10000
@@ -159,28 +178,164 @@ otu_active<-select(otu_active, -C10E.POS_S60, -C5N.POS_S63)
 # taxa3 0 
 
 
-#subset
+##------- log fold change from active to inactive ----------
+
+#what do you do for things that are not present in total?
+# can we just add 1 to everything?
+
+otu_log2<-log2(otu_active+1/(otu_total+1))
+
+
+n<-c("C10N", "C10R" ,"C1E" , "C1N" , "C1R" , "C2E" , "C2N" , "C2R" , "C5E" , "C5R" , "C7E" , "C7N" )
+colnames(otu_log2)<-n
+head(otu_log2)
+#zero in numerator = not present in active = -inf
+
+#####------make phyloseq object with log2 data -------#####
+
+otus.phyloseq<- t(otu_log2)
+metadat_l<- read.delim("16s/metadata_log2.txt", sep="\t", header = T, check.names=FALSE)
+y<-colnames(otu_log2)
+rownames(metadat_l) <- y
+metadat_l<-as.data.frame(metadat_l)
+
+
+# check distribution
+otu_log2
+hist(otu_log2$C10N)
+hist(otu_log2$C10R)
+hist(otu_log2$C1E)
+
+# select the top taxa by relative abundance
+# i did this above
+
+otu_table(Top_tax)
+df<-as.data.frame(tax_table(Top_tax))
+dim(df)
+#make asvs column to join by
+asvs<-row.names(df)
+df<-mutate(df, asvs=asvs)
+asvs<-row.names(otu_log2)
+otu_log2<-mutate(otu_log2, asvs=asvs)
+
+#filter the log2 dataset by the top taxa
+
+dfl<-left_join(df, otu_log2, by= "asvs")
+
+# now make  heatmap of top taxa
+# this is from the mesocosm paper
+### Phylogeny Ordered Heatmap @ 24 wks
+
+# Prepare the data-Calculate median strain fitness for each treatment @ 24wks and create it into a single dataframe with a column for each treatment and a row for each strain. 
+fitness<-meso_fit_long %>% filter(Time =="24wk") %>% group_by(Trt,strain) %>% summarise_if(is.numeric,median) %>% pivot_wider(names_from = Trt,values_from = fitness)
+fitness$strain<- as.character(fitness$strain)
+fitness$strain <- gsub("X","",fitness$strain) # get rid of the X's in front of the strains
+fitness$strain <- gsub("USDA","",fitness$strain) # get rid of the USDA's in front of the strains
+
+#library (gplots)
+library(ape)
+## Read in the tree file created by Brendan
+tree = read.tree('../data/tree.nw')
+
+### there are some discrepancies in strain names that need to be fixed...
+tree$tip.label[tree$tip.label=="KH46c"]<-"KH46C"
+tree$tip.label[tree$tip.label=="HM006-1"]<-"HM006.1"
+tree$tip.label[tree$tip.label=="KH35c"]<-"KH35C"
+tree$tip.label[tree$tip.label=="USDA1021"]<-"1021"
+tree$tip.label[tree$tip.label=="USDA1157"]<-"1157"
+
+# load in teh function for making a heatmap with the tree #
+heatmap.phylo <- function(x, Rowp, Colp, ...) {
+  l = length(seq(-4.9, 5, 0.1))
+  pal = colorRampPalette(c('#2166ac', '#f7f7f7', '#b2182b'))(l)
+  row_order = Rowp$tip.label[Rowp$edge[Rowp$edge[, 2] <= Ntip(Rowp), 2]] 
+  col_order = Colp$tip.label[Colp$edge[Colp$edge[, 2] <= Ntip(Colp), 2]] 
+  x <- x[row_order, col_order]
+  xl <- c(0.5, ncol(x)+0.5)
+  yl <- c(0.5, nrow(x)+0.5)
+  layout(matrix(c(0,1,0, 2,3,4, 0,5,0), nrow=3, byrow=TRUE),
+         width=c(3.5,    4.5, 1),
+         height=c(0.2, 3, 0.18))
+  par(mar=rep(0,4))
+  plot(Colp, direction="downwards", show.tip.label=FALSE,
+       xaxs="i", x.lim=xl)
+  par(mar=rep(0,4))
+  plot(Rowp, direction="rightwards", show.tip.label=FALSE, 
+       yaxs="i", y.lim=yl)
+  lpp = .PlotPhyloEnv$last_plot.phylo 
+  segments(lpp$xx[1:Ntip(Rowp)], lpp$yy[1:Ntip(Rowp)], par('usr')[2],
+           lpp$yy[1:Ntip(Rowp)], lty=3, col='grey50')
+  par(mar=rep(0,4), xpd=TRUE)
+  image((1:ncol(x))-0.5, (1:nrow(x))-0.5, t(x), col=pal,
+        xaxs="i", yaxs="i", axes=FALSE, xlab="",ylab="",breaks=seq(-5,5,0.1))
+  par(mar=rep(0,4))
+  plot(NA, axes=FALSE, ylab="", xlab="", yaxs="i", xlim=c(0,2), ylim=yl)
+  text(rep(0,nrow(x)),1:nrow(x), row_order, pos=4, family='Helvetica',
+       cex=1, xpd=NA)
+  par(mar=rep(0,4))
+  plot(NA, axes=FALSE, ylab="", xlab="", xaxs="i", ylim=c(0,2), xlim=xl)
+  text(1:ncol(x),rep(2,ncol(x)), col_order, srt=90, adj=c(1,.5), family='Helvetica',
+       cex=1.5)
+}
+
+# Create the matrix and get the column dendrogram for the heatmap from it.
+m = structure(as.matrix(fitness[, -1]),
+              dimnames=list(unlist(fitness[, 'strain']),
+                            unlist(names(fitness)[-1])))
+
+col_dendro = as.dendrogram(hclust(dist(t(m))))
+
+# And make the plot....
+pdf(file="../figures/Fig2_heatmap24wk_Phylo.pdf",width = 5,height=8, useDingbats=FALSE)
+heatmap.phylo(x = m, Rowp = tree, Colp = as.phylo(as.hclust(col_dendro)))
+dev.off()
+
+
+
+
+
+
+# select top taxa but select the taxa with the biggest change?
+
+
+
+#import it phyloseq
+Workshop_OTU <- otu_table(as.matrix(otus.phyloseq), taxa_are_rows = FALSE)
+Workshop_metadat <- sample_data(metadat_l)
+Workshop_taxo <- tax_table(as.matrix(taxon)) # this taxon file is from the prev phyloseq object length = 14833
+psl <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
+
+#test it worked
+sample_names(psl)
+print(psl)
+# 7185 taxa because we didn't include anything that wasn't rhizo, nodule or end
+
+
+
+
+
+
+
+
+
+
+
+
+##---- calculating inactive fraction-------
 #Inactive<- total- active
 otu_inactive<-otu_total-otu_active
-
 # all the taxa that are higher in the active fraction than the inactive fraction (negative )are == to zero 
-
 otu_inactive[otu_inactive<0]<-0
 otu_inactive
-
 #length 7185
 #       C10N.SYBR_S26 C10R.SYBR_S20 C1E.SYBR_S21 C1N.SYBR_S13 
 # taxa1  0              47          0            0  
 # taxa2  0              0           0            0
 # taxa3  0              22          0            0
-#
-#
-colnames(otu_inactive)
 # change colnames
 n<-c("C10N.inactive", "C10R.inactive", "C1E.inactive"  ,"C1N.inactive" , "C1R.inactive", "C2E.inactive" , "C2N.inactive"  ,"C2R.inactive" , "C5E.inactive", 
 "C5R.inactive",  "C7E.inactive",  "C7N.inactive" )
 colnames(otu_inactive)<- n
-
 # append the original dataset by adding the inactive taxa
 #make an asvs col to join by
 y<-row.names(otus)
@@ -199,11 +354,8 @@ otus
 # make all the asvs that are NA in the inactive fraction zeros
 otus[is.na(otus)] <- 0
 
-#just checking the row names and col names look right
-rownames(otus)
-colnames(otus)
-# append metadata
 
+# append metadata
 setwd("C:/Users/Jenn/OneDrive - The Pennsylvania State University/Documents/Github/BONCAT_gradients/data")
 metadat <- read.delim("16s/metadata_w_inactive.txt", sep="\t", header = T, check.names=FALSE)
 metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule', 'ctl'='ctl'))
@@ -358,10 +510,6 @@ dim(filter(root_active, sum>1))
 #check n taxa
 rank_names(ps)
 
-#interacting with phyloseq object
-sample_variables(ps)
-length(sample_variables(ps))
-
 #what phyla are here?
 rank_names(ps)
 get_taxa_unique(ps, "Phyla")
@@ -388,7 +536,7 @@ GP20 = prune_taxa(names(most_abundant_taxa), ps)
 length(get_taxa_unique(GP20, "Class"))
 print(get_taxa_unique(GP20, "Phyla"))
 print(get_taxa_unique(GP20, "Family"))
-tax_table(GP20)
+abundant_tax<-tax_table(GP20)
 
 # who is in the negative PCR ctl?
 #subset
@@ -409,7 +557,7 @@ print(get_taxa_unique(ctl20, "Phyla"))
 get_taxa_unique(ctl20, "Genus")
 get_taxa_unique(ctl20, "Family")
 
-#beads
+#who is in the flow cytometer ctl?
 #subset
 ctl<-subset_samples(ps, SampleID=="BEADS_S67")
 sample_variables(ps)
@@ -429,7 +577,7 @@ print(get_taxa_unique(ctl20, "Phyla"))
 get_taxa_unique(ctl20, "Genus")
 get_taxa_unique(ctl20, "Family")
 
-#nodule
+#who is in the nodule?
 #subset
 nod<-subset_samples(ps, Compartment=="Nodule")
 
@@ -452,7 +600,7 @@ get_taxa_unique(nod20, "Class")
 tax_table(nod20)
 
 
-######3.  import percent abundance into phyloseq #####
+######3.------  import percent abundance into phyloseq for figure ----- #####
 
 otus.phyloseq<- t(otus.perc)
 
@@ -528,7 +676,6 @@ other <- 100-rowSums(phyl.perc)
 phyl.perc<- cbind(phyl.perc, other)
 phyl.perc<-as.data.frame(phyl.perc)
 phyl.perc<-cbind(metadat, phyl.perc)
-
 
 
 # data wrangling  
