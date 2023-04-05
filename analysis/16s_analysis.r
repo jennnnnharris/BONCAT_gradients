@@ -19,15 +19,12 @@ BiocManager::install("Heatplus")
 
 ### Load required libraries ###
 
-library(gplots)
-library(ggplot2)
+library(tidyverse)
 library(vegan)
-library(plyr)
 library(RColorBrewer)
 library(reshape2)
 library(scales)
 library(data.table)
-library(dplyr)
 library(phyloseq)
 library(DT)
 library(Heatplus)
@@ -86,8 +83,7 @@ for (i in seq_along(out)) {
 }
 
 dev.off()
-## Convert OTU numbers to percentages ##
-#otus.perc<-otus.r/rowSums(otus.r)*100
+
 
 ######--- recode metadata----- ########
 metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
@@ -254,7 +250,6 @@ print(ps)
 # set wd for figures
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 
-
 # diversity 
 rich<-estimate_richness(ps, measures = c("Observed", "Shannon", "Simpson", "InvSimpson" ))
 
@@ -276,12 +271,12 @@ svg(file="figures/16s/total_alpha_diversity.svg",width = 5, height=4 )
 windows()
 rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive", Fraction!="BONCAT_Active")%>%
-  ggplot(aes(x=reorder(compartment_BCAT,-Observed), y=Observed, fill = Fraction))+
+  ggplot(aes(x=reorder(compartment_BCAT,-Observed), y=Shannon, fill = Fraction))+
   geom_boxplot() +
   scale_fill_manual(values = c("grey27", "lightgrey"))+
   geom_jitter(width = .1, size=1 )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
-  ylab("Number of ASVs")+
+  #ylab()+
   xlab("Compartment")
 dev.off()
 
@@ -295,13 +290,13 @@ svg(file="figures/16s/active_alpha_diversity_2.svg",width = 6, height=4 )
 windows()
 rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
-  ggplot(aes(x=compartment_BCAT, y=Observed, fill = Fraction, col= Fraction))+
+  ggplot(aes(x=compartment_BCAT, y=InvSimpson, fill = Fraction, col= Fraction))+
   geom_boxplot() +
   scale_colour_manual(values = c( "orange",  "black", "black"))+
   scale_fill_manual( values = c("gold", "grey27", "lightgrey"))+
   geom_jitter(width = .1, size=1 )+
   theme(axis.text.x = element_text(angle=60, hjust=1))+
-  ylab("Number of ASVs")+
+  #ylab("Number of ASVs")+
   xlab("Compartment")
 dev.off()
 
@@ -322,17 +317,36 @@ root_total<-subset_samples(ps, compartment_BCAT=="RootsTotal_Cells")
 root_total<-prune_taxa(taxa_sums(root_total) > 0, root_total)
 any(taxa_sums(root_total) == 0)
 root_total
-tax_table(root_total)
-total<-as.data.table(otu_table(root_total))
-t(total)
+ot<-as.data.table(otu_table(root_total))
+tt<-as.data.table(tax_table(root_total))
+ot<-t(ot)
+total<-cbind(ot,tt)
+sum<-rowSums(total[,1:4])
+total<-mutate(total, sum= sum)
+
+window("total")
+hist(total$sum)
+
 
 root_active<-subset_samples(ps, compartment_BCAT=="RootsBONCAT_Active")
 root_active<-prune_taxa(taxa_sums(root_active) > 0, root_active)
-any(taxa_sums(root) == 0)
+any(taxa_sums(root_active) == 0)
+root_active
 tt<-as.data.table(tax_table(root_active))
 ot<-as.data.table(otu_table(root_active))
-t(ot)
+ot<-t(ot)
 root_active<-cbind(ot,tt)
+sum<-rowSums(root_active[,1:5])
+
+root_active<-mutate(root_active, sum= sum)
+
+windows()
+hist(root_active$sum)
+
+dim(filter(total, sum>1))
+
+dim(filter(root_active, sum>1))
+
 
 
 #phylogenic diversity
@@ -359,14 +373,15 @@ OTUabundance = as.numeric(taxa_sums(ps))
 ASV = taxa_names(ps)
 d1<-as.data.frame(OTUabundance)
 d1<-cbind(d1, ASV)
+windows()
 ggplot(d1, aes(OTUabundance)) + 
   geom_histogram() +
   ggtitle("Histogram of Total Counts") + 
   xlim(0, 20000) + ylim (0,50) + theme_bw()
 # most taxa are rare, but some are really abundant
 
-#select most abundant taxa
-topN = 10
+# who are the abundant taxa?
+topN = 50
 most_abundant_taxa = sort(taxa_sums(ps), TRUE)[1:topN]
 print(most_abundant_taxa)
 GP20 = prune_taxa(names(most_abundant_taxa), ps)
@@ -375,8 +390,7 @@ print(get_taxa_unique(GP20, "Phyla"))
 print(get_taxa_unique(GP20, "Family"))
 tax_table(GP20)
 
-#negative ctl
-
+# who is in the negative PCR ctl?
 #subset
 ctl<-subset_samples(ps, SampleID=="CTL_S66")
 sample_variables(ps)
@@ -386,7 +400,6 @@ ctl<-prune_taxa(taxa_sums(ctl) > 0, ctl)
 any(taxa_sums(ctl) == 0)
 ntaxa(ctl)
 #who are the most abundant taxa?
-
 topN = 20
 most_abundant_taxa = sort(taxa_sums(ctl), TRUE)[1:topN]
 print(most_abundant_taxa)
@@ -436,124 +449,129 @@ print(get_taxa_unique(nod20, "Phyla"))
 get_taxa_unique(nod20, "Genus")
 get_taxa_unique(nod20, "Family")
 get_taxa_unique(nod20, "Class")
-
 tax_table(nod20)
 
-#genus in nodule  
-# c( " Allorhizobium-Neorhizobium-Pararhizobium-Rhizobium",  " Ensifer" , " Pseudomonas"  " Staphylococcus") 
 
-####100% plots ######
-rhizobiaceae <- subset_taxa(ps, Family ==  " Rhizobiaceae"  )
-rhizobia.sum<-rowSums(otu_table(rhizobiaceae))
-psuedo <- subset_taxa(ps, Family == " Pseudomonadaceae" )
-psuedo.sum<-rowSums(otu_table(psuedo))
-staph <- subset_taxa(ps, Family == " Staphylococcaceae")
-staph.sum<-rowSums(otu_table(staph))
-burk <- subset_taxa(ps, Family == " Burkholderiaceae"  )
-burk.sum<-rowSums(otu_table(burk))
-sphing <- subset_taxa(ps, Family== " Sphingomonadaceae" )
-sphing.sum<-rowSums(otu_table(sphing))
-micro <- subset_taxa(ps, Family ==  " Micrococcaceae"   )
-micro.sum<-rowSums(otu_table(micro))
-
-other<-rowSums(otus.t)- (rhizobia.sum+psuedo.sum+staph.sum+burk.sum+sphing.sum+micro.sum)
-
-  
-phyl.mat<-cbind(rhizobia.sum,psuedo.sum,staph.sum,burk.sum,sphing.sum, micro.sum, other)
-print(phyl.mat)
-phyl.ag<-aggregate(phyl.mat~metadat$Compartment,FUN=mean)
-
-rownames(phyl.ag)<-phyl.ag[,1]
-phyl.ag.2<-as.matrix(phyl.ag[,-1])
-
-phyl.ag.names<-rownames(phyl.ag)
-
-windows()
-barplot(apply(t(phyl.ag.2),2,rev),names=phyl.ag.names,col=c("#003f5c", "#444e86", "#955196","#dd5182","#ff6e54", "#ffa600"),horiz=FALSE,
-        ylab="Relative abundance (%)")
-# data wrangling  
-phyl.df<- as.data.frame(phyl.ag.2)
-phyl.df[,8]<-row.names(phyl.ag.2)
-phy.df.t<-gather(phyl.df, "taxa",value, 1:7)
-
-
-# Stacked + percent
-windows()
-ggplot(phy.df.t, aes(fill=taxa, y=value, x=V8)) + 
-  geom_bar(position="fill", stat="identity")+
-  scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
-  ggtitle("Top Phylum") +
-  theme_bw(base_size = 14) +
-  xlab("site")+
-  ylab("relative abundance %")
-
-
-###### import percent abundance into phyloseq #####
+######3.  import percent abundance into phyloseq #####
 
 otus.phyloseq<- t(otus.perc)
-taxon<-taxon[,1:7]
-metadat<-as.matrix(metadat)
-y<-colnames(otus)
-rownames(metadat) <- y
-metadat<-as.data.frame(metadat)
 
 #import it phyloseq
-Workshop_OTU <- otu_table(as.matrix(otus.perc), taxa_are_rows = FALSE)
+Workshop_OTU <- otu_table(as.matrix(otus.phyloseq), taxa_are_rows = FALSE)
 Workshop_metadat <- sample_data(metadat)
-Workshop_taxo <- tax_table(as.matrix(taxon))
-ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
+Workshop_taxo <- tax_table(as.matrix(taxon)) # this taxon file is from the prev phyloseq object length = 14833
+ps_perc <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
+
+t(otu_table(ps_perc))
 
 #test it worked
-sample_names(ps)
-print(ps)
+sample_names(ps_perc)
+print(ps_perc)
+# 14593 taxa
 
-# remove chloroplast DNA
-ps<-subset_taxa(ps, Class!=" Chloroplast")
-ps<-subset_taxa(ps, Genus!=" Mitochondria")
-ps<-subset_taxa(ps, Genus!=" Chloroplast")
+topN = 50
+most_abundant_taxa = sort(taxa_sums(ps_perc), TRUE)[1:topN]
+print(most_abundant_taxa)
+ps_20 = prune_taxa(names(most_abundant_taxa), ps_perc)
+length(get_taxa_unique(ps_perc, "Class"))
+print(get_taxa_unique(ps_20, "Phyla"))
+get_taxa_unique(ps_perc, "Genus")
+get_taxa_unique(ps_perc, "Family")
+get_taxa_unique(ps_perc, "Class")
+tax_table(ps_20)
+
+# top phyla
+
+#" Cyanobacteria"     " Acidobacteriota"   " Armatimonadota"    " Nitrospirota"      " Proteobacteria"    " Gemmatimonadota"   " Chloroflexi"      
+#" Bacteroidota"      " Actinobacteriota"  " Planctomycetota"   " Verrucomicrobiota" " Myxococcota"       " Bdellovibrionota" 
 
 #### 100% plots
 
-rhizobiaceae <- subset_taxa(ps, Family ==  " Rhizobiaceae"  )
-rhizobia.sum<-rowSums(otu_table(rhizobiaceae))
-psuedo <- subset_taxa(ps, Family == " Pseudomonadaceae" )
-psuedo.sum<-rowSums(otu_table(psuedo))
-staph <- subset_taxa(ps, Family == " Staphylococcaceae")
-staph.sum<-rowSums(otu_table(staph))
-burk <- subset_taxa(ps, Family == " Burkholderiaceae"  )
-burk.sum<-rowSums(otu_table(burk))
-sphing <- subset_taxa(ps, Family== " Sphingomonadaceae" )
-sphing.sum<-rowSums(otu_table(sphing))
-micro <- subset_taxa(ps, Family ==  " Micrococcaceae"   )
-micro.sum<-rowSums(otu_table(micro))
+Cyanobacteria <- subset_taxa(ps, Phyla ==  " Cyanobacteria"  )
+cyano.sum<-rowSums(otu_table(Cyanobacteria))
+Acidobacteriota <- subset_taxa(ps, Phyla  == " Acidobacteriota" )
+Acido.sum<-rowSums(otu_table(Acidobacteriota))
+Armatimonadota <- subset_taxa(ps, Phyla  == " Armatimonadota"  )
+Arma.sum<-rowSums(otu_table(Armatimonadota))
+Nitrospirota <- subset_taxa(ps, Phyla  == " Nitrospirota"   )
+Nitro.sum<-rowSums(otu_table(Nitrospirota))
+Proteobacteria  <- subset_taxa(ps, Phyla == " Proteobacteria"  )
+Proteo.sum<-rowSums(otu_table(Proteobacteria))
+Gemmatimonadota <- subset_taxa(ps, Phyla  ==  " Gemmatimonadota"  )
+Gemma.sum<-rowSums(otu_table(Gemmatimonadota))
+Chloroflexi <- subset_taxa(ps, Phyla  ==    " Chloroflexi" )
+Chloro.sum<-rowSums(otu_table(Chloroflexi))
+Bacteroidota  <- subset_taxa(ps, Phyla  ==    " Bacteroidota"  )
+Bactero.sum<-rowSums(otu_table(Bacteroidota))
+Actinobacteriota  <- subset_taxa(ps, Phyla  ==     " Actinobacteriota"   )
+Actino.sum<-rowSums(otu_table(Actinobacteriota ))
+Planctomycetota <- subset_taxa(ps, Phyla  ==     " Planctomycetota" )
+Planctomycetota.sum<-rowSums(otu_table(Planctomycetota ))
+Verrucomicrobiota  <- subset_taxa(ps, Phyla  ==     " Verrucomicrobiota"   )
+Verrucomicrobiota.sum<-rowSums(otu_table(Verrucomicrobiota ))
+Myxococcota <- subset_taxa(ps, Phyla  ==     " Myxococcota"   )
+Myxococcota.sum<-rowSums(otu_table(Myxococcota ))
+Bdellovibrionota <- subset_taxa(ps, Phyla  ==      " Bdellovibrionota"   )
+Bdellovibrionota.sum<-rowSums(otu_table(Bdellovibrionota ))
 
-other<-100-(rhizobia.sum+psuedo.sum+staph.sum+burk.sum+sphing.sum+micro.sum)
+
+#other<-100-(Bdellovibrionota.sum+ Myxococcota.sum+ Verrucomicrobiota.sum + Planctomycetota.sum+ Actino.sum + Bactero.sum +
+#            cyano.sum + Acido.sum + Arma.sum + Nitro.sum + Proteo.sum + Gemma.sum + Chloro.sum)
 
 
-phyl.mat<-cbind(rhizobia.sum, psuedo.sum, staph.sum, burk.sum, sphing.sum, micro.sum, other)
-print(phyl.mat)
-phyl.mat<-aggregate(phyl.mat~metadat$Compartment,FUN=mean)
+phyl.mat<-cbind(Bdellovibrionota.sum, Myxococcota.sum, Verrucomicrobiota.sum , Planctomycetota.sum, Actino.sum , Bactero.sum ,
+                  cyano.sum , Acido.sum , Arma.sum , Nitro.sum , Proteo.sum , Gemma.sum , Chloro.sum) 
+  
+phyl.perc<-(phyl.mat/41610)*100  
+print(phyl.perc)
+other <- 100-rowSums(phyl.perc)
+phyl.perc<- cbind(phyl.perc, other)
+phyl.perc<-as.data.frame(phyl.perc)
+phyl.perc<-cbind(metadat, phyl.perc)
 
-colnames(phyl.mat)[1]<- "Compartment"
+
+
 # data wrangling  
-phy.df.t<-gather(phyl.mat, "taxa", value, 2:8)
+phy.df<-gather(phyl.perc, "taxa", value, 7:20 )
 
-phy.df.t %>% group_by(Compartment, taxa) %>%
-summarise(mean = mean(value), n = n())
+head(phy.df)
 
+df<-phy.df %>% filter(Fraction!="Inactive")
+
+df<-df%>%
+  group_by(taxa, compartment_BCAT) %>%
+  summarise(mean = mean(value))
+
+unique(df$compartment_BCAT)
+
+df$compartment_BCAT<-factor(df$compartment_BCAT, levels = c("beadsbeads", 
+                    "ctlctl", "Bulk_SoilTotal_DNA",  "RhizosphereTotal_DNA",
+                    "RhizosphereTotal_Cells", "RhizosphereBONCAT_Active" ,"RootsTotal_Cells"  
+                    , "RootsBONCAT_Active", "NoduleTotal_Cells"  ,  "NoduleBONCAT_Active"   ))
+
+df<-filter(df, compartment_BCAT!="beadsbeads" & compartment_BCAT!="ctlctl")
 # Stacked + percent
+svg(file="top_taxa.svg",width = 6, height=5 )
+install.packages("viridis")  # Install
+library("viridis")
+windows()
 
-svg(file="figures/16s/top_taxa.svg",width = 6, height=5 )
-
-ggplot(phy.df.t, aes(fill=taxa, y=value, x=Compartment)) + 
+df%>% 
+ggplot(aes(fill=taxa, y=mean, x=compartment_BCAT)) + 
   geom_bar(position="fill", stat= "identity")+
-  scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
-  ggtitle("Top Families") +
-  theme_bw(base_size = 14) +
+  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Top phyla") +
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   xlab("Compartment")+
   ylab("relative abundance %")
   
 dev.off()
+
+
+
+
 
 
 ######------- 100% plot for just active taxa---------

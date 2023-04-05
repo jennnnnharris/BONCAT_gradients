@@ -10,12 +10,12 @@
 ## 3. check the number of reads for each sample
 
 ####### logging on and starting software ############
-#logon to PSU cluster
-ssh jeh6121@submit.aci.ics.psu.edu
+#logon to PSU roar collab
+ssh jeh6121@submit.hpc.psu.edu
 #start interactive job
 qsub -I -A open -N filter -l nodes=1:ppn=10 -l pmem=8gb -l walltime=2:00:00
 # go to work directory
-cd /gpfs/group/ltb5167/default/JennHarris/BONCAT_16S
+cd /storage/group/ltb5167/default/JennHarris/BONCAT_16S
 #start conda
 module load anaconda3
 source activate qiime2-2022.2
