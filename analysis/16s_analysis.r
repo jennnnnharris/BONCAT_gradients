@@ -31,6 +31,8 @@ library(Heatplus)
 library(viridis)
 library(hrbrthemes)
 library(ade4)
+#library (gplots)
+library(ape)
 
 ## Set the working directory; modify to your own ###
 setwd("C:/Users/Jenn/OneDrive - The Pennsylvania State University/Documents/Github/BONCAT_gradients/data")
@@ -170,7 +172,7 @@ otu_active<-as.data.frame(t(as.data.frame(otu_table(ps.Active))))
 ## so i think I'll just remove those ones and won't have a value for inactive for those samples
 otu_active<-select(otu_active, -C10E.POS_S60, -C5N.POS_S63)
 
-head(otu_active)
+#head(otu_active)
 #sum<-rowSums(otu_active)
 # length 7185
 # taxa1 10000
@@ -191,60 +193,54 @@ colnames(otu_log2)<-n
 head(otu_log2)
 #zero in numerator = not present in active = -inf
 
-#####------make phyloseq object with log2 data -------#####
-
-otus.phyloseq<- t(otu_log2)
-metadat_l<- read.delim("16s/metadata_log2.txt", sep="\t", header = T, check.names=FALSE)
-y<-colnames(otu_log2)
-rownames(metadat_l) <- y
-metadat_l<-as.data.frame(metadat_l)
-
-
 # check distribution
 otu_log2
 hist(otu_log2$C10N)
 hist(otu_log2$C10R)
-hist(otu_log2$C1E)
+hist(otu_log2$C1E, breaks = 20)
 
-# select the top taxa by relative abundance
-# i did this above
+#####------wrangling log2 data -------#####
+
+#transpose
+t_log2_otu<- t(otu_log2)
+
+#import metadata for summarising 
+metadat_l<- read.delim("16s/metadata_log2.txt", sep="\t", header = T, check.names=FALSE)
+y<-colnames(otu_log2)
+rownames(metadat_l) <- y
+metadat_l<-as.data.frame(metadat_l)
+#insert metadata to data frame
+t_log2_otu<-cbind(metadat_l, t_log2)
+#sumarise by rep
+t_log2_otu_short<- t_log2_otu %>% group_by(Fraction) %>% summarise_if(is.numeric,median) %>% select(-REP)
+
+# filter dataset for top asvs
+# I selectws the top taxa by relative abundance above
 
 otu_table(Top_tax)
 df<-as.data.frame(tax_table(Top_tax))
 dim(df)
-#make asvs column to join by
+#I'm curious who these asvs are so I'm going to add there names in
 asvs<-row.names(df)
 df<-mutate(df, asvs=asvs)
 asvs<-row.names(otu_log2)
 otu_log2<-mutate(otu_log2, asvs=asvs)
 
 #filter the log2 dataset by the top taxa
+otu_log2_200<-left_join(df, otu_log2, by= "asvs")
 
-dfl<-left_join(df, otu_log2, by= "asvs")
+as.matrix(otu_log2_200[,-(1:8)])
 
-# now make  heatmap of top taxa
-# this is from the mesocosm paper
-### Phylogeny Ordered Heatmap @ 24 wks
-
-# Prepare the data-Calculate median strain fitness for each treatment @ 24wks and create it into a single dataframe with a column for each treatment and a row for each strain. 
-fitness<-meso_fit_long %>% filter(Time =="24wk") %>% group_by(Trt,strain) %>% summarise_if(is.numeric,median) %>% pivot_wider(names_from = Trt,values_from = fitness)
-fitness$strain<- as.character(fitness$strain)
-fitness$strain <- gsub("X","",fitness$strain) # get rid of the X's in front of the strains
-fitness$strain <- gsub("USDA","",fitness$strain) # get rid of the USDA's in front of the strains
+###@# heatmap of top taxa
 
 #library (gplots)
 library(ape)
-## Read in the tree file created by Brendan
-tree = read.tree('../data/tree.nw')
+## Read in the tree file made by jenn
+tree = read.tree("16s/tree.nwk")
+# my tree just has ASV names think
 
-### there are some discrepancies in strain names that need to be fixed...
-tree$tip.label[tree$tip.label=="KH46c"]<-"KH46C"
-tree$tip.label[tree$tip.label=="HM006-1"]<-"HM006.1"
-tree$tip.label[tree$tip.label=="KH35c"]<-"KH35C"
-tree$tip.label[tree$tip.label=="USDA1021"]<-"1021"
-tree$tip.label[tree$tip.label=="USDA1157"]<-"1157"
 
-# load in teh function for making a heatmap with the tree #
+# load in the function for making a heatmap with the tree #
 heatmap.phylo <- function(x, Rowp, Colp, ...) {
   l = length(seq(-4.9, 5, 0.1))
   pal = colorRampPalette(c('#2166ac', '#f7f7f7', '#b2182b'))(l)
@@ -279,17 +275,34 @@ heatmap.phylo <- function(x, Rowp, Colp, ...) {
 }
 
 # Create the matrix and get the column dendrogram for the heatmap from it.
-m = structure(as.matrix(fitness[, -1]),
-              dimnames=list(unlist(fitness[, 'strain']),
-                            unlist(names(fitness)[-1])))
+# got remove all those extract columns and 
 
+asvs200 =   (otu_log2_200[, 'asvs'])
+m = as.matrix(otu_log2_200[,-(1:8)])
+row.names(m)<-asvs200 
+m<-structure(m)
+
+#make a dendrogram              
 col_dendro = as.dendrogram(hclust(dist(t(m))))
 
-# And make the plot....
-pdf(file="../figures/Fig2_heatmap24wk_Phylo.pdf",width = 5,height=8, useDingbats=FALSE)
-heatmap.phylo(x = m, Rowp = tree, Colp = as.phylo(as.hclust(col_dendro)))
-dev.off()
+# lol tree is so big ? maybe filter and make it smaller
+# we need a list of all the asvs we don't want
 
+asvs200 # asvs we want
+
+dim(otus.raw)
+
+asvs<-row.names(otus.raw)
+
+asvs_remove<-setdiff(asvs, asvs200)
+
+
+tree<-drop.tip(tree, asvs_remove)
+
+# And )make the plot....
+#pdf(file="../figures/Fig2_heatmap24wk_Phylo.pdf",width = 5,height=8, useDingbats=FALSE)
+heatmap.phylo(x = m, Rowp = tree, Colp = as.phylo(as.hclust(col_dendro)))
+#dev.off()
 
 
 

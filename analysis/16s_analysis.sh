@@ -13,7 +13,7 @@
 #logon to PSU roar collab
 ssh jeh6121@submit.hpc.psu.edu
 #start interactive job
-qsub -I -A open -N filter -l nodes=1:ppn=10 -l pmem=8gb -l walltime=2:00:00
+salloc -N 1 -n 4 --mem-per-cpu=1024 -t 1:00:00
 # go to work directory
 cd /storage/group/ltb5167/default/JennHarris/BONCAT_16S
 #start conda
