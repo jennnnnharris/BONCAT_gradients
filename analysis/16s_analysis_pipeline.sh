@@ -9,6 +9,21 @@
 ## 2. make a qiime map file
 ## 3. check the number of reads for each sample
 
+##### install software ###########
+# create conda environment
+conda create -n qiime-env -y
+#start conda
+module load anaconda3
+conda activate qiime-env
+# add wget
+conda install wget
+#load software
+# These instructions are identical to the Linux (64-bit) instructions
+wget https://data.qiime2.org/distro/core/qiime2-2022.2-py38-linux-conda.yml
+conda env create -n qiime2-env --file qiime2-2022.2-py38-linux-conda.yml
+
+
+
 ####### logging on and starting software ############
 #logon to PSU roar collab
 ssh jeh6121@submit.hpc.psu.edu
@@ -18,7 +33,7 @@ salloc -N 1 -n 4 --mem-per-cpu=1024 -t 1:00:00
 cd /storage/group/ltb5167/default/JennHarris/BONCAT_16S
 #start conda
 module load anaconda3
-source activate qiime2-2022.2
+conda activate qiime2-env
 # if that doesn't work check what conda environemnt you already have. I couldn't remember if I install qiime
 cd /storage/home/jeh6121/.conda/envs
 
@@ -97,8 +112,8 @@ qiime dada2 denoise-paired \
     --p-max-ee-r 5 \
     --p-n-reads-learn 1000000 \
     --p-chimera-method consensus \
-    --o-table ./asvs/table-dada2.qza \
-    --o-representative-sequences ./asvs/trimmed.dada2.qza \
+    --o-table ./asvs/feature.table.dada2.qza \
+    --o-representative-sequences ./asvs/rep.seqs.dada2.qza \
     --o-denoising-stats ./asvs/stats.dada2.qza
 
 # on how DADA2 went
@@ -159,9 +174,10 @@ qiime feature-classifier fit-classifier-naive-bayes \
 
 # test the classifier
 qiime feature-classifier classify-sklearn \
-  --i-classifier silva/silva-138-99-nb-classifier.qza \
-  --i-reads asvs/trimmed.dada2.qza \
-  --o-classification taxonomy.qza
+  --i-classifier silvals
+/silva-138-99-nb-classifier.qza \
+  --i-reads otu/rep.seqs.otu.qza \
+  --o-classification otu/taxonomy.otu.qza
 
 qiime metadata tabulate \
   --m-input-file taxonomy.qza \
@@ -218,7 +234,7 @@ mv *.qzv qzv_files
 #2 table of all the asvs (usually feature-table.tsv)
 #3 taxomony file (usually taxnomy.tsv)
 
-#optional
+#tree
 #4 phylogeny tree output rooted tree
 #5 phylogeny unrooted tree
 #6 export representative sequences (called asvs/trimmed.dada2.tsv)
@@ -227,13 +243,15 @@ qiime tools export \
 --output-path  /gpfs/group/ltb5167/default/JennHarris/BONCAT_16S/phyloseq
 
 
+## cluster into OTUS because I think that it's retaining asvs that are the same species
+# https://docs.qiime2.org/2023.2/plugins/available/vsearch/cluster-features-de-novo/
 
-
-
-
-
-
-
-
+qiime vsearch cluster-features-de-novo \
+  --i-sequences asvs/rep.seqs.dada2.qza \
+  --i-table  asvs/feature.table.dada2.qza \
+  --p-perc-identity .97 \
+  --p-threads 2 \
+  --o-clustered-table /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/feature.table.otu.qza \
+  --o-clustered-sequences /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/rep.seqs.otu.qza  
 
 

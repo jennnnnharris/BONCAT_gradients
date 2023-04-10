@@ -19,6 +19,7 @@ BiocManager::install("Heatplus")
 
 ### Load required libraries ###
 
+#install.packages("tidyverse")
 library(tidyverse)
 library(vegan)
 library(RColorBrewer)
@@ -33,21 +34,49 @@ library(hrbrthemes)
 library(ade4)
 #library (gplots)
 library(ape)
+install.packages("DECIPHER")
+install.packages("Biostrings")
 
 ## Set the working directory; modify to your own ###
 setwd("C:/Users/Jenn/OneDrive - The Pennsylvania State University/Documents/Github/BONCAT_gradients/data")
 
 ### Import Data ###
 taxon <- read.table("16s/taxonomy.txt", sep="\t", header=T, row.names=1)
-otus.raw <- read.table("16s/feature-table.tsv", sep="\t", header=T, row.names = 1 )
+asvs.raw <- read.table("16s/feature-table.tsv", sep="\t", header=T, row.names = 1 )
 metadat <- read.delim("16s/metadata.txt", sep="\t", header = T, check.names=FALSE)
 
-## Transpose OTU table ##
-otus.t <- t(otus.raw)
+## Transpose ASVS table ##
+asvs.t <- t(asvs.raw)
 ## order metadata
 metadat<-metadat[order(metadat$SampleID),]
-## order otu table
-otus.t<-otus.t[order(row.names(otus.t)),]
+## order asvs table
+asvs.t<-asvs.t[order(row.names(asvs.t)),]
+
+#--------cluster into OTUs--------
+# I chose to cluster into OTUs because when I looked at the sequencing inside the nodules
+# there were many asvs that all mapped to the rhizobia genus.
+# Those are all likely 1 species, given I they all BLAST to rhizobium leguminosarium v. trifoilia with WGS
+# I want to reduce the organism in the alpha diversity that are due to the dada2 clustering methods
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Determine minimum available reads per sample ##
 min(rowSums(otus.t))
