@@ -11,24 +11,23 @@
 
 ##### install software ###########
 # create conda environment
-conda create -n qiime-env -y
+conda create -n qiime2-env -y
 #start conda
 module load anaconda3
-conda activate qiime-env
 # add wget
 conda install wget
 #load software
 # These instructions are identical to the Linux (64-bit) instructions
 wget https://data.qiime2.org/distro/core/qiime2-2022.2-py38-linux-conda.yml
 conda env create -n qiime2-env --file qiime2-2022.2-py38-linux-conda.yml
-
-
+# get it's there
+/storage/home/jeh6121/.conda/envs/qiime2-env
 
 ####### logging on and starting software ############
 #logon to PSU roar collab
 ssh jeh6121@submit.hpc.psu.edu
 #start interactive job
-salloc -N 1 -n 4 --mem-per-cpu=1024 -t 2:00:00
+salloc -N 1 -n 4 --mem-per-cpu=1024 -t 1:00:00
 # go to work directory
 cd /storage/group/ltb5167/default/JennHarris/BONCAT_16S
 #start conda
@@ -173,11 +172,11 @@ qiime feature-classifier fit-classifier-naive-bayes \
   --o-classifier /silva/silva-138-99-classifier.qza
 
 # test the classifier
-qiime feature-classifier classify-sklearn \
-  --i-classifier silvals
-/silva-138-99-nb-classifier.qza \
+  --i-classifier silva/silva-138-99-nb-classifier.qza \
   --i-reads otu/rep.seqs.otu.qza \
-  --o-classification otu/taxonomy.otu.qza
+  --o-classification otu/taxonomy.otu2.qza
+
+rep.seqs.otu.qza
 
 qiime metadata tabulate \
   --m-input-file taxonomy.qza \
@@ -201,8 +200,8 @@ qiime metadata tabulate \
 #output taxomny file
 
 qiime tools export \
-  --input-path taxonomy.qza \
-  --output-path ./
+  --input-path taxonomy.otu.qza \
+  --output-path otu/output
 
 
 ####### assign phylogeny ##########
@@ -220,6 +219,7 @@ qiime phylogeny align-to-tree-mafft-fasttree \
 qiime tools export \
 --input-path unrooted-tree.qza \
 --output-path phyloseq
+
 qiime tools export \
 --input-path rooted-tree.qza \
 --output-path phyloseq
