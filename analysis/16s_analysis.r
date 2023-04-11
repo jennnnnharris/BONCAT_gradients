@@ -57,11 +57,46 @@ asvs.t<-asvs.t[order(row.names(asvs.t)),]
 # there were many asvs that all mapped to the rhizobia genus.
 # Those are all likely 1 species, given I they all BLAST to rhizobium leguminosarium v. trifoilia with WGS
 # I want to reduce the organism in the alpha diversity that are due to the dada2 clustering methods
+# tutorial from https://github.com/mikemc/speedyseq/blob/main/NEWS.md#new-general-purpose-vectorized-merging-function
+
+# import into phyloseq
+######--- recode metadata----- ########
+metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
+metadat<-metadat[, c(1,3:6)]
+metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
+#to make coloring things easier I'm gong to added a combined fractionXboncat column 
+metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
+
+# rearrange asv table
+asvs.phyloseq<- (asvs.t)
+taxon<-taxon[,1:7]
+metadat<-as.matrix(metadat)
+y<-colnames(asvs.raw)
+rownames(metadat) <- y
+metadat<-as.data.frame(metadat)
+
+#import it phyloseq
+Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
+Workshop_metadat <- sample_data(metadat)
+Workshop_taxo <- tax_table(as.matrix(taxon))
+ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
+
+# take a look at PS object
+print(ps)
+# we a get a Plyloseq object with  15027 taxa
 
 
 
-
-
+dna <- refseq(ps)
+nproc <- 1 # Increase to use multiple processors
+aln <- DECIPHER::AlignSeqs(dna, processors = nproc)
+d <- DECIPHER::DistanceMatrix(aln, processors = nproc)
+clusters <- DECIPHER::IdClusters(
+  d, 
+  method = "complete",
+  cutoff = 0.03, # corresponds to 97% OTUs
+  processors = nproc
+)
 
 
 

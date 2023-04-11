@@ -28,7 +28,7 @@ conda env create -n qiime2-env --file qiime2-2022.2-py38-linux-conda.yml
 #logon to PSU roar collab
 ssh jeh6121@submit.hpc.psu.edu
 #start interactive job
-salloc -N 1 -n 4 --mem-per-cpu=1024 -t 1:00:00
+salloc -N 1 -n 4 --mem-per-cpu=1024 -t 2:00:00
 # go to work directory
 cd /storage/group/ltb5167/default/JennHarris/BONCAT_16S
 #start conda
