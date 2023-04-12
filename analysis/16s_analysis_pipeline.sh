@@ -131,7 +131,7 @@ qiime tools export \
   --input-path  table-dada2.qza\
   --output-path asvs/asv_table
 
-biom convert -i asvs/asv_table/feature-table.biom -o asvs/asv_table/feature-table.tsv --to-tsv
+biom convert -i feature-table.biom -o feature-table.tsv --to-tsv
 
 # export representative sequences 
 # 
@@ -217,12 +217,13 @@ qiime phylogeny align-to-tree-mafft-fasttree \
   --o-rooted-tree rooted-tree.qza
 
 qiime tools export \
---input-path unrooted-tree.qza \
---output-path phyloseq
+--input-path unrooted.tree.qza \
+--output-path /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/output
+
 
 qiime tools export \
 --input-path rooted-tree.qza \
---output-path phyloseq
+--output-path /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/output
 
 #download things from the cluster to my pc
 
@@ -238,10 +239,10 @@ mv *.qzv qzv_files
 #4 phylogeny tree output rooted tree
 #5 phylogeny unrooted tree
 #6 export representative sequences (called asvs/trimmed.dada2.tsv)
-qiime tools export \
---input-path trimmed.dada2.qza \
---output-path  /gpfs/group/ltb5167/default/JennHarris/BONCAT_16S/phyloseq
 
+qiime tools export \
+--input-path feature.table.otu.qza \
+--output-path  /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/output
 
 ## cluster into OTUS because I think that it's retaining asvs that are the same species
 # https://docs.qiime2.org/2023.2/plugins/available/vsearch/cluster-features-de-novo/
