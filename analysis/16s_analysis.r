@@ -86,7 +86,7 @@ Workshop_taxo <- tax_table(as.matrix(taxon))
 ps <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
 
 ##  take a look at PS object
-print(ps)
+#print(ps)
 # we a get a Plyloseq object with  7727 taxa
 
 #######------ remove chloroplasts-------######
@@ -249,7 +249,7 @@ hist(nod_active$sum)
 ps1<- subset_samples(ps,Fraction !="Total_DNA"& Fraction!="beads" & Fraction !="ctl" ) 
 ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
 any(taxa_sums(ps1) == 0)
-ps1
+
 # 3128 taxa
 
 #Who are the most abundant taxa minus the total DNA
@@ -257,7 +257,7 @@ ps1
 #who are most abundant taxa
 topN = 200
 most_abundant_taxa = sort(taxa_sums(ps1), TRUE)[1:topN]
-print(most_abundant_taxa)
+#print(most_abundant_taxa)
 Top_tax = prune_taxa(names(most_abundant_taxa), ps1)
 length(get_taxa_unique(Top_tax, "Class"))
 length(get_taxa_unique(Top_tax, "Phyla"))
@@ -385,7 +385,7 @@ tree = read.tree("otu_output/tree.nwk")
 nod<-subset_samples(ps, Compartment=="Nodule")
 nod<-prune_taxa(taxa_sums(nod) > 0, nod)
 any(taxa_sums(nod) == 0)
-nod
+#nod
 # only 91 taxa
 topN=10
 most_abundant_taxa = sort(taxa_sums(nod), TRUE)[1:topN]
@@ -394,9 +394,13 @@ Top_tax = prune_taxa(names(most_abundant_taxa),nod)
 length(get_taxa_unique(Top_tax, "Class"))
 length(get_taxa_unique(Top_tax, "Genus"))
 nod_tt<-as.data.table(otu_table(Top_tax))
+taxa<-(tax_table(Top_tax))
+taxa<-as.data.frame(taxa)
+o<-row.names(taxa)
+taxa<-taxa%>%mutate(taxa, otus=o)
 #subset for these 100 taxa
-dim(nod_tt)
-nod_tt
+#dim(nod_tt)
+#nod_tt
 # transpose df
 tt100<-as.data.frame(t(nod_tt))
 # make otu column to join by in short df
@@ -420,7 +424,12 @@ otus100<- tt100$otus
 otus<-row.names(otu.raw) # all the asvs
 asvs_remove<-setdiff(otus, otus100) #asvs we don't want
 tree.nod<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-
+# change tip labels
+dim(taxa)
+g<-taxa$Genus # new tip label
+tree.nod$tip.label <- g
+#tree.nod
+row.names(m)<-g
 # And make the plot....
 #pdf(file="../figures/Fig2_heatmap24wk_Phylo.pdf",width = 5,height=8, useDingbats=FALSE)
 windows(6,10)
@@ -518,6 +527,7 @@ m<-structure(otu_log2_100)
 col_dendro = as.dendrogram(hclust(dist(t(m))))
 # tree is so big. filter and make it smaller
 otus100<- tt100$otus
+
 # asvs we want
 otus<-row.names(otu.raw) # all the asvs
 asvs_remove<-setdiff(otus, otus100) #asvs we don't want
@@ -535,58 +545,89 @@ heatmap.phylo(x = m, Rowp = tree.rhiz, Colp = as.phylo(as.hclust(col_dendro)))
 
 
 
+
+
+
+
+###############-----heatmap###################
+
+#subst by treament
+n<-c("C10N","C1N","C2N", "C7N") 
+e<- c("C1E","C2E","C5E","C7E")
+r<- c("C10R", "C1R",  "C2R",  "C5R")  
+# average log fold change in each treatment
+nod<- otu_log2%>% select(all_of(n))
+nod<-rowSums(nod)/4
+endo<- otu_log2%>% select(all_of(e))
+endo<- rowSums(endo)/4
+rhiz<- otu_log2%>% select(all_of(r))
+rhiz<-rowSums(rhiz)/4
+#combine
+avg_log2<-cbind(nod, endo)%>% cbind(rhiz)
+
+# now turn to df
+avg_log2<-as.data.frame(avg_log2)
+
+
+
 ##top 100 by the biggest log change 
-# 3128 taxa 
-# which taxa have the top higest log fold change?
-### mayeb exclude taxa that aren't in all the reps
-otus.t<-as.data.frame(t(otus))
-df<-cbind(otus.t, metadat)
-#subset by sample type
-
-
-### filter out taxa that aren't in all the samples
-d<-which(df %in% df!=0)
-df %>% filter(!row_number() %in% d)
-
-
-s<-rowSums(abs(otu_log2[,-13]))
+s<-rowSums(abs(avg_log2))
 s<-sort(s, decreasing = TRUE)
 top100<-names(s)[1:100]
-# transpose df
-tt100<-as.data.frame(top100)
-colnames(tt100)<-c("otus")
-# make otu column to join by in short df
-#join df
-otu_log2_100<-inner_join(otu_log2, tt100, by= "otus")
-otu_log2_100<-otu_log2_100[,1:12]
-n<-colnames(otu_log2_100)
+
+
+# tree is so big. filter and make it smaller
+otus<-row.names(otu.raw) # all the asvs
+asvs_remove<-setdiff(otus, top100) #asvs we don't want
+length(otus)
+length(r)
+tree.endo<-drop.tip(tree, asvs_remove) # remove asvs we don't need
+target<-tree.endo$tip.label
+
+# subest dataframe to be on the top 100 taxa
+# add otu col
+otus<-row.names(avg_log2)
+avg_log2<-cbind(avg_log2, otus)
+
+otu_100<-subset(avg_log2, otus %in% top100)
+#grab names
+n<-colnames(otu_100)
+r<-row.names(otu_100)
+# order row to match  tree
+otu_100<-otu_100[match(target, otu_100$otus),]
+otu_100<-otu_100[-4] # remove otu column
+
 # make a matrix
-otu_log2_100<-as.matrix(otu_log2_100)
-row.names(otu_log2_100)<-tt100$otus
-row.names(otu_log2_100)
-otu_log2_100
+m<-matrix(as.numeric(unlist(otu_100)),nrow=nrow(otu_100))
+row.names(m)<-r
+colnames(m)<-n[-4]
+#otu_log2_100
+
+# get names of taxa
+#taxon
+otus<-row.names(taxon)
+tax<-cbind(taxon, otus)
+#subset taxa table
+taxa_100<-subset(tax, otus %in% top100)
+# order by otu
+taxa_100<-taxa_100[match(target, taxa_100$otus),]
+g<-taxa_100$Family
+
+# rename rows
+row.names(m)<-g
+# rename tree tips
+tree.endo$tip.label <- g
+
 # Create the matrix and get the column dendrogram for the heatmap from it.
-m<-structure(otu_log2_100)
+m<-structure(m)
 #make a dendrogram              
 col_dendro = as.dendrogram(hclust(dist(t(m))))
-# tree is so big. filter and make it smaller
-otus100<- tt100$otus
-# asvs we want
-otus<-row.names(otu.raw) # all the asvs
-asvs_remove<-setdiff(otus, otus100) #asvs we don't want
-length(otus)
-length(otus100)
-tree.endo<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-
 # And make the plot....
-#pdf(file="../figures/Fig2_heatmap24wk_Phylo.pdf",width = 5,height=8, useDingbats=FALSE)
-windows(6,10)
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s")
+svg(file="heatmap.svg",width = 8 ,height=8)
+#windows(15,10)
 heatmap.phylo(x = m, Rowp = tree.endo, Colp = as.phylo(as.hclust(col_dendro)))
-#dev.off()
-
-
-
-
+dev.off()
 
 
 
