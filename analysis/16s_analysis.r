@@ -35,6 +35,44 @@ library(ade4)
 #library (gplots)
 library(ape)
 
+############-----load functions-------------######
+
+# load in the function for making a heatmap with the tree #
+heatmap.phylo <- function(x, Rowp, Colp, ...) {
+  l = length(seq(-4.9, 5, 0.1))
+  pal = colorRampPalette(c('#2166ac', '#f7f7f7', '#b2182b'))(l)
+  row_order = Rowp$tip.label[Rowp$edge[Rowp$edge[, 2] <= Ntip(Rowp), 2]] 
+  col_order = Colp$tip.label[Colp$edge[Colp$edge[, 2] <= Ntip(Colp), 2]] 
+  x <- x[row_order, col_order]
+  xl <- c(0.5, ncol(x)+0.5)
+  yl <- c(0.5, nrow(x)+0.5)
+  layout(matrix(c(0,1,0, 2,3,4, 0,5,0), nrow=3, byrow=TRUE),
+         width=c(3.5,    4.5, 1),
+         height=c(0.2, 3, 0.18))
+  par(mar=rep(0,4))
+  plot(Colp, direction="downwards", show.tip.label=FALSE,
+       xaxs="i", x.lim=xl)
+  par(mar=rep(0,4))
+  plot(Rowp, direction="rightwards", show.tip.label=FALSE, 
+       yaxs="i", y.lim=yl)
+  lpp = .PlotPhyloEnv$last_plot.phylo 
+  segments(lpp$xx[1:Ntip(Rowp)], lpp$yy[1:Ntip(Rowp)], par('usr')[2],
+           lpp$yy[1:Ntip(Rowp)], lty=3, col='grey50')
+  par(mar=rep(0,4), xpd=TRUE)
+  image((1:ncol(x))-0.5, (1:nrow(x))-0.5, t(x), col=pal,
+        xaxs="i", yaxs="i", axes=FALSE, xlab="",ylab="",breaks=seq(-5,5,0.1))
+  par(mar=rep(0,4))
+  plot(NA, axes=FALSE, ylab="", xlab="", yaxs="i", xlim=c(0,2), ylim=yl)
+  text(rep(0,nrow(x)),1:nrow(x), row_order, pos=4, family='Helvetica',
+       cex=1, xpd=NA)
+  par(mar=rep(0,4))
+  plot(NA, axes=FALSE, ylab="", xlab="", xaxs="i", ylim=c(0,2), xlim=xl)
+  text(1:ncol(x),rep(2,ncol(x)), col_order, srt=90, adj=c(1,.5), family='Helvetica',
+       cex=1.5)
+}
+
+
+
 
 ####### OTU 97% data##################
   # I chose to cluster into OTUs because when I looked at the sequencing inside the nodules
@@ -66,13 +104,13 @@ metadat<-metadat[order(metadat$SampleID),]
 otu.t<-otu.t[order(row.names(otu.t)),]
 
 ## Determine minimum available reads per sample ##
-min(rowSums(otu.t))
+#min(rowSums(otu.t))
 ## Rarefy to obtain even numbers of reads by sample ##
-set.seed(336)
-otu.r<-rrarefy(otu.t, 41351)
+#set.seed(336)
+#otu.r<-rrarefy(otu.t, 41351)
 
 ## rearrange data for phyloseq
-otu.phyloseq<- (otu.r)
+otu.phyloseq<- (otu.t)
 taxon<-taxon[,1:7]
 metadat<-as.matrix(metadat)
 y<-colnames(otu.raw)
@@ -311,56 +349,10 @@ hist(otu_log2$C1E, breaks = 20)
 otus<-row.names(otu_log2)
 otu_log2<-mutate(otu_log2, otus=otus)
 
-#####wrangling log2 data #####
-#transpose
-#t_log2_otu<- t(otu_log2)
-#import metadata for summarising 
-#metadat_l<- read.delim("16s/metadata_log2.txt", sep="\t", header = T, check.names=FALSE)
-#y<-colnames(otu_log2)
-#rownames(metadat_l) <- y
-#metadat_l<-as.data.frame(metadat_l)
-#insert metadata to data frame
-#t_log2_otu<-cbind(metadat_l, t_log2)
-#sumarise by rep
-#t_log2_otu_short<- t_log2_otu %>% group_by(Fraction) %>% summarise_if(is.numeric,median) %>% select(-REP)
 
 
 
 #### heatmap of top taxa ############
-# load in the function for making a heatmap with the tree #
-heatmap.phylo <- function(x, Rowp, Colp, ...) {
-  l = length(seq(-4.9, 5, 0.1))
-  pal = colorRampPalette(c('#2166ac', '#f7f7f7', '#b2182b'))(l)
-  row_order = Rowp$tip.label[Rowp$edge[Rowp$edge[, 2] <= Ntip(Rowp), 2]] 
-  col_order = Colp$tip.label[Colp$edge[Colp$edge[, 2] <= Ntip(Colp), 2]] 
-  x <- x[row_order, col_order]
-  xl <- c(0.5, ncol(x)+0.5)
-  yl <- c(0.5, nrow(x)+0.5)
-  layout(matrix(c(0,1,0, 2,3,4, 0,5,0), nrow=3, byrow=TRUE),
-         width=c(3.5,    4.5, 1),
-         height=c(0.2, 3, 0.18))
-  par(mar=rep(0,4))
-  plot(Colp, direction="downwards", show.tip.label=FALSE,
-       xaxs="i", x.lim=xl)
-  par(mar=rep(0,4))
-  plot(Rowp, direction="rightwards", show.tip.label=FALSE, 
-       yaxs="i", y.lim=yl)
-  lpp = .PlotPhyloEnv$last_plot.phylo 
-  segments(lpp$xx[1:Ntip(Rowp)], lpp$yy[1:Ntip(Rowp)], par('usr')[2],
-           lpp$yy[1:Ntip(Rowp)], lty=3, col='grey50')
-  par(mar=rep(0,4), xpd=TRUE)
-  image((1:ncol(x))-0.5, (1:nrow(x))-0.5, t(x), col=pal,
-        xaxs="i", yaxs="i", axes=FALSE, xlab="",ylab="",breaks=seq(-5,5,0.1))
-  par(mar=rep(0,4))
-  plot(NA, axes=FALSE, ylab="", xlab="", yaxs="i", xlim=c(0,2), ylim=yl)
-  text(rep(0,nrow(x)),1:nrow(x), row_order, pos=4, family='Helvetica',
-       cex=1, xpd=NA)
-  par(mar=rep(0,4))
-  plot(NA, axes=FALSE, ylab="", xlab="", xaxs="i", ylim=c(0,2), xlim=xl)
-  text(1:ncol(x),rep(2,ncol(x)), col_order, srt=90, adj=c(1,.5), family='Helvetica',
-       cex=1.5)
-}
-
 
 ## Read in the tree file made by jenn
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
@@ -369,7 +361,6 @@ tree = read.tree("otu_output/tree.nwk")
 
 ##### well this heat maps isn't super helpful
 ##### because the Nodules and roots are so much less diverse than the soil
-
 # i am curious what taxa is enriched in the rhizosphere I should just focus on rhizosphere
 # if i'm curious about what makes a good endo
 # make is this figure for the taxa that are enrich in the plant
@@ -458,6 +449,7 @@ dim(endo_tt)
 endo_tt
 # transpose df
 tt100<-as.data.frame(t(endo_tt))
+top100<-row.names(tt100)
 # make otu column to join by in short df
 otus100<-row.names(tt100)
 tt100<-mutate(tt100, otus=otus100)
@@ -569,7 +561,6 @@ avg_log2<-cbind(nod, endo)%>% cbind(rhiz)
 avg_log2<-as.data.frame(avg_log2)
 
 
-
 ##top 100 by the biggest log change 
 s<-rowSums(abs(avg_log2))
 s<-sort(s, decreasing = TRUE)
@@ -629,9 +620,165 @@ svg(file="heatmap.svg",width = 8 ,height=8)
 heatmap.phylo(x = m, Rowp = tree.endo, Colp = as.phylo(as.hclust(col_dendro)))
 dev.off()
 
+#######------phyloseq agregate by-------------###
 
 
 
+######------aggregate by higher taxa level for heatmap------------########
+
+########aggregate#####
+o<-row.names(taxon) # make column to join dfs 
+taxon<-cbind(taxon, o)
+
+o<-row.names(otus)  # make column to join dfs 
+otus<-cbind(otus, o)
+
+df<-left_join(otus, taxon) #join df 
+df1<-df[,c(1:42, 48)] %>%group_by(Family) %>% summarise_all(sum) #summarize by family
+
+#make total df
+total<-df1 %>% select(contains('SYBR')) #select total cells columns
+total<-select(total, -C7R.SYBR_S19) #remove this sample because I don't have matching active sample for it
+
+#make active df
+active<-df1 %>% select(contains('POS')) #select total cells columns
+active<-select(active, -C10E.POS_S60, -C5N.POS_S63) ## remove sample I don't have a value for inactive 
+
+#calculate log fold change
+otu_log2<-log2(active+1/(total+1))
+
+#label columns and rows
+n<-c("C10N", "C10R" ,"C1E" , "C1N" , "C1R" , "C2E" , "C2N" , "C2R" , "C5E" , "C5R" , "C7E" , "C7N" )
+colnames(otu_log2)<-n
+row.names(otu_log2)<-df1$Family 
+head(otu_log2)
+
+
+######avg by treament############
+n<-c("C10N","C1N","C2N", "C7N") 
+e<- c("C1E","C2E","C5E","C7E")
+r<- c("C10R", "C1R",  "C2R",  "C5R")  
+# average log fold change in each treatment
+nod<- otu_log2%>% select(all_of(n))
+nod<-rowSums(nod)/4
+endo<- otu_log2%>% select(all_of(e))
+endo<- rowSums(endo)/4
+rhiz<- otu_log2%>% select(all_of(r))
+rhiz<-rowSums(rhiz)/4
+#combine
+avg_log2<-cbind(nod, endo)%>% cbind(rhiz)
+
+# now turn to df
+avg_log2<-as.data.frame(avg_log2)
+
+
+#########top 100 by the biggest log change ############
+s<-rowSums(abs(avg_log2))
+s<-sort(s, decreasing = TRUE)
+top100<-names(s)[1:100]
+
+##########get tree ################
+## Read in the tree file made by jenn
+## rip this tre is by otus
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
+tree = read.tree("otu_output/tree.nwk")
+print(tree)
+
+###### lets do something jenky ###
+# grab a representative otu for each family.
+
+df # df of outs and taxa
+df1<-df%>% filter(Family %in% top100) # select top familys
+sums<-rowSums(df1[,c(1:42)]) # sum across samples
+df1<-data.frame(df1$o, df1$Family, sums) # make new df
+df1<-(df1[order(df1$df1.Family, -df1$sums),]) # order df
+# grab most abundance otu for each family
+df1.o=1
+df1.Family=1
+sums=1
+newdf <- data.frame(df1.o, df1.Family, sums)
+df1<-filter(df1, df1$df1.Family != "") # drop famliy that is missing a label
+top100<-unique(df1$df1.Family)
+  
+for (i in top100) {
+  print(i)
+  d<- filter(df1, df1$df1.Family == i) # select df
+  d<-(d[order(-d$sums),]) # order df
+  d<-d[1,] # grab top taxa
+  print(d)
+  newdf<-rbind(d, newdf)
+}
+
+rep.otus<-newdf$df1.o
+
+
+# tree is so big. filter and make it smaller
+otus<-row.names(otu.raw) # all the asvs
+asvs_remove<-setdiff(otus, rep.otus) #asvs we don't want
+length(otus)
+asvs_remove
+tree.endo<-drop.tip(tree, asvs_remove) # remove asvs we don't need
+target<-tree.endo$tip.label
+print(tree.endo)
+### change names in tre to be family names
+ # order otus in df that matches otus and familys
+newdf1<-newdf[match(target, newdf$df1.o),]
+newdf1
+# put family names on tree
+#taxon
+g<-newdf1$df1.Family
+# rename tree tips
+tree.endo$tip.label <- g
+
+# rename rows
+row.names(m)<-g
+
+
+
+
+
+# subest avg_log2 dataframe to be on the top 100 taxa
+
+# add famliy col
+
+fam<-row.names(avg_log2)
+avg_log2<-cbind(avg_log2, fam)
+
+otu_100<-subset(avg_log2, fam %in% top100)
+#grab names
+dim(otu_100)
+n<-colnames(otu_100[1:3])
+r<-row.names(otu_100)
+
+# order row to match  tree
+otu_100<-otu_100[match(target, otu_100$otus),]
+otu_100<-otu_100[-4] # remove otu column
+otu_100<-otu_100[match(newdf1$df1.Family, otu_100$fam),]
+
+# make a matrix
+m<-matrix(as.numeric(unlist(otu_100[1:3])),nrow=nrow(otu_100))
+row.names(m)<-r
+colnames(m)<-n[-4]
+#otu_log2_100
+
+
+# Create the matrix and get the column dendrogram for the heatmap from it.
+m<-structure(m)
+#make a dendrogram              
+col_dendro = as.dendrogram(hclust(dist(t(m))))
+# And make the plot....
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s")
+svg(file="heatmap.svg",width = 8 ,height=8)
+#windows(15,10)
+heatmap.phylo(x = m, Rowp = tree.endo, Colp = as.phylo(as.hclust(col_dendro)))
+dev.off()
+
+
+
+
+#prep df for heatmap
+
+#make heatmap
 
 
 
