@@ -149,40 +149,43 @@ setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burg
 rich<-estimate_richness(ps, measures = c("Observed", "Shannon", "Simpson", "InvSimpson" ))
 
 svg(file="figures/16s/diversity.svg",width = 10, height=4 )
-#windows()
+windows()
 plot_richness(ps, "Fraction", measures = c("Observed","Shannon", "Simpson", "InvSimpson")) +
   geom_boxplot(aes(fill = "Fraction")) + scale_fill_manual(values = c("#CBD588", "#5F7FC7", "orange","#DA5724", "#508578"))
 dev.off()
 
-# diversity of active microbes in each fraction
+# Data wrangling fo rdiversity of active microbes in each fraction
 rich<-cbind(rich, metadat)
 rich<-as.data.frame(rich)
 colnames(rich)
 rich$Compartment<-factor(rich$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
-
 reorder(compartment_BCAT, -Observed)
 
-svg(file="figures/16s/total_alpha_diversity.svg",width = 5, height=4 )
-windows()
-rich %>%
-  filter(Plant!="NOPLANT", Fraction!="Inactive", Fraction!="BONCAT_Active")%>%
-  ggplot(aes(x=reorder(compartment_BCAT,-Observed), y=Shannon, fill = Fraction))+
-  geom_boxplot() +
-  scale_fill_manual(values = c("grey27", "lightgrey"))+
-  geom_jitter(width = .1, size=1 )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #ylab()+
-  xlab("Compartment")
-dev.off()
-
 rich<- rich %>%  filter(Plant!="NOPLANT", Fraction!="Inactive")
-
 rich$compartment_BCAT <-factor(rich$compartment_BCAT, levels = c("Bulk_SoilTotal_DNA", "RhizosphereTotal_DNA", "RhizosphereTotal_Cells", "RhizosphereBONCAT_Active",
                                                                  "RootsTotal_Cells"   ,  "RootsBONCAT_Active" , "NoduleTotal_Cells" ,  "NoduleBONCAT_Active" ))          
 
-# total + active 
-svg(file="figures/16s/active_alpha_diversity_2.svg",width = 6, height=4 )
-windows()
+# total + active number otus
+svg(file="figures/16s/observed_divserity.svg",width = 6, height=4 )
+windows(width = 10, height=7)
+rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
+  ggplot(aes(x=compartment_BCAT, y=Observed, fill = Fraction, col= Fraction))+
+  geom_boxplot() +
+  scale_colour_manual(values = c( "orange",  "black", "black"))+
+  scale_fill_manual( values = c("gold", "grey27", "lightgrey"))+
+  geom_jitter(width = .1, size=1 )+
+  theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
+        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14) )+
+  ylab("N Otus")+
+  xlab("Compartment")
+dev.off()
+
+
+
+# total + active shannon
+svg(file="figures/16s/shannon_diversity.svg",width = 6, height=4 )
+windows(width = 10, height=7)
 rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
   ggplot(aes(x=compartment_BCAT, y=Shannon, fill = Fraction, col= Fraction))+
@@ -190,13 +193,33 @@ rich %>%
   scale_colour_manual(values = c( "orange",  "black", "black"))+
   scale_fill_manual( values = c("gold", "grey27", "lightgrey"))+
   geom_jitter(width = .1, size=1 )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  #ylab("Number of ASVs")+
+  theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
+        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14) )+
+  ylab("shannon diversity")+
   xlab("Compartment")
 dev.off()
 
 
-# look at what's in the endophyte
+
+# total + active simpson
+svg(file="figures/16s/simpson_diversity.svg",width = 6, height=4 )
+windows(width = 10, height=7)
+rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
+  ggplot(aes(x=compartment_BCAT, y=Simpson, fill = Fraction, col= Fraction))+
+  geom_boxplot() +
+  scale_colour_manual(values = c( "orange",  "black", "black"))+
+  scale_fill_manual( values = c("gold", "grey27", "lightgrey"))+
+  geom_jitter(width = .1, size=1 )+
+  theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
+        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14) )+
+  ylab("Simpson diversity")+
+  xlab("Compartment")
+dev.off()
+
+
+
+############ taxa exploration in  the endophyte ######################
 
 rich %>%
   filter(BONCAT!="DNA", Fraction!="ctl", Compartment== "Roots", REP!=1)%>%
@@ -229,7 +252,6 @@ rich %>%
   geom_jitter(width = .1, size=1 )+
   ylab("Shannon divsersity")+
   theme_bw()
-
 
 
 root_total<-subset_samples(ps, compartment_BCAT=="RootsTotal_Cells")
@@ -280,6 +302,74 @@ nod_active<-mutate(nod_active, sum= sum)
 # most everything in rhizosbia
 window("total")
 hist(nod_active$sum)
+##------- log fold change from total cells in the rhizosphere to the active fractions-------#######
+
+
+
+## calculated a total fraction 
+## remove taxa from bulk soil
+ps1<- subset_samples(ps,Fraction !="Total_DNA"& Fraction!="beads" & Fraction !="ctl" ) 
+ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
+any(taxa_sums(ps1) == 0)
+
+# 3173 taxa from non rareified data
+
+# subset total cell and active fraction
+ps.Total<- subset_samples(ps1,Fraction =="Total_Cells" )
+otu_total<-as.data.frame(t(as.data.frame(otu_table(ps.Total))))
+
+#remove this sample because I don't have a boncat sample for it
+r<-c("C10R.SYBR_S20", "C1R.SYBR_S16", "C2R.SYBR_S17",  "C5R.SYBR_S18", "C7R.SYBR_S19")  
+
+otu_total<-select(otu_total, all_of(r))
+dim(otu_total)
+length(otu_total)
+head(otu_total)
+#3173
+#                                     C10R.SYBR_S20 C1R.SYBR_S16 C2R.SYBR_S17  C5R.SYBR_S18 C7R.SYBR_S19
+#f18c54e493d5d5ad534b9c3100216416          1867         9482         5803         5013         7044
+#fef6fa6624415b309a5ca9ff89d8efa0             0           50           16           0          241
+######### make a data frame of rhizosphere total in right order
+
+df<-cbind(otu_total, otu_total)
+df<-cbind(otu_total, df)
+df<-df[sort(colnames(df))]
+df<-df[,-15]
+
+otu_total<-df
+
+ps.Active<- subset_samples(ps1,Fraction =="BONCAT_Active" )
+otu_active<-as.data.frame(t(as.data.frame(otu_table(ps.Active))))
+## missing some sample from sybr for C10 E and C5 N
+## so i think I'll just remove those ones and won't have a value for inactive for those samples
+dim(otu_active)
+#head(otu_active)
+#dim(otu_active)
+#sum<-rowSums(otu_active)
+# length 3128
+# taxa1 10000
+# taxa2 0
+# taxa3 0 
+
+# log fold change from active to inactive 
+# add 1 to everything (absent in active & absent in total = no change)
+
+otu_log2<-log2(otu_active+1/(otu_total+1))
+
+dim(otu_log2)
+colnames(otu_log2)
+n<-c("C10N", "C10E", "C10R" ,"C1E" , "C1N" , "C1R" , "C2E" , "C2N" , "C2R" , "C5E" ,"C5N", "C5R" , "C7E" , "C7N" )
+colnames(otu_log2)<-n
+head(otu_log2)
+# check distribution
+otu_log2
+hist(otu_log2$C10N) # most things didn't change because most taxa not present 
+hist(otu_log2$C10R)
+hist(otu_log2$C1E, breaks = 20)
+# insert otu columns
+otus<-row.names(otu_log2)
+otu_log2<-mutate(otu_log2, otus=otus)
+
 
 ##------- log fold change from active to inactive ----------
 ## calculated a total fraction 
@@ -288,22 +378,7 @@ ps1<- subset_samples(ps,Fraction !="Total_DNA"& Fraction!="beads" & Fraction !="
 ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
 any(taxa_sums(ps1) == 0)
 
-# 3128 taxa
-
-#Who are the most abundant taxa minus the total DNA
-# mayeb should evaluted top taxa in active ??? idk???
-#who are most abundant taxa
-topN = 200
-most_abundant_taxa = sort(taxa_sums(ps1), TRUE)[1:topN]
-#print(most_abundant_taxa)
-Top_tax = prune_taxa(names(most_abundant_taxa), ps1)
-length(get_taxa_unique(Top_tax, "Class"))
-length(get_taxa_unique(Top_tax, "Phyla"))
-length(get_taxa_unique(Top_tax, "Genus"))
-length(get_taxa_unique(Top_tax, "Family"))
-tax_table(Top_tax)
-tt<-as.data.table(otu_table(Top_tax))
-hist(tt$f18c54e493d5d5ad534b9c3100216416)
+# 3173 taxa from non rareified data
 
 # subset total cell and active fraction
 ps.Total<- subset_samples(ps1,Fraction =="Total_Cells" )
