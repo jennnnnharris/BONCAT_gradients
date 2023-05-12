@@ -139,7 +139,7 @@ taxon<-as.data.frame(tax_table(ps))
 
 ####################rarefying taxa and importing into phyloseq #####
 ## Determine minimum available reads per sample ##
-min(rowSums(otu.t))
+min.seqs<-min(rowSums(otu.t))
 ## Rarefy to obtain even numbers of reads by sample ##
 set.seed(336)
 otu.r<-rrarefy(otu.t, 41351)
@@ -166,9 +166,10 @@ ps.r<-subset_taxa(ps.r, Genus!=" Chloroplast")
 ps.r<-prune_taxa(taxa_sums(ps.r) > 0, ps.r)
 any(taxa_sums(ps.r) == 0)
 ps.r
+
 # 7516 taxa
 # output df 
-#otus<-as.data.frame(t(as.data.frame(otu_table(ps))))
+otu.r.clean<-as.data.frame(t(as.data.frame(otu_table(ps.r))))
 #taxon<-as.data.frame(tax_table(ps))
 
 
@@ -344,6 +345,7 @@ hist(nod_active$sum)
 otus.bray<-vegdist(otu_table(ps.r), method = "bray")
 ps.r
 
+
 # Perform PCoA analysis of BC distances #
 otus.pcoa <- cmdscale(otus.bray, k=(42-1), eig=TRUE)
 
@@ -436,18 +438,18 @@ dev.off()
 
 
 ##########-------run a new pcoa on just soil <3
-######forget this pc3 and pc 4 stufff for rn
-ps
-ps2<-subset_samples(ps, Compartment !=  "Nodule" & Compartment != "Roots")
+ps.r
+ps2<-subset_samples(ps.r, Compartment !=  "Nodule" & Compartment != "Roots")
 ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
 any(taxa_sums(ps2) == 0)
 ps2
-
+sample.names(ps2)
+# 7401 taXA
 # Calculate Bray-Curtis distance between samples
 otus.bray<-vegdist(otu_table(ps2), method = "bray")
 
 # Perform PCoA analysis of BC distances #
-otus.pcoa <- cmdscale(otus.bray, k=(28-1), eig=TRUE)
+otus.pcoa <- cmdscale(otus.bray, k=(24-1), eig=TRUE)
 
 # Store coordinates for first two axes in new variable #
 otus.p <- otus.pcoa$points[,1:2]
@@ -467,22 +469,77 @@ as.factor(metadat2$compartment_BCAT)
 levels(as.factor(metadat2$compartment_BCAT))
 levels(as.factor(metadat2$Fraction))
 
+square <- 22
+diamond <- 23
+triangle <- 24
+circle <- 21
+
 #setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 svg(file="figures/16s/pcoa/soil_raw.svg",width = 6, height=6 )
 windows(title="PCoA on asvs- Bray Curtis", width = 7, height = 6)
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 points(otus.p[,1:2],
-       pch=c(22,21,0,24, 25, 23)[as.factor(metadat2$Fraction)],
+       pch=c(square, circle, square, triangle, diamond)[as.factor(metadat2$Fraction)],
        lwd=1,cex=2,
-       bg=c("black","#739AFF", "white", "#785EF0", "#785EF0",  "#785EF0", "#785EF0" )[as.factor(metadat2$compartment_BCAT)])
+       bg=c(blue,"black", "white", purple , purple, purple)[as.factor(metadat2$compartment_BCAT)])
 
-# bulk soil = blue
-# rhizzo = purple
-# ctl = white
-# bead = black
-# active = circle
-# inactive = trangle
+legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR control",  "Rhizosphere BONCAT_Active" , "Rhizosphere Inactive",  "Rhizosphere Total DNA"), 
+       pch=c(15,5, 0, 1,2,5),
+       cex=1.1, 
+       col=c("black", "#739AFF",  "black", "#785EF0", "#785EF0",  "#785EF0"),
+       bty = "n")
+
+dev.off()
+
+################# just active verse total
+
+ps.r
+ps2<-subset_samples(ps.r, Compartment !=  "Nodule" & Compartment != "Roots" & Fraction!="Total_DNA")
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+sample.names(ps2)
+# 7401 taXA
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+
+# Perform PCoA analysis of BC distances #
+otus.pcoa <- cmdscale(otus.bray, k=(11-1), eig=TRUE)
+
+# Store coordinates for first two axes in new variable #
+otus.p <- otus.pcoa$points[,1:2]
+
+# Calculate % variance explained by each axis #
+otus.eig<-otus.pcoa$eig
+perc.exp<-otus.eig/(sum(otus.eig))*100
+pe1<-perc.exp[1]
+pe2<-perc.exp[2]
+
+# subset metadata
+metadat2<-metadat%>% filter(Compartment !=  "Nodule" & Compartment != "Roots" & Fraction!="Total_DNA") 
+
+as.factor(metadat2$Compartment)
+as.factor(metadat2$Fraction)
+as.factor(metadat2$compartment_BCAT)
+levels(as.factor(metadat2$compartment_BCAT))
+levels(as.factor(metadat2$Fraction))
+
+square <- 22
+diamond <- 23
+triangle <- 24
+circle <- 21
+
+#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/16s/pcoa/soil_simple_raw.svg",width = 6, height=6 )
+windows(title="PCoA on asvs- Bray Curtis", width = 7, height = 6)
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+points(otus.p[,1:2],
+       pch=c(square, circle, square, triangle)[as.factor(metadat2$Fraction)],
+       lwd=1,cex=2,
+       bg=c("black", "white", purple, purple)[as.factor(metadat2$compartment_BCAT)])
+
 legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR control",  "Rhizosphere BONCAT_Active" , "Rhizosphere Inactive",  "Rhizosphere Total DNA"), 
        pch=c(15,5, 0, 1,2,5),
        cex=1.1, 
@@ -492,13 +549,14 @@ legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR cont
 dev.off()
 
 
+
 #########-------------- permanova----------------#########
 
+# use output that doesn't have chloroplast for permanova. 
 
 
-otu.p.t <- t(otus.perc)
-nrow(otu.p.t)
-otu.perm<- adonis2(otu.p.t~ Compartment*Fraction, data = metadat, permutations = 999, method="bray")
+otu.r.clean.t <- t(otu.r.clean)
+otu.perm<- adonis2(t(otu.r.clean)~ Compartment*Fraction, data = metadat, permutations = 999, method="bray")
 
 otu.perm
 # Fraction         4   8.3386 0.59802 18.4333  0.001 ***
@@ -506,7 +564,7 @@ otu.perm
 #  Fraction:BONCAT  2   0.5742 0.04118  2.5387  0.126   
 
 #analysis of similarities
-otu.ano<- anosim(otu.p.t, grouping =  metadat$Compartment, permutations = 999)
+otu.ano<- anosim(t(otu.r.clean), grouping =  metadat$Compartment, permutations = 999)
 summary(otu.ano)
 
 #test for dispersion between groups
@@ -514,27 +572,17 @@ dispersion <- betadisper(otus.bray, group=metadat$Compartment)
 permutest(dispersion)
 plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
 
-dispersion <- betadisper(otus.bray, group=metadat$BONCAT)
-permutest(dispersion)
-plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
-#Groups     3 0.16064 0.053547 1.148    999  0.363
-# homogenous varience :)
-
-dispersion <- betadisper(otus.bray, group=metadat$Compartment)
-permutest(dispersion)
-plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
-#Groups     8 0.69417 0.086771 26.697    999  0.001 ***
-# non homogenous variance :(
 
 
 ##### subset data by fraction 
-#rhizo active ver inactive
-test<-otu.p.t[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_Cells" & metadat$Fraction != "Total_DNA"),]
-metadat_y<-metadat[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_Cells" & metadat$Fraction != "Total_DNA") ,]
+#rhizo active verse total cells
+test<-otu.r.clean.t[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_DNA"),]
+metadat_y<-metadat[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_DNA") ,]
 otu.perm<- adonis2(test~ Fraction, data = metadat_y, permutations = 999, method="bray")
 otu.perm
+
 #rhizo active ver total DNA
-test<-otu.p.t[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_Cells" & metadat$Fraction != "Inactive"),]
+test<-otu.r.clean.t[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_Cells" & metadat$Fraction != "Inactive"),]
 metadat_y<-metadat[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_Cells" & metadat$Fraction != "Inactive") ,]
 otu.perm<- adonis2(test~ Fraction, data = metadat_y, permutations = 999, method="bray")
 otu.perm
