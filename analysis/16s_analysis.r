@@ -71,6 +71,112 @@ heatmap.phylo <- function(x, Rowp, Colp, ...) {
        cex=1.5)
 }
 
+######-------------import Asvs data -----------------##############
+## Set the working directory; ###
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
+
+### Import Data ###
+taxon <- read.table("asv_level_output/taxonomy.txt", sep="\t", header=T, row.names=1)
+asvs.raw <- read.table("asv_level_output/feature-table.tsv", sep="\t", header=T, row.names = 1 )
+metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
+
+## Transpose ASVS table ##
+asvs.t <- t(asvs.raw)
+## order metadata
+metadat<-metadat[order(metadat$SampleID),]
+## order asvs table
+asvs.t<-asvs.t[order(row.names(asvs.t)),]
+
+# rearrange asv table
+asvs.phyloseq<- (asvs.t)
+taxon<-taxon[,1:7]
+metadat<-as.matrix(metadat)
+y<-colnames(asvs.raw)
+rownames(metadat) <- y
+metadat<-as.data.frame(metadat)
+
+#import it phyloseq
+Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
+Workshop_metadat <- sample_data(metadat)
+Workshop_taxo <- tax_table(as.matrix(taxon))
+ps.a <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
+
+# take a look at PS object
+print(ps.a)
+# we a get a Plyloseq object with  15027 taxa
+
+## Determine minimum available reads per sample ##
+min.s<-min(rowSums(asvs.t))
+
+### Rarefy to obtain even numbers of reads by sample ###
+set.seed(336)
+asvs.r<-rrarefy(asvs.t, min.s)
+############------------ rarefaction curve------------############
+S <- specnumber(otus.t) # observed number of species
+raremax <- min(rowSums(otus.t))
+plot(otus.t, otus.r, xlab = "Observed No. of Species", ylab = "Rarefied No. of Species")
+abline(0, 1)
+out<-rarecurve(otus.t, step = 20, sample = raremax, col = "blue", cex = 0.6)
+## build plots
+col <- c("black")
+lty <- c("solid")
+lwd <- rep(1, 42)
+pars <- expand.grid(col = col, lty = lty, lwd = lwd, 
+                    stringsAsFactors = FALSE)
+Nmax <- sapply(out, function(x) max(attr(x, "Subsample")))
+Smax <- sapply(out, max)
+# save
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/16s/rarecurve.svg",width = 6, height=6 )
+plot(c(1, max(Nmax)), c(1, max(Smax)), xlab = "Number of Sequences",
+     ylab = "ASV", type = "n")
+abline(v = raremax)
+for (i in seq_along(out)) {
+  N <- attr(out[[i]], "Subsample")
+  with(pars, lines(N, out[[i]], col = col[i], lty = lty[i], lwd = lwd[i]))
+}
+dev.off()
+
+
+######--- recode metadata----- ########
+metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
+metadat<-metadat[, c(1,3:6)]
+metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
+#to make coloring things easier I'm gong to added a combined fractionXboncat column 
+metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
+
+#####------make phyloseq object with rarefied data -------#####
+
+asvs.phyloseq<- (asvs.r)
+taxon<-taxon[,1:7]
+metadat<-as.matrix(metadat)
+y<-colnames(asvs.raw)
+rownames(metadat) <- y
+metadat<-as.data.frame(metadat)
+
+#import it phyloseq
+Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
+Workshop_metadat <- sample_data(metadat)
+Workshop_taxo <- tax_table(as.matrix(taxon))
+ps.a <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
+
+#test it worked
+#sample_names(ps)
+print(ps.a)
+# 15027 taxa
+
+# remove chloroplast DNA
+ps.a<-subset_taxa(ps.a, Class!=" Chloroplast")
+ps.a<-subset_taxa(ps.a, Genus!=" Mitochondria")
+ps.a<-subset_taxa(ps.a, Genus!=" Chloroplast")
+# get rid of taxa that aren; in any samples
+ps.a<-prune_taxa(taxa_sums(ps.a) > 0, ps.a)
+any(taxa_sums(ps.a) == 0)
+ps.a
+# 14593 taxa
+
+asvs.clean<-as.data.frame(t(as.data.frame(otu_table(ps.a))))
+taxon<-as.data.frame(tax_table(ps.a))
 
 
 
@@ -398,43 +504,6 @@ legend("top",legend=c("beads", "Bulk_SoilTotal_DNA" ,      "neg control"   ,  "N
 
 dev.off()
 
-#####-------active verse inactive
-
-# subset
-p<-otus.p[which(metadat$Fraction != "Total_Cells"),]
-
-
-# subset metadata
-metadat_in<-metadat%>% filter(Fraction !="Total_Cells") 
-
-metadat%>% filter(Fraction == "Inactive")
-as.factor(metadat_in$Compartment)
-as.factor(metadat_in$Fraction)
-as.factor(metadat_in$compartment_BCAT)
-levels(as.factor(metadat_in$compartment_BCAT))
-levels(as.factor(metadat_in$Fraction))
-
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-#svg(file="figures/16s/pcoa/pcoa_all_raw.svg",width = 7, height=6 )
-
-windows(title="PCoA on plant asvs- Bray Curtis", width = 7, height = 6)
-ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis dissimilarities",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
-         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
-points(p, col=c("black"),
-       pch=c(22,21,0,24, 23 )[as.factor(metadat_in$Fraction)],
-       lwd=1,cex=2,
-       bg=c("black", "#739AFF", "white", "#DC267F", "#DC267F", "#785EF0", "#785EF0" , "#785EF0", "#FFB000", "#FFB000")[as.factor(metadat_in$compartment_BCAT)])
-
-
-legend("bottom",legend=c("beads", "Bulk_SoilTotal_DNA" ,      "neg control"   ,  "NoduleBONCAT_Active"    ,  "NoduleInactive"     ,      "RhizosphereBONCAT_Active",
-                         "RhizosphereInactive","RhizosphereTotal_DNA" ,    "RootsBONCAT_Active"   ,    "RootsInactive"),
-       pch=c(15,5,0,1,2 , 1, 2 , 5, 1, 2),
-       col= c("black", "#739AFF", "black", "#DC267F", "#DC267F", "#785EF0", "#785EF0" , "#785EF0", "#FFB000", "#FFB000"),
-       bty = "n",
-       inset = c(.05, 0))
-
-dev.off()
-
 
 
 ##########-------run a new pcoa on just soil <3
@@ -614,15 +683,122 @@ otu.perm<- adonis2(test~ Compartment, data = metadat_y, permutations = 999, meth
 otu.perm
 
 
+##################### PCOA ASVS level data  ##############
+
+#Pcoa on rarefied ASVS Data
+
+# Calculate Bray-Curtis distance between samples
+asvs.bray<-vegdist(otu_table(ps.a), method = "bray")
+ps.a
 
 
+# Perform PCoA analysis of BC distances #
+asvs.pcoa <- cmdscale(asvs.bray, k=(42-1), eig=TRUE)
+
+# Store coordinates for first two axes in new variable #
+asvs.p <- asvs.pcoa$points[,1:2]
+
+# Calculate % variance explained by each axis #
+asvs.eig<-asvs.pcoa$eig
+perc.exp<-asvs.eig/(sum(asvs.eig))*100
+pe1<-perc.exp[1]
+pe2<-perc.exp[2]
+
+#plant verse soil
+metadat
+# subset
+
+#p<-otus.p[which(metadat$BONCAT != "ctl",)]
+
+# subset metadata
+as.factor(metadat$Compartment)
+as.factor(metadat$Fraction)
+as.factor(metadat$compartment_BCAT)
+levels(as.factor(metadat$compartment_BCAT))
+levels(as.factor(metadat$Fraction))
+
+# colors :)
+gold <- "#FFB000"
+purple <- "#785EF0"
+blue <- "#739AFF"
+pink <- "#DC267F"
+
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/16s/pcoa/Pcoa_ASVS_plantvsoil_raw.svg",width = 7, height=6 )
+
+windows(title="PCoA on plant asvs- Bray Curtis", width = 7, height = 6)
+ordiplot(asvs.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis dissimilarities",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+points(asvs.p, col=c("black"),
+       pch=c(22, 21,22,24, 23)[as.factor(metadat$Fraction)],
+       lwd=1,cex=2,
+       bg=c( blue, "black", "white", pink , pink, purple, purple, purple, gold, gold)[as.factor(metadat$compartment_BCAT)])
 
 
+legend("top",legend=c("beads", "Bulk_SoilTotal_DNA" ,      "neg control"   ,  "NoduleBONCAT_Active"    ,  "Nodule Total Cells"     ,      "RhizosphereBONCAT_Active",
+                      "Rhizosphere Total Cells","RhizosphereTotal_DNA" ,    "Roots BONCAT Active"   ,    "Roots Total Cells"),
+       pch=c(15,5,0,1,2 , 1, 2 , 5, 1, 2),
+       col= c("black", "#739AFF", "black", "#DC267F", "#DC267F", "#785EF0", "#785EF0" , "#785EF0", "#FFB000", "#FFB000"),
+       bty = "n",
+       inset = c(.05, 0))
+
+dev.off()
 
 
+##########-------run a new pcoa on just soil <3  ASVS level ###
+ps.a
+ps2a<-subset_samples(ps.a, Compartment !=  "Nodule" & Compartment != "Roots")
+ps2a<-prune_taxa(taxa_sums(ps2a) > 0, ps2a)
+any(taxa_sums(ps2a) == 0)
+ps2a
+sample.names(ps2a)
+# 7401 taXA
+# Calculate Bray-Curtis distance between samples
+asvs.bray<-vegdist(otu_table(ps2a), method = "bray")
 
+# Perform PCoA analysis of BC distances #
+asvs.pcoa <- cmdscale(asvs.bray, k=(24-1), eig=TRUE)
 
+# Store coordinates for first two axes in new variable #
+asvs.p <- asvs.pcoa$points[,1:2]
 
+# Calculate % variance explained by each axis #
+asvs.eig<-asvs.pcoa$eig
+perc.exp<-asvs.eig/(sum(asvs.eig))*100
+pe1<-perc.exp[1]
+pe2<-perc.exp[2]
+
+# subset metadata
+metadat2<-metadat%>% filter(Compartment !=  "Nodule" & Compartment != "Roots") 
+
+as.factor(metadat2$Compartment)
+as.factor(metadat2$Fraction)
+as.factor(metadat2$compartment_BCAT)
+levels(as.factor(metadat2$compartment_BCAT))
+levels(as.factor(metadat2$Fraction))
+
+square <- 22
+diamond <- 23
+triangle <- 24
+circle <- 21
+
+#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/16s/pcoa/soil_raw.svg",width = 6, height=6 )
+windows(title="PCoA on asvs- Bray Curtis", width = 7, height = 6)
+ordiplot(asvs.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+points(asvs.p[,1:2],
+       pch=c(square, circle, square, triangle, diamond)[as.factor(metadat2$Fraction)],
+       lwd=1,cex=2,
+       bg=c(blue,"black", "white", purple , purple, purple)[as.factor(metadat2$compartment_BCAT)])
+
+legend("bottom",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR control",  "Rhizosphere BONCAT_Active" , "Rhizosphere Inactive",  "Rhizosphere Total DNA"), 
+       pch=c(15,5, 0, 1,2,5),
+       cex=1.1, 
+       col=c("black", "#739AFF",  "black", "#785EF0", "#785EF0",  "#785EF0"),
+       bty = "n")
+
+dev.off()
 
 
 
@@ -1091,117 +1267,6 @@ dev.off()
 
 
 
-######-------------Asvs-----------------##############
-## Set the working directory; modify to your own ###
-setwd("C:/Users/Jenn/OneDrive - The Pennsylvania State University/Documents/Github/BONCAT_gradients/data")
-
-### Import Data ###
-taxon <- read.table("16s/taxonomy.txt", sep="\t", header=T, row.names=1)
-asvs.raw <- read.table("16s/feature-table.tsv", sep="\t", header=T, row.names = 1 )
-metadat <- read.delim("16s/metadata.txt", sep="\t", header = T, check.names=FALSE)
-
-## Transpose ASVS table ##
-asvs.t <- t(asvs.raw)
-## order metadata
-metadat<-metadat[order(metadat$SampleID),]
-## order asvs table
-asvs.t<-asvs.t[order(row.names(asvs.t)),]
-
-# rearrange asv table
-asvs.phyloseq<- (asvs.t)
-taxon<-taxon[,1:7]
-metadat<-as.matrix(metadat)
-y<-colnames(asvs.raw)
-rownames(metadat) <- y
-metadat<-as.data.frame(metadat)
-
-#import it phyloseq
-Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
-Workshop_metadat <- sample_data(metadat)
-Workshop_taxo <- tax_table(as.matrix(taxon))
-ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
-
-# take a look at PS object
-print(ps)
-# we a get a Plyloseq object with  15027 taxa
-
-## Determine minimum available reads per sample ##
-min(rowSums(otus.t))
-
-### Rarefy to obtain even numbers of reads by sample ###
-set.seed(336)
-otus.r<-rrarefy(otus.t, 41610)
-############------------ rarefaction curve------------############
-
-#rarecurve
-S <- specnumber(otus.t) # observed number of species
-raremax <- min(rowSums(otus.t))
-plot(otus.t, otus.r, xlab = "Observed No. of Species", ylab = "Rarefied No. of Species")
-abline(0, 1)
-out<-rarecurve(otus.t, step = 20, sample = raremax, col = "blue", cex = 0.6)
-
-## build plots
-col <- c("black")
-lty <- c("solid")
-lwd <- rep(1, 42)
-pars <- expand.grid(col = col, lty = lty, lwd = lwd, 
-                    stringsAsFactors = FALSE)
-Nmax <- sapply(out, function(x) max(attr(x, "Subsample")))
-Smax <- sapply(out, max)
-
-# save
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/rarecurve.svg",width = 6, height=6 )
-plot(c(1, max(Nmax)), c(1, max(Smax)), xlab = "Number of Sequences",
-     ylab = "ASV", type = "n")
-abline(v = raremax)
-for (i in seq_along(out)) {
-  N <- attr(out[[i]], "Subsample")
-  with(pars, lines(N, out[[i]], col = col[i], lty = lty[i], lwd = lwd[i]))
-}
-
-dev.off()
-
-
-######--- recode metadata----- ########
-metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
-metadat<-metadat[, c(1,3:6)]
-metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
-#to make coloring things easier I'm gong to added a combined fractionXboncat column 
-metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
-
-#####------make phyloseq object with rarefied data -------#####
-
-otus.phyloseq<- (otus.r)
-taxon<-taxon[,1:7]
-metadat<-as.matrix(metadat)
-y<-colnames(otus.raw)
-rownames(metadat) <- y
-metadat<-as.data.frame(metadat)
-
-#import it phyloseq
-Workshop_OTU <- otu_table(otus.phyloseq, taxa_are_rows = FALSE)
-Workshop_metadat <- sample_data(metadat)
-Workshop_taxo <- tax_table(as.matrix(taxon))
-ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
-
-#test it worked
-#sample_names(ps)
-print(ps)
-# 15027 taxa
-
-# remove chloroplast DNA
-ps<-subset_taxa(ps, Class!=" Chloroplast")
-ps<-subset_taxa(ps, Genus!=" Mitochondria")
-ps<-subset_taxa(ps, Genus!=" Chloroplast")
-# get rid of taxa that aren; in any samples
-ps<-prune_taxa(taxa_sums(ps) > 0, ps)
-any(taxa_sums(ps) == 0)
-ps
-# 14593 taxa
-
-otus<-as.data.frame(t(as.data.frame(otu_table(ps))))
-taxon<-as.data.frame(tax_table(ps))
 
 
 #################------ fold change total to active---------------####
