@@ -616,7 +616,60 @@ legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR cont
        bty = "n")
 
 dev.off()
+#################-------------------just plant##############
+ps.r
+ps2<-subset_samples(ps.r, Compartment !=  "Bulk_Soil" & Compartment != "Rhizosphere" & Compartment != "ctl")
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+sample.names(ps2)
+# 446 taXA
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
 
+# Perform PCoA analysis of BC distances #
+otus.pcoa <- cmdscale(otus.bray, k=(15-1), eig=TRUE)
+
+# Store coordinates for first two axes in new variable #
+otus.p <- otus.pcoa$points[,1:2]
+
+# Calculate % variance explained by each axis #
+otus.eig<-otus.pcoa$eig
+perc.exp<-otus.eig/(sum(otus.eig))*100
+pe1<-perc.exp[1]
+pe2<-perc.exp[2]
+
+# subset metadata
+metadat2<-metadat%>% filter(Compartment !=  "Bulk_Soil" & Compartment != "Rhizosphere" & Compartment != "ctl") 
+
+as.factor(metadat2$Compartment)
+as.factor(metadat2$Fraction)
+as.factor(metadat2$compartment_BCAT)
+levels(as.factor(metadat2$compartment_BCAT))
+levels(as.factor(metadat2$Fraction))
+
+square <- 22
+diamond <- 23
+triangle <- 24
+circle <- 21
+
+#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/16s/pcoa/plant_raw.svg",width = 6, height=6 )
+windows(title="PCoA on asvs- Bray Curtis", width = 7, height = 6)
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+points(otus.p[,1:2],
+       pch=c(circle, triangle)[as.factor(metadat2$Fraction)],
+       lwd=1,cex=2,
+       bg=c(pink, pink, gold, gold)[as.factor(metadat2$compartment_BCAT)])
+
+legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR control",  "Rhizosphere BONCAT_Active" , "Rhizosphere Inactive",  "Rhizosphere Total DNA"), 
+       pch=c(15,5, 0, 1,2,5),
+       cex=1.1, 
+       col=c("black", "#739AFF",  "black", "#785EF0", "#785EF0",  "#785EF0"),
+       bty = "n")
+
+dev.off()
 
 
 #########-------------- permanova----------------#########
