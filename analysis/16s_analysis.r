@@ -138,7 +138,7 @@ for (i in seq_along(out)) {
 dev.off()
 
 
-######--- recode metadata----- ########
+######--- recode metadata----- #
 metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
 metadat<-metadat[, c(1,3:6)]
 metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
@@ -263,7 +263,7 @@ Workshop_taxo <- tax_table(as.matrix(taxon))
 ps.r <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
 ps.r
 # we a get a Plyloseq object with  7727 taxa
-#######------ remove chloroplasts-------######
+#######------ remove chloroplasts-------#
 # remove chloroplast DNA
 ps.r<-subset_taxa(ps.r, Class!=" Chloroplast")
 ps.r<-subset_taxa(ps.r, Genus!=" Mitochondria")
@@ -277,6 +277,69 @@ ps.r
 # output df 
 otu.r.clean<-as.data.frame(t(as.data.frame(otu_table(ps.r))))
 #taxon<-as.data.frame(tax_table(ps))
+
+#####################------normalizing data by number of reads#################
+
+## Set the working directory; modify to your own ###
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
+
+### Import Data ###
+taxon <- read.delim("otu_output/taxonomy.txt", sep="\t", header=T, row.names=1)
+otu.raw <- read.table("otu_output/feature-table.txt", sep="\t", header = T , row.names = 1 )
+metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
+
+
+#data wrangleing and importing into Phyloseq#
+## recode metadata 
+metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
+metadat<-metadat[, c(1,3:6)]
+metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
+#to make coloring things easier I'm gong to added a combined fractionXboncat column 
+metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
+
+## Transpose ASVS table ##
+otu.t <- t(otu.raw)
+## order metadata
+metadat<-metadat[order(metadat$SampleID),]
+## order asvs table
+otu.t<-otu.t[order(row.names(otu.t)),]
+
+
+# hellinger data transformation 
+# divides each value by the row sum and takes the square root of the quotient
+# this would normalize by the number of reads in each sample and make very not abundant taxa less strongly influence the data
+otu.n<-decostand(otu.t, "hellinger")
+
+## rearrange data for phyloseq
+otu.phyloseq<- (otu.n)
+taxon<-taxon[,1:7]
+metadat<-as.matrix(metadat)
+y<-colnames(otu.raw)
+rownames(metadat) <- y
+metadat<-as.data.frame(metadat)
+## import it phyloseq
+Workshop_OTU <- otu_table(otu.phyloseq, taxa_are_rows = FALSE)
+Workshop_metadat <- sample_data(metadat)
+Workshop_taxo <- tax_table(as.matrix(taxon))
+ps <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
+ps
+# 7727 taxa
+#######------ remove chloroplasts-------#
+# remove chloroplast DNA
+ps<-subset_taxa(ps, Class!=" Chloroplast")
+ps<-subset_taxa(ps, Genus!=" Mitochondria")
+ps<-subset_taxa(ps, Genus!=" Chloroplast")
+# get rid of taxa that arent in any samples
+ps<-prune_taxa(taxa_sums(ps) > 0, ps)
+any(taxa_sums(ps) == 0)
+ps
+
+# 7623 taxa
+# output df 
+otu.clean<-as.data.frame(t(as.data.frame(otu_table(ps))))
+taxon<-as.data.frame(tax_table(ps))
+
+
 
 
 
@@ -862,7 +925,7 @@ dev.off()
 
 
 ##------- log fold change -------#######
-# compare active rhizosphere to active in plant ######
+# compare active rhizosphere to active in plant #
 # shows what microbes are more active in the plant than the soil
 
 ## select active taxa
@@ -895,7 +958,7 @@ colnames(df)
 
 # add 1 to everything (absent in active & absent in total = no change)
 
-otu_log2<-log2(otu.plant/(df+1))
+otu_log2<-log2(otu.plant/(df+.0001))
 
 dim(otu_log2)
 colnames(otu_log2)
@@ -907,6 +970,13 @@ otu_log2
 hist(otu_log2$C10N) # most things didn't change because most taxa not present 
 hist(otu_log2$C5N)
 hist(otu_log2$C1E, breaks = 20)
+# col dendogram doesn't work because a ton of stuff equals 0 infinit
+# we re code -inf as -99
+# this means a taxa wasn't present in the location sampled
+
+
+otu_log2[otu_log2== "-Inf"] <- -99
+
 
 ############## make heatmap #1-------#################
 
@@ -934,14 +1004,6 @@ colnames(otu_log2)
 head(otu_log2)
 tree.short
 
-
-# make a matrix
-# col dendogram doesn't work because a ton of stuff equals 0 infinit
-      # we re code -inf as -99
-      # this means a taxa wasn't present in the location sampled
-otu_log2[otu_log2== "-Inf"] <- -99
-
-
 # check out disctribution
 #otu_log2[otu_log2=="-99"] <- NA
 #summary(otu_log2)
@@ -964,6 +1026,60 @@ otu_log2[otu_log2== "-Inf"] <- -99
          
   #make a plot without phylogeny 
         #make a dendrogram              
+         row_dendro = as.dendrogram(hclust(dist((m))))
+         
+         ############  make the heatmap  plot #################33
+         windows(8,10)
+         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
+         
+# focus on just taxa that are present in the plant
+         
+         
+        
+         df<-subset(otu_log2, otu_log2$C10E != -99 | otu_log2$C1E != -99  | otu_log2$C2E != -99 | otu_log2$C5E != -99 )
+         # these are the ones we don't want 
+         df1<-subset(otu_log2, otu_log2$C10E == -99 & otu_log2$C1E == -99  & otu_log2$C2E == -99 & otu_log2$C5E == -99)
+         
+         
+         
+         #make tree smaller
+         # shorten phylogeny to match what is in our log 2 file
+         otus<-row.names(otu.raw) # all the otus
+         #otus we want
+         otus_300<-row.names(df) 
+         asvs_remove<-setdiff(otus, otus_300) #asvs we don't want
+         tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
+         tree.short
+         
+         # order the table so it matches the 
+         # make otu column 
+         df$otus <- otus_300
+         
+         # grab correct order 
+         target<-tree.short$tip.label
+         df<-df[match(target, df$otus),]
+         # rm out column
+         df<-subset(df, select = -otus)
+         colnames(df)
+         head(df)
+         tree.short
+         
+         
+        #make matrix      
+         m<-as.matrix(df)
+         row.names(m)
+         #row.names(m)<-f # make row names family names
+         # Create the matrix and get the column dendrogram for the heatmap from it.
+         m<-structure(m)
+         #make a dendrogram              
+         col_dendro = as.dendrogram(hclust(dist(t(m))))
+  # And make the plot with phylogeny
+         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
+         windows(8,10)
+         heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
+         #dev.off()
+ #make a plot without phylogeny 
+         #make a dendrogram              
          row_dendro = as.dendrogram(hclust(dist((m))))
          
          ############  make the heatmap  plot #################33
@@ -1010,7 +1126,7 @@ otu_log2[otu_log2== "-Inf"] <- -99
  # log fold change from active to inactive 
  # add 1 to everything absent in total = no change)
          
-         otu_log2<-log2(otu.active/(otu.total+1))
+         otu_log2<-log2(otu.active/(otu.total+.0001))
          
          dim(otu_log2)
          colnames(otu_log2)
@@ -1022,6 +1138,20 @@ otu_log2[otu_log2== "-Inf"] <- -99
          hist(otu_log2$C10N) # most things didn't change because most taxa not present 
          hist(otu_log2$C10R)
          hist(otu_log2$C1E, breaks = 20)
+         # this means a taxa wasn't present in the location sampled
+         # col dendogram doesn't work because a ton of stuff equals 0 infinit
+         # we re code -inf as -99
+         # this means a taxa wasn't present in the location sampled
+         otu_log2[otu_log2== "-Inf"] <- -99
+         
+         
+         # check out disctribution
+        # otu_log2[otu_log2=="-99"] <- NA
+        # summary(otu_log2)
+         # change NA back to neg 99
+        # otu_log2[otu_log2=="NA"] <- -99
+
+         
          
          
 ########### make heatmap #2-------#################
@@ -1050,20 +1180,6 @@ otu_log2[otu_log2== "-Inf"] <- -99
          head(otu_log2)
          tree.short
          
-         
-         # make a matrix
-         # col dendogram doesn't work because a ton of stuff equals 0 infinit
-         # we re code -inf as -99
-         # this means a taxa wasn't present in the location sampled
-         otu_log2[otu_log2== "-Inf"] <- -99
-         
-         
-         # check out disctribution
-         otu_log2[otu_log2=="-99"] <- NA
-         summary(otu_log2)
-         # change NA back to neg 99
-         otu_log2[otu_log2=="NA"] <- -99
-         
          # make matrix
          m<-as.matrix(otu_log2)
          row.names(m)
@@ -1087,108 +1203,301 @@ otu_log2[otu_log2== "-Inf"] <- -99
          windows(8,10)
          heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
 
-#____________________________________________#
-         
-#### value in total compared to the value in the active rhizosphere, active endo, active nod
-#### heat map #3 
-
-   ## select total fraction 
-  ## remove taxa from bulk soil
-         ps1<- subset_samples(ps, Fraction!="beads" & Fraction !="ctl" ) 
-         ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
-         any(taxa_sums(ps1) == 0)
-         ps1
-         # 7340 taxa from non rareified data
-         
-         # subset bulkd soil total dna fraction
-         ps.Total<- ps1 %>% subset_samples(Fraction =="Total_DNA" & Plant=="Clover") %>% subset_samples(Compartment !="Rhizosphere" )
-         otu.total<-as.data.frame(t(as.data.frame(otu_table(ps.Total))))
-         colnames(otu.total)
-         # samples in otu.total C10B, C2B , C5B, C7B
-         #mising: C1B
-         # remove sample thats missing in active
-         dim(otu.total)
-         # subset for active cells fraction    
-         ps.Active<- subset_samples(ps1,Fraction =="BONCAT_Active" )
-         otu.active<-as.data.frame(t(as.data.frame(otu_table(ps.Active))))
-         dim(otu.active)
-         colnames(otu.active)
-         # 
-         # remove samples that you don't have a pair all C1 
-         otu.active<-subset(otu.active, select = -c(C1E.POS_S31,C1N.POS_S61, C1R.POS_S27))
-         dim(otu.active)
-         colnames(otu.active)
-         # make total df match the dimensions of active
-         df<- cbind(otu.total, otu.total)
-         dim(df)
-         df <- cbind(df, otu.total)
-         dim(df)
-         colnames(df)
-         # put in the right order
-         df<-df[sort(colnames(df))]
-         colnames(df)
-         # remove one of the ones for C7
-         df<- subset(df, select = -c(C7B.DNA_S3.2 ))
-         head(df)
-         head(otu.active)
-         
-         # log fold change from active to inactive 
-         # add 1 to everything absent in total = no change)
-        
-         
-         otu_log2<-log2(otu.active/(df+1))
-         
-         dim(otu_log2)
+###subset by just rhizosphere
          colnames(otu_log2)
-         n<-c("C10E", "C10N", "C10R" , "C2E" , "C2N" , "C2R" , "C5E" , "C5N", "C5R" , "C7E" , "C7N" )
-         colnames(otu_log2)<-n
-         head(otu_log2)
-         # check distribution
-         #otu_log2
-         hist(otu_log2$C10E)
-         hist(otu_log2$C7N)
-         hist(otu_log2$C2E, breaks = 10)         
+         df<-subset(otu_log2, select = c(C10R, C1R, C2R, C5R ))
          
          
+         df<-subset(df, df$C10R != -99 | df$C1R != -99  | df$C2R != -99 | df$C5R != -99 )
+         # these are the ones we don't want 
+         df1<-subset(df, otu_log2$C10R == -99 & otu_log2$C1R == -99  & otu_log2$C2R == -99 & otu_log2$C5R == -99)
          
-###### heatmap #3###############         
-# grab phylogeny and Read in the tree file 
-         setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
-         tree = read.tree("otu_output/tree.nwk")
+         #make tree smaller
          # shorten phylogeny to match what is in our log 2 file
          otus<-row.names(otu.raw) # all the otus
          #otus we want
-         otus_7000<-row.names(otu_log2) 
-         asvs_remove<-setdiff(otus, otus_7000) #asvs we don't want
+         otus_r<-row.names(df) 
+         asvs_remove<-setdiff(otus, otus_r) #asvs we don't want
          tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
          tree.short
          
          # order the table so it matches the 
          # make otu column 
-         otu_log2$otus <- otus_7000
+         df$otus <- otus_r
+         
+         # grab correct order 
+         target<-tree.short$tip.label
+         df<-df[match(target, df$otus),]
+         # rm out column
+         df<-subset(df, select = -otus)
+         colnames(df)
+         head(df)
+         tree.short
+         
+         
+         #make matrix      
+         m<-as.matrix(df)
+         row.names(m)
+         #row.names(m)<-f # make row names family names
+         # Create the matrix and get the column dendrogram for the heatmap from it.
+         m<-structure(m)
+         #make a dendrogram              
+         col_dendro = as.dendrogram(hclust(dist(t(m))))
+         # And make the plot with phylogeny
+         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
+         windows(8,10)
+         heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
+         #dev.off()
+  ### no phylogeny
+         #make a plot without phylogeny 
+         #make a dendrogram              
+         row_dendro = as.dendrogram(hclust(dist((m))))
+         
+         ############  make the heatmap  plot #################33
+         windows(8,10)
+         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
+         
+         
+         
+### just endophyte
+         colnames(otu_log2)
+         df<-subset(otu_log2, select = c(C1E, C2E, C5E,  C7E))
+         df<-subset(df, df$C1E != -99 | df$C2E != -99  | df$C5E != -99 | df$C7E != -99 )
+         #make tree smaller
+         # shorten phylogeny to match what is in our log 2 file
+         otus<-row.names(otu.raw) # all the otus
+         #otus we want
+         otus_r<-row.names(df) 
+         asvs_remove<-setdiff(otus, otus_r) #asvs we don't want
+         tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
+         tree.short
+         
+         # order the table so it matches the 
+         # make otu column 
+         df$otus <- otus_r
+         
+         # grab correct order 
+         target<-tree.short$tip.label
+         df<-df[match(target, df$otus),]
+         # rm out column
+         df<-subset(df, select = -otus)
+         colnames(df)
+         head(df)
+         tree.short
+         
+         
+         #make matrix      
+         m<-as.matrix(df)
+         row.names(m)
+         #row.names(m)<-f # make row names family names
+         # Create the matrix and get the column dendrogram for the heatmap from it.
+         m<-structure(m)
+         #make a dendrogram              
+         col_dendro = as.dendrogram(hclust(dist(t(m))))
+         # And make the plot with phylogeny
+         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
+         windows(8,10)
+         heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
+         #dev.off()
+         ### no phylogeny
+         #make a plot without phylogeny 
+         #make a dendrogram              
+         row_dendro = as.dendrogram(hclust(dist((m))))
+         
+         ############  make the heatmap  plot #################33
+         windows(8,10)
+         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
+         
+  ### just nodule
+         colnames(otu_log2)
+         df<-subset(otu_log2, select = c(C10N, C1N, C2N,  C7N))
+         df<-subset(df, df$C10N != -99 | df$C1N != -99  | df$C2N != -99 | df$C7N != -99 )
+         #make tree smaller
+         # shorten phylogeny to match what is in our log 2 file
+         otus<-row.names(otu.raw) # all the otus
+         #otus we want
+         otus_r<-row.names(df) 
+         asvs_remove<-setdiff(otus, otus_r) #asvs we don't want
+         tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
+         tree.short
+         
+         # order the table so it matches the 
+         # make otu column 
+         df$otus <- otus_r
+         
+         # grab correct order 
+         target<-tree.short$tip.label
+         df<-df[match(target, df$otus),]
+         # rm out column
+         df<-subset(df, select = -otus)
+         colnames(df)
+         head(df)
+         tree.short
+         
+         
+         #make matrix      
+         m<-as.matrix(df)
+         row.names(m)
+         #row.names(m)<-f # make row names family names
+         # Create the matrix and get the column dendrogram for the heatmap from it.
+         m<-structure(m)
+         #make a dendrogram              
+         col_dendro = as.dendrogram(hclust(dist(t(m))))
+         # And make the plot with phylogeny
+         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
+         windows(8,10)
+         heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
+         #dev.off()
+         ### no phylogeny
+         #make a plot without phylogeny 
+         #make a dendrogram              
+         row_dendro = as.dendrogram(hclust(dist((m))))
+         
+         ############  make the heatmap  plot #################33
+         windows(8,10)
+         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
+         
+#        Are the taxa present in the plant also active in the soil?
+         
+         #heat map #3
+         #active / total
+         # filter for taxa that are present in the soil
+         
+    ### just nodule
+         colnames(otu_log2)
+         df<-subset(otu_log2, otu_log2$C1E != -99 | otu_log2$C2E != -99  | otu_log2$C5E != -99 | otu_log2$C7E != -99 )
+         #make tree smaller
+         dim(df)
+         # shorten phylogeny to match what is in our log 2 file
+         otus<-row.names(otu.raw) # all the otus
+         #otus we want
+         otus_r<-row.names(df) 
+         asvs_remove<-setdiff(otus, otus_r) #asvs we don't want
+         tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
+         tree.short
+         
+         # order the table so it matches the 
+         # make otu column 
+         df$otus <- otus_r
+         
+         # grab correct order 
+         target<-tree.short$tip.label
+         df<-df[match(target, df$otus),]
+         # rm out column
+         df<-subset(df, select = -otus)
+         colnames(df)
+         head(df)
+         tree.short
+         
+         
+         #make matrix      
+         m<-as.matrix(df)
+         row.names(m)
+         #row.names(m)<-f # make row names family names
+         # Create the matrix and get the column dendrogram for the heatmap from it.
+         m<-structure(m)
+         #make a dendrogram              
+         col_dendro = as.dendrogram(hclust(dist(t(m))))
+         # And make the plot with phylogeny
+         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
+         windows(8,10)
+         heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
+         #dev.off()
+         ### no phylogeny
+         #make a plot without phylogeny 
+         #make a dendrogram              
+         row_dendro = as.dendrogram(hclust(dist((m))))
+         
+         ############  make the heatmap  plot #################33
+         windows(8,10)
+         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
+         
+         
+#####heat map # 4######
+# what is the selectivity of the plant?
+# total viable in fraction X / total viable in rhizosphere
+         
+         
+         ## select total taxa
+         ps1<- subset_samples(ps, Fraction=="Total_Cells" ) 
+         sample_data(ps)
+         ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
+         any(taxa_sums(ps1) == 0)
+         ps1
+         # 2473 taxa from non rareified data
+##### start up <3         
+         ## select active taxa in rhizosphere
+         ps.soil<- subset_samples(ps1,  Compartment=="Rhizosphere")
+         otu.soil<-as.data.frame(t(as.data.frame(otu_table(ps.soil))))
+         head(otu.soil)
+         colnames(otu.soil)
+         # samples C10R, C1R, C2R, C5R
+         
+         # select active taxa in plant
+         ps.plant<- subset_samples(ps1,Fraction =="Total_Cells" & Compartment!="Rhizosphere")
+         otu.plant<-as.data.frame(t(as.data.frame(otu_table(ps.plant))))
+         head(otu.plant)
+         colnames(otu.plant)
+         # samples C10E, C10N, C1E, C1N, C2E, C2E, C2N, C5E, C5N, C7E, C7N  
+         # drop sample C7 because it doesnt have a pair in the soil
+         otu.plant<-subset(otu.plant, select = -c(C7E.POS_S34,C7N.POS_S64))
+         
+         # make df of active in rhizosphere to divid by
+         df<-cbind(otu.soil, otu.soil)
+         df<-df[sort(colnames(df))]
+         colnames(df)
+         
+         # add 1 to everything (absent in active & absent in total = no change)
+         
+         otu_log2<-log2(otu.plant/(df+.0001))
+         
+         dim(otu_log2)
+         colnames(otu_log2)
+         n<-c("C10E", "C10N","C1E" , "C1N" , "C2E" , "C2N" , "C5E" , "C5N")
+         colnames(otu_log2)<-n
+         head(otu_log2)
+         # check distribution
+         otu_log2
+         hist(otu_log2$C10N) # most things didn't change because most taxa not present 
+         hist(otu_log2$C5N)
+         hist(otu_log2$C1E, breaks = 20)
+         # col dendogram doesn't work because a ton of stuff equals 0 infinit
+         # we re code -inf as -99
+         # this means a taxa wasn't present in the location sampled
+         
+         
+         otu_log2[otu_log2== "-Inf"] <- -99
+         
+         
+# make heatmap
+         # grab phylogeny and Read in the tree file 
+         setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
+         tree = read.tree("otu_output/tree.nwk")
+         # shorten phylogeny to match what is in our log 2 file
+         otus<-row.names(otu.raw) # all the otus
+         #otus we want
+         otus_1903<-row.names(otu_log2) 
+         asvs_remove<-setdiff(otus, otus_1903) #asvs we don't want
+         tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
+         tree.short
+         
+         # order the table so it matches the 
+         # make otu column 
+         otu_log2$otus <- otus_1903
+         
          # grab correct order 
          target<-tree.short$tip.label
          otu_log2<-otu_log2[match(target, otu_log2$otus),]
          # rm out column
          otu_log2<-subset(otu_log2, select = -otus)
-         # check names
          colnames(otu_log2)
          head(otu_log2)
          tree.short
          
-        
-         # make a matrix
-         # col dendogram doesn't work because a ton of stuff equals 0 infinit
-         # we re code -inf as -99
-         # this means a taxa wasn't present in the location sampled
-         otu_log2[otu_log2== "-Inf"] <- -99
-         
-         
          # check out disctribution
          #otu_log2[otu_log2=="-99"] <- NA
          #summary(otu_log2)
-         # change NA back to neg 99
-         #otu_log2[otu_log2=="NA"] <- -99
+         
          
          # make matrix
          m<-as.matrix(otu_log2)
@@ -1209,21 +1518,18 @@ otu_log2[otu_log2== "-Inf"] <- -99
          #make a dendrogram              
          row_dendro = as.dendrogram(hclust(dist((m))))
          
-          ######  make the heatmap  plot #################33
+         ############  make the heatmap  plot #################33
          windows(8,10)
          heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
          
+         
+         
+         
 
-
-
-
-
-
-
-
-
-
-
+         
+         
+#____________________________________________#
+         
 ###############------top taxa by max log fold change -------############
 #select top 100 by the biggest log change 
 dim(otu_log2)
