@@ -1357,9 +1357,8 @@ tree.short
          windows(8,10)
          heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
          
-#        Are the taxa present in the plant also active in the soil?
-         
-         #heat map #3
+#######heat map #3 #######
+#Are the taxa present in the plant also active in the soil?
          #active / total
          # filter for taxa that are present in the soil
          
@@ -1431,9 +1430,9 @@ tree.short
          otu.soil<-as.data.frame(t(as.data.frame(otu_table(ps.soil))))
          head(otu.soil)
          colnames(otu.soil)
-         # samples C10R, C1R, C2R, C5R
+         # samples C10R, C1R, C2R, C5R, C7R
          
-         # select active taxa in plant
+         # select total viable cells in plant
          ps.plant<- subset_samples(ps1,Fraction =="Total_Cells" & Compartment!="Rhizosphere")
          otu.plant<-as.data.frame(t(as.data.frame(otu_table(ps.plant))))
          head(otu.plant)
