@@ -1438,21 +1438,22 @@ tree.short
          head(otu.plant)
          colnames(otu.plant)
          # samples C10E, C10N, C1E, C1N, C2E, C2E, C2N, C5E, C5N, C7E, C7N  
-         # drop sample C7 because it doesnt have a pair in the soil
-         otu.plant<-subset(otu.plant, select = -c(C7E.POS_S34,C7N.POS_S64))
+         #otu.plant<-subset(otu.plant, select = -c(C7E.POS_S34,C7N.POS_S64))
          
-         # make df of active in rhizosphere to divid by
+         # make df of active in rhizosphere to divide by
          df<-cbind(otu.soil, otu.soil)
          df<-df[sort(colnames(df))]
          colnames(df)
-         
+         df<-subset(df, select= c(-C10R.SYBR_S20, -C5R.SYBR_S18))
+         dim(df)
+         dim(otu.plant)
          # add 1 to everything (absent in active & absent in total = no change)
          
          otu_log2<-log2(otu.plant/(df+.0001))
          
          dim(otu_log2)
          colnames(otu_log2)
-         n<-c("C10E", "C10N","C1E" , "C1N" , "C2E" , "C2N" , "C5E" , "C5N")
+         n<-c("C10N", "C1E","C1N", "C2E" , "C2N" , "C5E" , "C7E", "C7N")
          colnames(otu_log2)<-n
          head(otu_log2)
          # check distribution
@@ -1465,7 +1466,7 @@ tree.short
          # this means a taxa wasn't present in the location sampled
          
          
-         otu_log2[otu_log2== "-Inf"] <- -99
+         otu_log2[otu_log2== "-Inf"] <- -11
          
          
 # make heatmap
