@@ -34,12 +34,14 @@ library(hrbrthemes)
 library(ade4)
 #library (gplots)
 library(ape)
+library(readxl)
+install.packages("ggtree")
 
 ############-----load functions-------------######
 
 # load in the function for making a heatmap with the tree #
 heatmap.phylo <- function(x, Rowp, Colp, ...) {
-  l = length(seq(-9.5, 10, .5))
+  l = length(seq(-12.5, 10, .5))
   pal = colorRampPalette(c("#0c3fb6" ,"#cfc3c8", "#bb0000"))(l)
   row_order = Rowp$tip.label[Rowp$edge[Rowp$edge[, 2] <= Ntip(Rowp), 2]] 
   col_order = Colp$tip.label[Colp$edge[Colp$edge[, 2] <= Ntip(Colp), 2]] 
@@ -60,7 +62,7 @@ heatmap.phylo <- function(x, Rowp, Colp, ...) {
            lpp$yy[1:Ntip(Rowp)], lty=3, col='grey50')
   par(mar=rep(0,4), xpd=TRUE)
   image((1:ncol(x))-0.5, (1:nrow(x))-0.5, t(x), col=pal,
-        xaxs="i", yaxs="i", axes=FALSE, xlab= "", ylab= "", breaks=seq(-10,10,.5))
+        xaxs="i", yaxs="i", axes=FALSE, xlab= "", ylab= "", breaks=seq(-13,10,.5))
   par(mar=rep(0,4))
   plot(NA, axes=FALSE, ylab="", xlab="", yaxs="i", xlim=c(0,2), ylim=yl)
   text(rep(0,nrow(x)),1:nrow(x), row_order, pos=4,
@@ -194,7 +196,6 @@ taxon <- read.delim("otu_output/taxonomy.txt", sep="\t", header=T, row.names=1)
 otu.raw <- read.table("otu_output/feature-table.txt", sep="\t", header = T , row.names = 1 )
 metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
 
-
 #data wrangleing and importing into Phyloseq#
 ## recode metadata 
 metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
@@ -209,6 +210,7 @@ otu.t <- t(otu.raw)
 metadat<-metadat[order(metadat$SampleID),]
 ## order asvs table
 otu.t<-otu.t[order(row.names(otu.t)),]
+
 
 
 ########-----------import non rarefied data into phyloseq #
@@ -278,7 +280,7 @@ ps.r
 otu.r.clean<-as.data.frame(t(as.data.frame(otu_table(ps.r))))
 #taxon<-as.data.frame(tax_table(ps))
 
-#####################------normalizing data by number of reads#################
+#####################------normalizing data by number of cells#################
 
 ## Set the working directory; modify to your own ###
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
@@ -287,7 +289,10 @@ setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burg
 taxon <- read.delim("otu_output/taxonomy.txt", sep="\t", header=T, row.names=1)
 otu.raw <- read.table("otu_output/feature-table.txt", sep="\t", header = T , row.names = 1 )
 metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
-
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/sequencing")
+n_cells <- read_excel("Cell_counts_For_sequencing.xlsx", na = "NA")
+n_cells<-select(n_cells, Sample_ID, Number_cells)
+n_cells
 
 #data wrangleing and importing into Phyloseq#
 ## recode metadata 
@@ -304,14 +309,8 @@ metadat<-metadat[order(metadat$SampleID),]
 ## order asvs table
 otu.t<-otu.t[order(row.names(otu.t)),]
 
-
-# hellinger data transformation 
-# divides each value by the row sum and takes the square root of the quotient
-# this would normalize by the number of reads in each sample and make very not abundant taxa less strongly influence the data
-otu.n<-decostand(otu.t, "hellinger")
-
 ## rearrange data for phyloseq
-otu.phyloseq<- (otu.n)
+otu.phyloseq<- (otu.t)
 taxon<-taxon[,1:7]
 metadat<-as.matrix(metadat)
 y<-colnames(otu.raw)
@@ -324,6 +323,38 @@ Workshop_taxo <- tax_table(as.matrix(taxon))
 ps <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
 ps
 # 7727 taxa
+# grab samples of total cells and boncat pos
+ps1 <- subset_samples(ps,Fraction =="BONCAT_Active"  |Fraction=="Total_Cells")
+ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
+any(taxa_sums(ps1) == 0)
+ps1
+# 3208 taxa
+sample_data(ps1)
+
+#normalize by the number of cells in each sample.
+otu.cells<-as.data.frame(otu_table(ps1))
+n_cells<-na.omit(n_cells)
+n_cells
+
+#otu.cells<-cbind(otu.cells, n_cells)
+
+seq<-rowSums(otu.cells)
+otu.cells<-otu.cells*n_cells$Number_cells/seq
+
+### looks great now put it back into phyloseq.
+
+## rearrange data for phyloseq
+otu.phyloseq<- (otu.cells)
+
+## import it phyloseq
+Workshop_OTU <- otu_table(otu.phyloseq, taxa_are_rows = FALSE)
+Workshop_metadat <- sample_data(metadat)
+Workshop_taxo <- tax_table(as.matrix(taxon))
+ps <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
+ps
+# 3208 taxa
+
+
 #######------ remove chloroplasts-------#
 # remove chloroplast DNA
 ps<-subset_taxa(ps, Class!=" Chloroplast")
@@ -334,12 +365,14 @@ ps<-prune_taxa(taxa_sums(ps) > 0, ps)
 any(taxa_sums(ps) == 0)
 ps
 
-# 7623 taxa
+# 3173 taxa
 # output df 
 otu.clean<-as.data.frame(t(as.data.frame(otu_table(ps))))
 taxon<-as.data.frame(tax_table(ps))
 
 
+# um import tree?
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
 
 
 
@@ -982,7 +1015,22 @@ otu_log2[otu_log2== "-Inf"] <- -99
 
 # grab phylogeny and Read in the tree file 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
-tree = read.tree("otu_output/tree.nwk")
+tree = read.tree("tree.nwk")
+
+tree
+
+ranks <- read.delim("ranks.txt", sep="\t", header = T, check.names=FALSE)
+
+
+
+
+
+
+
+
+
+
+
 # shorten phylogeny to match what is in our log 2 file
 otus<-row.names(otu.raw) # all the otus
 #otus we want
@@ -1430,6 +1478,7 @@ tree.short
          otu.soil<-as.data.frame(t(as.data.frame(otu_table(ps.soil))))
          head(otu.soil)
          colnames(otu.soil)
+         dim(otu.soil)
          # samples C10R, C1R, C2R, C5R, C7R
          
          # select total viable cells in plant
@@ -1437,6 +1486,7 @@ tree.short
          otu.plant<-as.data.frame(t(as.data.frame(otu_table(ps.plant))))
          head(otu.plant)
          colnames(otu.plant)
+         dim(otu.plant)
          # samples C10E, C10N, C1E, C1N, C2E, C2E, C2N, C5E, C5N, C7E, C7N  
          #otu.plant<-subset(otu.plant, select = -c(C7E.POS_S34,C7N.POS_S64))
          
@@ -1449,7 +1499,7 @@ tree.short
          dim(otu.plant)
          # add 1 to everything (absent in active & absent in total = no change)
          
-         otu_log2<-log2(otu.plant/(df+.0001))
+         otu_log2<-log2(otu.plant/(df+1))
          
          dim(otu_log2)
          colnames(otu_log2)
@@ -1476,14 +1526,14 @@ tree.short
          # shorten phylogeny to match what is in our log 2 file
          otus<-row.names(otu.raw) # all the otus
          #otus we want
-         otus_1903<-row.names(otu_log2) 
-         asvs_remove<-setdiff(otus, otus_1903) #asvs we don't want
+         otus_2500<-row.names(otu_log2) 
+         asvs_remove<-setdiff(otus, otus_2500) #asvs we don't want
          tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
          tree.short
          
          # order the table so it matches the 
          # make otu column 
-         otu_log2$otus <- otus_1903
+         otu_log2$otus <- otus_2500
          
          # grab correct order 
          target<-tree.short$tip.label
@@ -1563,7 +1613,7 @@ target<-tree.short$tip.label
 top100<-top100[match(target, top100$otus),]
 head(top100)
 top100<-top100[-15] # remove otu column
-colnames(top100
+colnames(top100)
 
 
 
