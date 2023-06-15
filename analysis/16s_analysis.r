@@ -948,7 +948,7 @@ dev.off()
 
 
 
-##------- heatmap #2 log fold change -------#######
+##------- heatmap #2 active plant/ active rhizopshere -------#######
 # compare active rhizosphere to active in plant #
 # shows what microbes are more active in the plant than the soil
 
@@ -1157,7 +1157,7 @@ tree.short
          
 
 #____________________________________________#
-################# log fold change calculation for heatmap #3############
+################# active location X /totallocation X  heatmap #3############
 #### value in active compared to total for that respective location
 
   ## remove taxa from bulk soil
@@ -1259,8 +1259,8 @@ tree.short
           # add back family column
          f<-row.names(otu_log2)
          otu_log2<-mutate(otu_log2, Family = f)
-         # remove columns that are not rhizo
-         otu_log2<-otu_log2 %>% select(-C10N  , -C1E  , -C1N  , -C2E  , -C2N  , -C5E  , -C7E  , -C7N)
+         # remove columns that are not rhizo for heat map #4
+         otu_log2.r<-otu_log2 %>% select(-C10N  , -C1E  , -C1N  , -C2E  , -C2N  , -C5E  , -C7E  , -C7N)
          
 ########### heatmap #3 make the tree -------#################
          # grab phylogeny and Read in the tree file 
@@ -1386,6 +1386,7 @@ tree.short
          #make a dendrogram              
          col_dendro = as.dendrogram(hclust(dist(t(m))))
          
+         
          # And make the plot with phylogeny
          #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
          windows(12,10)
@@ -1400,6 +1401,23 @@ tree.short
          windows(8,10)
          heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
 
+         
+         
+         ######### change order of samples in tre
+         
+         
+        as.phylo(colnames(m))
+        Colp<-read.tree(text =  "((C10N:3,C10R:3):2, (C1E:3,C1N:3,C1R:3):2,   (C2E:3,C2N:3,C2R:3):2, (C5E:3,C5R:3):2, (C7E:3  ,C7N:3):2);")
+
+        # And make the plot with phylogeny
+        #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
+        windows(12,10)
+        heatmap.phylo(x = m, Rowp = tree.short, Colp = Colp)
+        #dev.off()
+         
+         
+         
+         
 ###subset by just rhizosphere
          colnames(otu_log2)
          df<-subset(otu_log2, select = c(C10R, C1R, C2R, C5R ))
