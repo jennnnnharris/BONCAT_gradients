@@ -43,7 +43,7 @@ library('TreeTools')
 
 # load in the function for making a heatmap with the tree #
 heatmap.phylo <- function(x, Rowp, Colp, ...) {
-  l = length(seq(-12.5, 10, .5))
+  l = length(seq(-16.5, 16, .5))
   pal = colorRampPalette(c("#03348a" ,"#cfc3c8", "#bb0000"))(l)
   row_order = Rowp$tip.label[Rowp$edge[Rowp$edge[, 2] <= Ntip(Rowp), 2]] 
   col_order = Colp$tip.label[Colp$edge[Colp$edge[, 2] <= Ntip(Colp), 2]] 
@@ -64,7 +64,7 @@ heatmap.phylo <- function(x, Rowp, Colp, ...) {
            lpp$yy[1:Ntip(Rowp)], lty=3, col='grey50')
   par(mar=rep(0,4), xpd=TRUE)
   image((1:ncol(x))-0.5, (1:nrow(x))-0.5, t(x), col=pal,
-        xaxs="i", yaxs="i", axes=FALSE, xlab= "", ylab= "", breaks=seq(-13,10,.5))
+        xaxs="i", yaxs="i", axes=FALSE, xlab= "", ylab= "", breaks=seq(-17,16,.5))
   par(mar=rep(0,4))
   plot(NA, axes=FALSE, ylab="", xlab="", yaxs="i", xlim=c(0,2), ylim=yl)
   text(rep(0,nrow(x)),1:nrow(x), row_order, pos=4,
@@ -1627,7 +1627,7 @@ tree.short
          heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
          
          
-#####heat map # 1 log fold change total/total ######
+#####heat map # 1  total/total ######
 # what is the selectivity of the plant?
 # total viable in fraction X / total viable in rhizosphere
          
@@ -1636,10 +1636,13 @@ tree.short
          sample_data(ps)
          ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
          any(taxa_sums(ps1) == 0)
+         
+         
          ps1
          # 2473 taxa from non rareified data
-         #filter for taxa that have at least 5 cells
-         ps1<-prune_taxa(taxa_sums(ps1) > 5, ps1)
+         #filter for taxa that have at least 10 cells
+         ps1<-prune_taxa(taxa_sums(ps1) > 10, ps1)
+         ps1
          # 2269 taxa
          
 # select total viable cells in plant
@@ -1759,14 +1762,14 @@ tree.short
          # this means a taxa wasn't present in the location sampled
          
          
-         otu_log2[otu_log2== "-Inf"] <- -11
+         otu_log2[otu_log2== "-Inf"] <- -15
          ## add family column
          f<-row.names(otu_log2)
          otu_log2<-mutate(otu_log2, Family = f)
          
          #what are the values for these missing taxa
          
-         otu_log2<- filter(otu_log2, C10N > -11 | C1E > -11 | C1N > -11 | C2E > -11 | C2N > -11 | C5E > -11 | C7E > -11 | C7N > -11  )
+         otu_log2<- filter(otu_log2, C10N > -15 | C1E > -15 | C1N > -15 | C2E > -15 | C2N > -15 | C5E > -15 | C7E > -15 | C7N > -15  )
          
 
          
