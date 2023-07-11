@@ -75,6 +75,16 @@ heatmap.phylo <- function(x, Rowp, Colp, ...) {
        cex=1.5)
 }
 
+###### load colors ##########
+# colors :)
+gold <- "#FFB000"
+lightgold <- "#fffaa2"
+purple <- "#785EF0"
+blue <- "#739AFF"
+pink <- "#DC267F"
+lightpink <- "#ffc6e5"
+
+
 ######-------------import Asvs data -----------------##############
 ## Set the working directory; ###
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
@@ -276,7 +286,6 @@ ps.r<-subset_taxa(ps.r, Genus!=" Chloroplast")
 ps.r<-prune_taxa(taxa_sums(ps.r) > 0, ps.r)
 any(taxa_sums(ps.r) == 0)
 ps.r
-
 # 7516 taxa
 # output df 
 otu.r.clean<-as.data.frame(t(as.data.frame(otu_table(ps.r))))
@@ -392,24 +401,26 @@ rich<-cbind(rich, metadat)
 rich<-as.data.frame(rich)
 colnames(rich)
 rich$Compartment<-factor(rich$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
-reorder(compartment_BCAT, -Observed)
+rich %>%
+arrange( -Observed)
 
 rich<- rich %>%  filter(Plant!="NOPLANT", Fraction!="Inactive")
 rich$compartment_BCAT <-factor(rich$compartment_BCAT, levels = c("Bulk_SoilTotal_DNA", "RhizosphereTotal_DNA", "RhizosphereTotal_Cells", "RhizosphereBONCAT_Active",
                                                                  "RootsTotal_Cells"   ,  "RootsBONCAT_Active" , "NoduleTotal_Cells" ,  "NoduleBONCAT_Active" ))          
 
 # total + active number otus
-svg(file="figures/16s/observed_divserity.svg",width = 6, height=4 )
-windows(width = 10, height=7)
+svg(file="figures/16s/observed_divserity.svg",width = 6, height=7 )
+windows(width = 6, height=7)
 rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
-  ggplot(aes(x=compartment_BCAT, y=Observed, fill = Fraction, col= Fraction))+
+  ggplot(aes(x=compartment_BCAT, y=Observed, fill = Compartment, col= Compartment))+
   geom_boxplot() +
-  scale_colour_manual(values = c( "orange",  "black", "black"))+
-  scale_fill_manual( values = c("gold", "grey27", "lightgrey"))+
+  scale_colour_manual(values = c( "black",  "black", gold, pink))+
+  scale_fill_manual( values = c(blue, purple, lightgold, lightpink))+
   geom_jitter(width = .1, size=1 )+
   theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
-        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14) )+
+        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14),
+        legend.position =  c(0.8, 0.8))+
   ylab("N Otus")+
   xlab("Compartment")
 dev.off()
@@ -550,6 +561,8 @@ otus.pcoa <- cmdscale(otus.bray, k=(42-1), eig=TRUE)
 
 # Store coordinates for first two axes in new variable #
 otus.p <- otus.pcoa$points[,1:2]
+# swtich order
+switch<-otus.p[,2:1]
 
 # Calculate % variance explained by each axis #
 otus.eig<-otus.pcoa$eig
@@ -571,18 +584,18 @@ levels(as.factor(metadat$compartment_BCAT))
 levels(as.factor(metadat$Fraction))
 
 # colors :)
-gold <- "#FFB000"
-purple <- "#785EF0"
-blue <- "#739AFF"
-pink <- "#DC267F"
+#gold <- "#FFB000"
+#purple <- "#785EF0"
+#blue <- "#739AFF"
+#pink <- "#DC267F"
 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/pcoa/Pcoa_plantvsoil_raw.svg",width = 7, height=6 )
+svg(file="figures/16s/pcoa/Pcoa_plantvsoil_raw.svg",width = 6, height=6 )
 
 windows(title="PCoA on plant asvs- Bray Curtis", width = 7, height = 6)
-ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis dissimilarities",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
-         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
-points(otus.p, col=c("black"),
+ordiplot(otus.pcoa,choices=c(2,1), type="none", main="PCoA of Bray Curtis dissimilarities",xlab=paste("PCoA1 (",round(pe2,2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe1,2),"% variance explained)"))
+points(switch, col=c("black"),
        pch=c(22, 21,22,24, 23)[as.factor(metadat$Fraction)],
        lwd=1,cex=2,
        bg=c( blue, "black", "white", pink , pink, purple, purple, purple, gold, gold)[as.factor(metadat$compartment_BCAT)])
@@ -605,7 +618,7 @@ ps2<-subset_samples(ps.r, Compartment !=  "Nodule" & Compartment != "Roots")
 ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
 any(taxa_sums(ps2) == 0)
 ps2
-sample.names(ps2)
+sample_names(ps2)
 # 7401 taXA
 # Calculate Bray-Curtis distance between samples
 otus.bray<-vegdist(otu_table(ps2), method = "bray")
@@ -637,8 +650,8 @@ triangle <- 24
 circle <- 21
 
 #setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/pcoa/soil_raw.svg",width = 6, height=6 )
-windows(title="PCoA on asvs- Bray Curtis", width = 7, height = 6)
+svg(file="figures/16s/pcoa/soil_raw.svg",width = 4, height=4 )
+windows(title="PCoA on asvs- Bray Curtis", width = 4, height = 4)
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 points(otus.p[,1:2],
@@ -661,13 +674,22 @@ ps2<-subset_samples(ps.r, Compartment !=  "Nodule" & Compartment != "Roots" & Fr
 ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
 any(taxa_sums(ps2) == 0)
 ps2
-sample.names(ps2)
+sample_names(ps2)
+df<-as.data.frame(otu_table(ps2))
 # 7401 taXA
 # Calculate Bray-Curtis distance between samples
 otus.bray<-vegdist(otu_table(ps2), method = "bray")
 
 # Perform PCoA analysis of BC distances #
 otus.pcoa <- cmdscale(otus.bray, k=(11-1), eig=TRUE)
+
+#add species scores
+#add.spec.scores(ordi, comm, method="cor.scores", multi=1, Rscale=F, scaling="1")
+#install.packages("BiodiversityR")
+#library(BiodiversityR)
+#otus.pcoa<-add.spec.scores(otus.pcoa, df , method="pcoa.scores", multi=1, Rscale=F, scaling="1")
+
+sppscores(otus.pcoa)
 
 # Store coordinates for first two axes in new variable #
 otus.p <- otus.pcoa$points[,1:2]
@@ -693,7 +715,7 @@ triangle <- 24
 circle <- 21
 
 #setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/pcoa/soil_simple_raw.svg",width = 6, height=6 )
+svg(file="figures/16s/pcoa/soil_simple_raw.svg",width = 4, height= 4)
 windows(title="PCoA on asvs- Bray Curtis", width = 7, height = 6)
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
@@ -709,6 +731,15 @@ legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR cont
        bty = "n")
 
 dev.off()
+
+
+
+####### active verse total RDA
+
+
+
+
+
 #################-------------------just plant##
 ps.r
 ps2<-subset_samples(ps.r, Compartment !=  "Bulk_Soil" & Compartment != "Rhizosphere" & Compartment != "ctl")
@@ -716,12 +747,18 @@ ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
 any(taxa_sums(ps2) == 0)
 ps2
 sample.names(ps2)
+df<-as.data.frame(otu_table(ps2))
 # 446 taXA
 # Calculate Bray-Curtis distance between samples
 otus.bray<-vegdist(otu_table(ps2), method = "bray")
 
 # Perform PCoA analysis of BC distances #
 otus.pcoa <- cmdscale(otus.bray, k=(15-1), eig=TRUE)
+
+#add species scores
+#add.spec.scores(ordi, comm, method="cor.scores", multi=1, Rscale=F, scaling="1")
+#add.spec.scores(otus.pcoa, , method="cor.scores", multi=1, Rscale=F, scaling="1")
+
 
 # Store coordinates for first two axes in new variable #
 otus.p <- otus.pcoa$points[,1:2]
@@ -747,8 +784,8 @@ triangle <- 24
 circle <- 21
 
 #setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/pcoa/plant_raw.svg",width = 6, height=6 )
-windows(title="PCoA on asvs- Bray Curtis", width = 7, height = 6)
+svg(file="figures/16s/pcoa/plant_raw.svg",width = 4, height=4 )
+windows(title="PCoA on asvs- Bray Curtis", width = 4, height = 4)
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 points(otus.p[,1:2],
@@ -763,7 +800,7 @@ legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR cont
        bty = "n")
 
 dev.off()
-
+####### PCA ##############
 
 #########-------------- permanova----------------#########
 
@@ -791,16 +828,36 @@ plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
 
 ##### subset data by fraction 
 #rhizo active verse total cells
-test<-otu.r.clean.t[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_DNA"),]
+
+ps.r
+ps2<-subset_samples(ps.r, Compartment ==  "Rhizosphere"  & Fraction!="Total_DNA")
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+sample_names(ps2)
+df<-as.data.frame(otu_table(ps2))
+row.names(df)
+
+
 metadat_y<-metadat[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_DNA") ,]
-otu.perm<- adonis2(test~ Fraction, data = metadat_y, permutations = 999, method="bray")
+otu.perm<- adonis2(df~ Fraction, data = metadat_y, permutations = 999, method="bray")
 otu.perm
+
+
+#cry runa  PCA
+
+
+
 
 #rhizo active ver total DNA
 test<-otu.r.clean.t[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_Cells" & metadat$Fraction != "Inactive"),]
 metadat_y<-metadat[which(metadat$Compartment == "Rhizosphere" & metadat$Fraction != "Total_Cells" & metadat$Fraction != "Inactive") ,]
-otu.perm<- adonis2(test~ Fraction, data = metadat_y, permutations = 999, method="bray")
+otu.perm<- adonis2(test~Fraction, data = metadat_y, permutations = 999, method = "bray")
 otu.perm
+
+
+
+
 
 
 #nod active verse inactive
@@ -1260,7 +1317,7 @@ tree.short
          f<-row.names(otu_log2)
          otu_log2<-mutate(otu_log2, Family = f)
          # remove columns that are not rhizo for heat map #4
-         otu_log2.r<-otu_log2 %>% select(-C10N  , -C1E  , -C1N  , -C2E  , -C2N  , -C5E  , -C7E  , -C7N)
+         #otu_log2.r<-otu_log2 %>% select(-C10N  , -C1E  , -C1N  , -C2E  , -C2N  , -C5E  , -C7E  , -C7N)
          
 ########### heatmap #3 make the tree -------#################
          # grab phylogeny and Read in the tree file 
@@ -1307,11 +1364,11 @@ tree.short
          #families we want
          asvs_remove<-setdiff(tree$tip.label, otu_log2$Family) #asvs we don't want
          tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-         windows(14,14)
-         plot(tree.short, no.margin=TRUE,  cex = .5)
-         nodelabels()
-         ape::nodelabels( 253, 253, bg="green")
-         ape::nodelabels(31, 31, bg="green")
+        # windows(14,14)
+         #plot(tree.short, no.margin=TRUE,  cex = .5)
+         #nodelabels()
+         #ape::nodelabels( 253, 253, bg="green")
+         #ape::nodelabels(31, 31, bg="green")
          
          ### rename node labels
          tree.short[["node.label"]] <- c(1:138)
@@ -1405,7 +1462,9 @@ tree.short
          
          ######### change order of samples in tree
         as.phylo(colnames(m))
-        Colp<-read.tree(text =  "((C10N:3,C10R:3):2, (C1E:3,C1N:3,C1R:3):2,   (C2E:3,C2N:3,C2R:3):2, (C5E:3,C5R:3):2, (C7E:3  ,C7N:3):2);")
+        Colp<-read.tree(text =  "((C10N:3,C1N:3):2, (C1E:3,C1N:3,C1R:3):2,   (C2E:3,C2N:3,C2R:3):2, (C5E:3,C5R:3):2, (C7E:3  ,C7N:3):2);")
+
+        
 
         # And make the plot with phylogeny
         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
@@ -1413,9 +1472,131 @@ tree.short
         heatmap.phylo(x = m, Rowp = tree.short, Colp = Colp)
         #dev.off()
          
-         
-         
-         
+###### subset taxa present in plant and change order #############
+        
+        otu_log2
+        otu_log2<-subset(otu_log2, otu_log2$C1E != -11 | otu_log2$C2E != -11  | otu_log2$C5E != -11 | otu_log2$C7E != -11 )
+        f<-row.names(otu_log2)
+        otu_log2<-mutate(otu_log2, Family = f)
+        
+        
+########### heatmap #3 make the tree -------#################
+        # grab phylogeny and Read in the tree file 
+        setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/GTDB")
+        tree = read.tree("family.nwk")
+        
+        # chec if the ncbi one is better
+        #setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/NCBI")
+        #tree = read.tree("genus.nwk")
+        # it is not 
+        length(tree$tip.label) # look at the tip labels 
+        
+        #this is how to modify tip labels
+        tree$tip.label <- gsub("\\_1","",tree$tip.label)
+        tree$tip.label <- gsub("\\'","",tree$tip.label)
+        #lol my taxa asignment all have a space so I'll remove thAT
+        otu_log2$Family <- gsub(" ", "", otu_log2$Family)
+        #modeify tip labls
+        otu_log2$Family <- gsub('\\_()', '' , otu_log2$Family)
+        otu_log2$Family <- gsub('_\\(*)*', '' , otu_log2$Family)
+        otu_log2$Family <- gsub('*Subgroup1*', '' , otu_log2$Family)
+        otu_log2$Family <- gsub('\\(SR1)', '' , otu_log2$Family)
+        otu_log2$Family <- gsub('*\\(*)*', '' , otu_log2$Family)
+        otu_log2$Family <- gsub ("Abditibacteriaceae"  , "Actinomycetaceae",  otu_log2$Family ) #in the same clades
+        
+        
+        length(intersect(unique(otu_log2$Family), tree$tip.label)) # Apply setdiff function to see what's missing from the tree
+        length(setdiff(unique(otu_log2$Family), tree$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
+        mynames<-(setdiff(unique(otu_log2$Family), tree$tip.label))
+        
+    
+        
+        # CHECK NAEMS OF TAXA THAT ARE MISSIG
+        mynames<-sort(mynames)
+        mynames
+        mynames[grep("^[Aa].*", mynames)]
+        otu_log2$Family[grep("^[T].*", otu_log2$Family)]
+        ##### MAKE TREE SMALLER
+        
+        # shorten phylogeny to match what is in our log 2 file
+        #families we want
+        asvs_remove<-setdiff(tree$tip.label, otu_log2$Family) #asvs we don't want
+        tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
+        # windows(14,14)
+      
+        ### rename node labels
+        tree.short[["node.label"]] <- c(1:138)
+        
+        #match with short tree
+        length(intersect(unique(otu_log2$Family), tree.short$tip.label)) # Apply setdiff function to see what's missing from the tree
+        length(setdiff(unique(otu_log2$Family), tree.short$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
+        mynames<-(setdiff(unique(otu_log2$Family), tree.short$tip.label))
+        
+               # order the table so it matches the 
+        # make otu column 
+        # grab correct order 
+        target<-tree.short$tip.label
+        head(otu_log2)
+        dim(otu_log2)
+        otu_log2<-otu_log2[match(target, otu_log2$Family),]
+        dim(otu_log2)
+        # rm out column
+        # makes sure no space in col names
+        n <- otu_log2$Family
+        otu_log2<-subset(otu_log2, select = c( -Family))
+        row.names(otu_log2) <- n
+        
+        colnames(otu_log2)
+        head(otu_log2)
+        dim(otu_log2)
+        tree.short
+        #row.names(out_log2.1) <-f
+        
+        
+        # make matrix
+        m<-as.matrix(otu_log2)
+        row.names(m)
+        #row.names(m)<-f # make row names family names
+        # Create the matrix and get the column dendrogram for the heatmap from it.
+        m<-structure(m)
+        #make a dendrogram              
+        col_dendro = as.dendrogram(hclust(dist(t(m))))
+        
+        
+        setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+        
+        # And make the plot with phylogeny
+        svg(file="figures/16s/heatmap3.svg",width = 10, height=7 )
+        
+        windows(16,10)
+        #heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
+        #dev.off()
+        
+        tr<-read.tree(text =  "((C1N:3,C2N:3,C7N:3,C10N:3):2, (C1E:3,C2E:3,C5E:3,C7E:3):2,   (C1R:3, C2R:3,C5R:3, C10R:3):2);")
+       
+        heatmap.phylo(x = m, Rowp = tree.short, Colp = tr)
+        
+        dev.off
+        
+          heatmap.phylo(x = m, Rowp = tree.short, Colp = tr)
+        
+        # no phylogeny
+        
+        #make a plot without phylogeny 
+        #make a dendrogram              
+        row_dendro = as.dendrogram(hclust(dist((m))))
+        tr<-read.tree(text =  "((C1N:3,C2N:3,C7N:3,C10N:3):2, (C1E:3,C2E:3,C5E:3,C7E:3):2,   (C1R:3, C2R:3,C5R:3, C10R:3):2);")
+
+        ############  make the heatmap  plot #################33
+        windows(16,10)
+        heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = tr)
+        
+        
+        dev.off
+        
+        
+        
+        
 ###subset by just rhizosphere
          colnames(otu_log2)
          df<-subset(otu_log2, select = c(C10R, C1R, C2R, C5R ))
@@ -1566,7 +1747,7 @@ tree.short
          windows(8,10)
          heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
          
-#######heat map #3 #######
+#######heat map #3 just taxa in the plant #######
 #Are the taxa present in the plant also active in the soil?
          #active / total
          # filter for taxa that are present in the soil
@@ -1606,8 +1787,12 @@ tree.short
          m<-structure(m)
          #make a dendrogram              
          col_dendro = as.dendrogram(hclust(dist(t(m))))
+         
+         Colp<-read.tree(text =  "((C10N:3,C1N:3):2, (C1E:3,C1N:3,C1R:3):2,   (C2E:3,C2N:3,C2R:3):2, (C5E:3,C5R:3):2, (C7E:3  ,C7N:3):2);")
+         
          # And make the plot with phylogeny
          #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
+         
          windows(8,10)
          heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
          #dev.off()
@@ -1644,17 +1829,17 @@ tree.short
          n<-row.names(taxon)
          taxon<- mutate(taxon, OTU=n)
          otu.total<-left_join(otu.total, taxon)
-         otu.total<-select(otu.total, -Phyla, -Domain, -Class, -Order, -Genus, -Species, -OTU)
+         otu.total<-select(otu.total, -Phyla, -Domain, -Class, -Family, -Genus, -Species, -OTU)
          
          # aggregate some families that have old nomincalture
-         otu.total$Family <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu.total$Family)
+         otu.total$Order <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu.total$Order)
          
          otu.total<-aggregate(cbind(C10N.SYBR_S26, C10R.SYBR_S20, C1E.SYBR_S21,  C1N.SYBR_S13  ,C1R.SYBR_S16,  C2E.SYBR_S22 ,
-                                    C2N.SYBR_S15,  C2R.SYBR_S17,  C5E.SYBR_S23,  C5R.SYBR_S18,  C7E.SYBR_S24 , C7N.SYBR_S25 ) ~ Family, data = otu.total, FUN = sum, na.rm = TRUE)
-         row.names(otu.total) <- otu.total$Family
+                                    C2N.SYBR_S15,  C2R.SYBR_S17,  C5E.SYBR_S23,  C5R.SYBR_S18,  C7E.SYBR_S24 , C7N.SYBR_S25 ) ~ Order, data = otu.total, FUN = sum, na.rm = TRUE)
+         row.names(otu.total) <- otu.total$Order
          
-         # rm family col
-         otu.total<-select(otu.total, -Family)
+         # rm order col
+         otu.total<-select(otu.total, -Order)
          dim(otu.total)
          colnames(otu.total)
          rownames(otu.total)
@@ -1671,23 +1856,23 @@ tree.short
          dim(otu.active)
          colnames(otu.active)
          
-         ####### agregate to the family level
+         ####### agregate to the order level
          n<-row.names(otu.active)
          otu.active<-mutate(otu.active, OTU=n)
          n<-row.names(taxon)
          taxon<- mutate(taxon, OTU=n)
          otu.active<-left_join(otu.active, taxon)
-         otu.active<-select(otu.active, -Phyla, -Domain, -Class, -Order, -Genus, -Species, -OTU)
+         otu.active<-select(otu.active, -Phyla, -Domain, -Class, -Family, -Genus, -Species, -OTU)
          
          # aggregate some families that have old nomincalture
-         otu.active$Family <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu.active$Family)
+         otu.active$Order <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu.active$Order)
          
          otu.active<-aggregate(cbind(C10N.POS_S65, C10R.POS_S30, C1E.POS_S31,  C1N.POS_S61,  C1R.POS_S27,  C2E.POS_S32, 
-                                     C2N.POS_S62,  C2R.POS_S28, C5E.POS_S33,  C5R.POS_S29,  C7E.POS_S34,  C7N.POS_S64  ) ~ Family, data = otu.active, FUN = sum, na.rm = TRUE)
-         row.names(otu.active) <- otu.active$Family
+                                     C2N.POS_S62,  C2R.POS_S28, C5E.POS_S33,  C5R.POS_S29,  C7E.POS_S34,  C7N.POS_S64  ) ~ Order, data = otu.active, FUN = sum, na.rm = TRUE)
+         row.names(otu.active) <- otu.active$Order
          
-         # rm family col
-         otu.active<-select(otu.active, -Family)
+         # rm Order col
+         otu.active<-select(otu.active, -Order)
          dim(otu.active)
          colnames(otu.active)
          rownames(otu.active)    
@@ -1717,14 +1902,13 @@ tree.short
          #otu_log2<- filter(otu_log2, C10N > -11 | C1E > -11 | C1N > -11 | C2E > -11 | C2N > -11 | C5E > -11 | C7E > -11 | C7N > -11  )
          # add back family column
          f<-row.names(otu_log2)
-         otu_log2<-mutate(otu_log2, Family = f)
+         otu_log2<-mutate(otu_log2, Order = f)
          # remove columns that are not rhizo for heat map #4
-         otu_log2.r<-otu_log2 %>% select(-C10N  , -C1E  , -C1N  , -C2E  , -C2N  , -C5E  , -C7E  , -C7N)
-         
+
          ########### heatmap #3 make the tree -------#################
          # grab phylogeny and Read in the tree file 
          setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/GTDB")
-         tree = read.tree("family.nwk")
+         tree = read.tree("Order.nwk")
          
          # chec if the ncbi one is better
          #setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/NCBI")
@@ -1733,22 +1917,12 @@ tree.short
          length(tree$tip.label) # look at the tip labels 
          
          #this is how to modify tip labels
-         tree$tip.label <- gsub("\\_1","",tree$tip.label)
-         tree$tip.label <- gsub("\\'","",tree$tip.label)
          #lol my taxa asignment all have a space so I'll remove thAT
-         otu_log2$Family <- gsub(" ", "", otu_log2$Family)
+         otu_log2$Order <- gsub(" ", "", otu_log2$Order)
          #modeify tip labls
-         otu_log2$Family <- gsub('\\_()', '' , otu_log2$Family)
-         otu_log2$Family <- gsub('_\\(*)*', '' , otu_log2$Family)
-         otu_log2$Family <- gsub('*Subgroup1*', '' , otu_log2$Family)
-         otu_log2$Family <- gsub('\\(SR1)', '' , otu_log2$Family)
-         otu_log2$Family <- gsub('*\\(*)*', '' , otu_log2$Family)
-         otu_log2$Family <- gsub ("Abditibacteriaceae"  , "Actinomycetaceae",  otu_log2$Family ) #in the same clades
-         
-         
-         length(intersect(unique(otu_log2$Family), tree$tip.label)) # Apply setdiff function to see what's missing from the tree
-         length(setdiff(unique(otu_log2$Family), tree$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
-         mynames<-(setdiff(unique(otu_log2$Family), tree$tip.label))
+         length(intersect(unique(otu_log2$Order), tree$tip.label)) # Apply setdiff function to see what's missing from the tree
+         length(setdiff(unique(otu_log2$Order), tree$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
+         mynames<-(setdiff(unique(otu_log2$Order), tree$tip.label))
          
          # CHECK NAMES IN BIG TREE
          #spnames = tree$tip.label
@@ -1759,12 +1933,13 @@ tree.short
          mynames<-sort(mynames)
          mynames
          mynames[grep("^[Aa].*", mynames)]
-         otu_log2$Family[grep("^[T].*", otu_log2$Family)]
+         tree$tip.label[grep("^[Aa].*", tree$tip.label)]
+         otu_log2$Order[grep("^[T].*", otu_log2$Order)]
          ##### MAKE TREE SMALLER
          
          # shorten phylogeny to match what is in our log 2 file
          #families we want
-         asvs_remove<-setdiff(tree$tip.label, otu_log2$Family) #asvs we don't want
+         asvs_remove<-setdiff(tree$tip.label, otu_log2$Order) #asvs we don't want
          tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
          windows(14,14)
          plot(tree.short, no.margin=TRUE,  cex = .5)
@@ -1773,7 +1948,7 @@ tree.short
          ape::nodelabels(31, 31, bg="green")
          
          ### rename node labels
-         tree.short[["node.label"]] <- c(1:138)
+         #tree.short[["node.label"]] <- c(1:138)
          
          # add branches    
          #which(tree.short$tip.label=="Acidobacteriaceae")
@@ -1804,9 +1979,9 @@ tree.short
          
          
          #match with short tree
-         length(intersect(unique(otu_log2$Family), tree.short$tip.label)) # Apply setdiff function to see what's missing from the tree
-         length(setdiff(unique(otu_log2$Family), tree.short$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
-         mynames<-(setdiff(unique(otu_log2$Family), tree.short$tip.label))
+         length(intersect(unique(otu_log2$Order), tree.short$tip.label)) # Apply setdiff function to see what's missing from the tree
+         length(setdiff(unique(otu_log2$Order), tree.short$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
+         mynames<-(setdiff(unique(otu_log2$Order), tree.short$tip.label))
          
          
          
@@ -1821,12 +1996,12 @@ tree.short
          target<-tree.short$tip.label
          head(otu_log2)
          dim(otu_log2)
-         otu_log2<-otu_log2[match(target, otu_log2$Family),]
+         otu_log2<-otu_log2[match(target, otu_log2$Order),]
          dim(otu_log2)
          # rm out column
          # makes sure no space in col names
-         n <- otu_log2$Family
-         otu_log2<-subset(otu_log2, select = c( -Family))
+         n <- otu_log2$Order
+         otu_log2<-subset(otu_log2, select = c( -Order))
          row.names(otu_log2) <- n
          
          colnames(otu_log2)
