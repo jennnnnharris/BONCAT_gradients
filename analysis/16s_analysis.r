@@ -2829,3 +2829,7 @@ ggplot(phy.df, aes(fill=taxa, y=mean, x=compartment_BCAT)) +
   ylab("relative abundance %")
 
 dev.off()
+
+
+
+
