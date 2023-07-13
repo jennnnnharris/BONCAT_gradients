@@ -43,8 +43,8 @@ library('TreeTools')
 
 # load in the function for making a heatmap with the tree #
 heatmap.phylo <- function(x, Rowp, Colp, ...) {
-  l = length(seq(-16.5, 16, .5))
-  pal = colorRampPalette(c("#03348a" ,"#cfc3c8", "#bb0000"))(l)
+  l = length(seq(.1, 6, .1))
+  pal = colorRampPalette(c("#fffaa2", "#bb0000"))(l)
   row_order = Rowp$tip.label[Rowp$edge[Rowp$edge[, 2] <= Ntip(Rowp), 2]] 
   col_order = Colp$tip.label[Colp$edge[Colp$edge[, 2] <= Ntip(Colp), 2]] 
   x <- x[row_order, col_order]
@@ -64,7 +64,7 @@ heatmap.phylo <- function(x, Rowp, Colp, ...) {
            lpp$yy[1:Ntip(Rowp)], lty=3, col='grey50')
   par(mar=rep(0,4), xpd=TRUE)
   image((1:ncol(x))-0.5, (1:nrow(x))-0.5, t(x), col=pal,
-        xaxs="i", yaxs="i", axes=FALSE, xlab= "", ylab= "", breaks=seq(-17,16,.5))
+        xaxs="i", yaxs="i", axes=FALSE, xlab= "", ylab= "", breaks=seq(.1,6.1,.1))
   par(mar=rep(0,4))
   plot(NA, axes=FALSE, ylab="", xlab="", yaxs="i", xlim=c(0,2), ylim=yl)
   text(rep(0,nrow(x)),1:nrow(x), row_order, pos=4,
@@ -1003,6 +1003,118 @@ legend("bottom",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR contr
 
 dev.off()
 
+#####--------heatmap number one just activity famliy level-------########
+
+## select active taxa
+ps1<- subset_samples(ps, Fraction=="BONCAT_Active" ) 
+ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
+any(taxa_sums(ps1) == 0)
+ps1
+# 1903 taxa from normalizwed by ncells data data
+otu<-as.data.frame(t(as.data.frame(otu_table(ps1))))
+otu
+# check distrubution
+hist(otu$C10E.POS_S60)
+hist(otu$C10N.POS_S65)
+hist(otu$C10R.POS_S30, breaks= 5)
+hist(otu$C1R.POS_S27)
+
+####### agregate to the family level
+n<-row.names(otu)
+otu<-mutate(otu, OTU=n)
+n<-row.names(taxon)
+taxon<- mutate(taxon, OTU=n)
+otu<-left_join(otu, taxon)
+otu<-select(otu, -Phyla, -Domain, -Class, -Order, -Genus, -Species, -OTU)
+# aggregate some families that have old nomincalture
+otu$Family <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu$Family)
+otu<-aggregate(cbind(C10E.POS_S60,  C10N.POS_S65, C1E.POS_S31, C1N.POS_S61,  C2E.POS_S32,  C2N.POS_S62,  C5E.POS_S33,  C5N.POS_S63, C10R.POS_S30, C1R.POS_S27, C2R.POS_S28, C5R.POS_S29 ) ~ Family, data = otu, FUN = sum, na.rm = TRUE)
+row.names(otu) <- otu$Family
+# rm family col
+otu<-select(otu, -Family)
+dim(otu)
+colnames(otu)
+rownames(otu)
+#change col names
+n<-c("C10E", "C10N", "C1E",  "C1N",  "C2E",  "C2N", "C5E", "C5N", "C10R", "C1R", "C2R", "C5R") 
+colnames(otu)<-n
+head(otu)
+## filter for taxa that were not present in the plant.
+otu1<-filter(otu, C10E > 0 | C10N > 0 | C1E > 0 | C1N > 0 | C2E > 0 | C2N > 0 | C5E > 0 | C5N > 0  )
+dim(otu1)
+head(otu1)
+#add back family column
+n<-row.names(otu1)
+otu1<-mutate(otu1, Family=n)
+
+# grab phylogeny and Read in the tree file 
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/GTDB")
+tree = read.tree("family.nwk")
+length(tree$tip.label) # look at the tip labels 
+# modify tip labels
+tree$tip.label <- gsub("\\_1","",tree$tip.label)
+tree$tip.label <- gsub("\\'","",tree$tip.label)
+#lol my taxa asignment all have a space so I'll remove thAT
+otu1$Family <- gsub(" ", "", otu1$Family)
+#modeify tip labls
+otu1$Family <- gsub('\\_()', '' , otu1$Family)
+otu1$Family <- gsub('_\\(*)*', '' , otu1$Family)
+otu1$Family <- gsub('*Subgroup1*', '' , otu1$Family)
+otu1$Family <- gsub('\\(SR1)', '' , otu1$Family)
+otu1$Family <- gsub('*\\(*)*', '' , otu1$Family)
+otu1$Family <- gsub ("Abditibacteriaceae"  , "Actinomycetaceae",  otu1$Family ) #in the same clades
+
+length(intersect(unique(otu1$Family), tree$tip.label)) # Apply setdiff function to see what's missing from the tree
+length(setdiff(unique(otu1$Family), tree$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
+mynames<-(setdiff(unique(otu1$Family), tree$tip.label))
+#shorten phylogeny to match what is in our data frame
+asvs_remove<-setdiff(tree$tip.label, otu1$Family) #asvs we don't want
+tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
+plot(tree.short, no.margin=TRUE,  cex = .5)
+# grab correct order 
+target<-tree.short$tip.label
+otu1<-otu1[match(target, otu1$Family),]
+dim(otu1)
+# rm family column from df
+n <- otu1$Family
+otu1<-subset(otu1, select = c( -Family))
+row.names(otu1) <- n
+# summary stats
+max(m)
+min(m)
+mean(m)
+summary(m)
+# i think this matrix needs a log transform
+m<-log10(m)
+m[m== "-Inf"] <- 0
+m
+summary(m)
+
+# make matrix
+m<-as.matrix(otu1)
+row.names(m)
+m<-structure(m)
+#make a dendrogram              
+col_dendro = as.dendrogram(hclust(dist(t(m))))
+#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+#svg(file="figures/16s/heatmap3.svg",width = 10, height=7 )
+# And make the plot with phylogeny
+windows(16,10)
+heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
+dev.off()
+# change order
+tr<-read.tree(text =  "((C1N:3,C2N:3, C5N:3,C10N:3):2, (C1E:3,C2E:3,C5E:3,C10E:3):2,   (C1R:3, C2R:3,C5R:3, C10R:3):2);")
+heatmap.phylo(x = m, Rowp = tree.short, Colp = tr)
+dev.off
+# no phylogeny
+#make a dendrogram              
+row_dendro = as.dendrogram(hclust(dist((m))))
+windows(16,10)
+heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = tr)
+dev.off
+        
+        
+
 
 
 ##------- heatmap #2 active plant/ active rhizopshere -------#######
@@ -1103,7 +1215,6 @@ otu_log2.1
 
 # we re code -inf as -99
 # this means a taxa wasn't present in the location sampled
-
 
 # build your data your trying to pu tin the tree
 n<-row.names(otu_log2.1)
