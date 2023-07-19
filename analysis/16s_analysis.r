@@ -286,6 +286,7 @@ ps.r<-subset_taxa(ps.r, Genus!=" Chloroplast")
 ps.r<-prune_taxa(taxa_sums(ps.r) > 0, ps.r)
 any(taxa_sums(ps.r) == 0)
 ps.r
+ps <- ps.r
 # 7516 taxa
 # output df 
 otu.r.clean<-as.data.frame(t(as.data.frame(otu_table(ps.r))))
@@ -429,17 +430,18 @@ dev.off()
 
 # total + active shannon
 svg(file="figures/16s/shannon_diversity.svg",width = 6, height=4 )
-windows(width = 10, height=7)
+windows(width = 6, height=7)
 rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
-  ggplot(aes(x=compartment_BCAT, y=Shannon, fill = Fraction, col= Fraction))+
+  ggplot(aes(x=compartment_BCAT, y=Shannon, fill = Compartment, col= Compartment))+
   geom_boxplot() +
-  scale_colour_manual(values = c( "orange",  "black", "black"))+
-  scale_fill_manual( values = c("gold", "grey27", "lightgrey"))+
+  scale_colour_manual(values = c( "black",  "black", gold, pink))+
+  scale_fill_manual( values = c(blue, purple, lightgold, lightpink))+
   geom_jitter(width = .1, size=1 )+
   theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
-        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14) )+
-  ylab("shannon diversity")+
+        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14),
+        legend.position =  c(0.8, 0.8))+
+  ylab("Shannon")+
   xlab("Compartment")
 dev.off()
 
@@ -497,20 +499,49 @@ rich %>%
   ylab("Shannon divsersity")+
   theme_bw()
 
-
-root_total<-subset_samples(ps, compartment_BCAT=="RootsTotal_Cells")
+n<-sample_names(root_total)
+root_total<-subset_samples(ps, Compartment=="Roots")
 root_total<-prune_taxa(taxa_sums(root_total) > 0, root_total)
 any(taxa_sums(root_total) == 0)
 root_total
-ot<-as.data.table(otu_table(root_total))
-tt<-as.data.table(tax_table(root_total))
-ot<-t(ot)
-total<-cbind(ot,tt)
-sum<-rowSums(total[,1:4])
-total<-mutate(total, sum= sum)
+#406 taxa between both active and inactive
+otu<-as.data.table(otu_table(root_total))
+taxon<-(tax_table(root_total))
 
+otu<-t(otu)
+otu
+total<-cbind(otu.clean,taxon)
+#sum<-rowSums(total[,1:4])
+#total<-mutate(total, sum= sum)
 window("total")
 hist(total$sum)
+
+####### not including taxa that are really rare less than 5 reads
+####### are all those taxa in the root present in the bulk soil? ##########
+otu<-as.data.frame(otu)
+colnames(otu)
+otu1<-filter(otu, V1 > 5 | V2 > 5 | V3 > 5 | V4 > 5 | V5 > 5 | V6 > 5 | V7 > 5 | V8 > 5 )
+dim(otu1)
+# 194 taxa
+r_otus<- row.names(otu1)
+###### okay now grad the total dna list
+sample_data(ps)
+total<-subset_samples(ps, Fraction=="Total_DNA")
+total<-prune_taxa(taxa_sums(total) > 0, total)
+any(taxa_sums(total) == 0)
+total<-as.data.frame(t(otu_table(total)))
+
+# 6041 taxa
+t_otus<-row.names(total)
+length(intersect(t_otus, r_otus)) # Apply setdiff function to see what's missing from the total DNA
+length(setdiff(r_otus, t_otus))# 
+# 62 taxa missing
+mynames<-setdiff(r_otus, t_otus)
+
+62/(132+62)
+
+
+mynames
 
 root_active<-subset_samples(ps, compartment_BCAT=="RootsBONCAT_Active")
 root_active<-prune_taxa(taxa_sums(root_active) > 0, root_active)
@@ -1012,12 +1043,8 @@ any(taxa_sums(ps1) == 0)
 ps1
 # 1903 taxa from normalizwed by ncells data data
 otu<-as.data.frame(t(as.data.frame(otu_table(ps1))))
-otu
+dim(otu)
 # check distrubution
-hist(otu$C10E.POS_S60)
-hist(otu$C10N.POS_S65)
-hist(otu$C10R.POS_S30, breaks= 5)
-hist(otu$C1R.POS_S27)
 
 ####### agregate to the family level
 n<-row.names(otu)
@@ -1035,12 +1062,11 @@ otu<-select(otu, -Family)
 dim(otu)
 colnames(otu)
 rownames(otu)
-#change col names
-n<-c("C10E", "C10N", "C1E",  "C1N",  "C2E",  "C2N", "C5E", "C5N", "C10R", "C1R", "C2R", "C5R") 
+n<-c("Root4", "Nodule4", "Root1",  "Nodule1",  "Root2",  "Nodule2", "Root3", "Nodule3", "Rhizosphere4", "Rhizosphere1", "Rhizosphere2", "Rhizosphere3") 
 colnames(otu)<-n
 head(otu)
 ## filter for taxa that were not present in the plant.
-otu1<-filter(otu, C10E > 0 | C10N > 0 | C1E > 0 | C1N > 0 | C2E > 0 | C2N > 0 | C5E > 0 | C5N > 0  )
+otu1<-filter(otu, Root4 > 0 | Nodule4 > 0 | Root1 > 0 | Nodule1 > 0 | Root2 > 0 | Nodule2 > 0 | Root3 > 0 | Nodule3 > 0  )
 dim(otu1)
 head(otu1)
 #add back family column
@@ -1079,6 +1105,12 @@ dim(otu1)
 n <- otu1$Family
 otu1<-subset(otu1, select = c( -Family))
 row.names(otu1) <- n
+
+
+# make matrix
+m<-as.matrix(otu1)
+row.names(m)
+m<-structure(m)
 # summary stats
 max(m)
 min(m)
@@ -1089,27 +1121,22 @@ m<-log10(m)
 m[m== "-Inf"] <- 0
 m
 summary(m)
-
-# make matrix
-m<-as.matrix(otu1)
-row.names(m)
-m<-structure(m)
 #make a dendrogram              
 col_dendro = as.dendrogram(hclust(dist(t(m))))
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-#svg(file="figures/16s/heatmap3.svg",width = 10, height=7 )
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/heatmap1.svg", width = 10, height=10 )
 # And make the plot with phylogeny
-windows(16,10)
+windows(16,12)
 heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
 dev.off()
 # change order
-tr<-read.tree(text =  "((C1N:3,C2N:3, C5N:3,C10N:3):2, (C1E:3,C2E:3,C5E:3,C10E:3):2,   (C1R:3, C2R:3,C5R:3, C10R:3):2);")
+tr<-read.tree(text =  "((Nodule1:3,Nodule2:3, Nodule3:3,Nodule4:3):2, (Root1:3,Root2:3,Root3:3,Root4:3):2, (Rhizosphere1:3, Rhizosphere2:3,Rhizosphere3:3, Rhizosphere4:3):2);")
 heatmap.phylo(x = m, Rowp = tree.short, Colp = tr)
 dev.off
 # no phylogeny
 #make a dendrogram              
 row_dendro = as.dendrogram(hclust(dist((m))))
-windows(16,10)
+windows(10,10)
 heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = tr)
 dev.off
         
