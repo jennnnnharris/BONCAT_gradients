@@ -113,10 +113,10 @@ metadat<-as.data.frame(metadat)
 Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
 Workshop_metadat <- sample_data(metadat)
 Workshop_taxo <- tax_table(as.matrix(taxon))
-ps.a <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
+ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
 
 # take a look at PS object
-print(ps.a)
+print(ps)
 # we a get a Plyloseq object with  15027 taxa
 
 ## Determine minimum available reads per sample ##
@@ -172,25 +172,25 @@ metadat<-as.data.frame(metadat)
 Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
 Workshop_metadat <- sample_data(metadat)
 Workshop_taxo <- tax_table(as.matrix(taxon))
-ps.a <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
+ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
 
 #test it worked
 #sample_names(ps)
-print(ps.a)
+print(ps)
 # 15027 taxa
 
 # remove chloroplast DNA
-ps.a<-subset_taxa(ps.a, Class!=" Chloroplast")
-ps.a<-subset_taxa(ps.a, Genus!=" Mitochondria")
-ps.a<-subset_taxa(ps.a, Genus!=" Chloroplast")
+ps<-subset_taxa(ps, Class!=" Chloroplast")
+ps<-subset_taxa(ps, Genus!=" Mitochondria")
+ps<-subset_taxa(ps, Genus!=" Chloroplast")
 # get rid of taxa that aren; in any samples
-ps.a<-prune_taxa(taxa_sums(ps.a) > 0, ps.a)
-any(taxa_sums(ps.a) == 0)
-ps.a
+ps<-prune_taxa(taxa_sums(ps) > 0, ps)
+any(taxa_sums(ps) == 0)
+ps
 # 14593 taxa
 
-asvs.clean<-as.data.frame(t(as.data.frame(otu_table(ps.a))))
-taxon<-as.data.frame(tax_table(ps.a))
+asvs.clean<-as.data.frame(t(as.data.frame(otu_table(ps))))
+taxon<-as.data.frame(tax_table(ps))
 
 
 
@@ -201,61 +201,61 @@ taxon<-as.data.frame(tax_table(ps.a))
   # I want to reduce the organism in the alpha diversity that are due to the dada2 clustering methods
   
 ## Set the working directory; modify to your own ###
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
+#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
 
 ### Import Data ###
-taxon <- read.delim("otu_output/taxonomy.txt", sep="\t", header=T, row.names=1)
-otu.raw <- read.table("otu_output/feature-table.txt", sep="\t", header = T , row.names = 1 )
-metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
+#taxon <- read.delim("otu_output/taxonomy.txt", sep="\t", header=T, row.names=1)
+#otu.raw <- read.table("otu_output/feature-table.txt", sep="\t", header = T , row.names = 1 )
+#metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
 
 #data wrangleing and importing into Phyloseq#
 ## recode metadata 
-metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
-metadat<-metadat[, c(1,3:6)]
-metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
+#metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
+#metadat<-metadat[, c(1,3:6)]
+#metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
 #to make coloring things easier I'm gong to added a combined fractionXboncat column 
-metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
+#metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
 
 ## Transpose ASVS table ##
-otu.t <- t(otu.raw)
+#otu.t <- t(otu.raw)
 ## order metadata
-metadat<-metadat[order(metadat$SampleID),]
+#metadat<-metadat[order(metadat$SampleID),]
 ## order asvs table
-otu.t<-otu.t[order(row.names(otu.t)),]
+#otu.t<-otu.t[order(row.names(otu.t)),]
 
 
 
 ########-----------import non rarefied data into phyloseq #
 ## rearrange data for phyloseq
-otu.phyloseq<- (otu.t)
-taxon<-taxon[,1:7]
-metadat<-as.matrix(metadat)
-y<-colnames(otu.raw)
-rownames(metadat) <- y
-metadat<-as.data.frame(metadat)
+#otu.phyloseq<- (otu.t)
+#taxon<-taxon[,1:7]
+#metadat<-as.matrix(metadat)
+#y<-colnames(otu.raw)
+#rownames(metadat) <- y
+#metadat<-as.data.frame(metadat)
 
 ## import it phyloseq
-Workshop_OTU <- otu_table(otu.phyloseq, taxa_are_rows = FALSE)
-Workshop_metadat <- sample_data(metadat)
-Workshop_taxo <- tax_table(as.matrix(taxon))
-ps <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
+#Workshop_OTU <- otu_table(otu.phyloseq, taxa_are_rows = FALSE)
+#Workshop_metadat <- sample_data(metadat)
+#Workshop_taxo <- tax_table(as.matrix(taxon))
+#ps <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
 ##  take a look at PS object
-print(ps)
+#print(ps)
 # we a get a Plyloseq object with  7727 taxa
 
 #######------ remove chloroplasts#
 # remove chloroplast DNA
-ps<-subset_taxa(ps, Class!=" Chloroplast")
-ps<-subset_taxa(ps, Genus!=" Mitochondria")
-ps<-subset_taxa(ps, Genus!=" Chloroplast")
+#ps<-subset_taxa(ps, Class!=" Chloroplast")
+#ps<-subset_taxa(ps, Genus!=" Mitochondria")
+#ps<-subset_taxa(ps, Genus!=" Chloroplast")
 # get rid of taxa that arent in any samples
-ps<-prune_taxa(taxa_sums(ps) > 0, ps)
-any(taxa_sums(ps) == 0)
-ps
+#ps<-prune_taxa(taxa_sums(ps) > 0, ps)
+#any(taxa_sums(ps) == 0)
+#ps
 # 7623 taxa
 # output df 
-otus<-as.data.frame(t(as.data.frame(otu_table(ps))))
-taxon<-as.data.frame(tax_table(ps))
+#otus<-as.data.frame(t(as.data.frame(otu_table(ps))))
+#taxon<-as.data.frame(tax_table(ps))
 
 ######rarefying taxa and importing into phyloseq #
 ## Determine minimum available reads per sample ##
@@ -379,7 +379,7 @@ ps
 
 # 3173 taxa
 # output df 
-otu.clean<-as.data.frame(t(as.data.frame(otu_table(ps))))
+asvs.clean<-as.data.frame(t(as.data.frame(otu_table(ps))))
 taxon<-as.data.frame(tax_table(ps))
 
 
@@ -422,14 +422,14 @@ rich %>%
   theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
         legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14),
         legend.position =  c(0.8, 0.8))+
-  ylab("N Otus")+
+  ylab("Number of ASVS")+
   xlab("Compartment")
 dev.off()
 
 
 
 # total + active shannon
-svg(file="figures/16s/shannon_diversity.svg",width = 6, height=4 )
+svg(file="figures/16s/shannon_diversity.svg",width = 6, height=7 )
 windows(width = 6, height=7)
 rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
@@ -441,27 +441,342 @@ rich %>%
   theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
         legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14),
         legend.position =  c(0.8, 0.8))+
-  ylab("Shannon")+
+  ylab("Shannon Diversity")+
   xlab("Compartment")
 dev.off()
 
 
+### t test
 
-# total + active simpson
-svg(file="figures/16s/simpson_diversity.svg",width = 6, height=4 )
-windows(width = 10, height=7)
-rich %>%
-  filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
-  ggplot(aes(x=compartment_BCAT, y=Simpson, fill = Fraction, col= Fraction))+
-  geom_boxplot() +
-  scale_colour_manual(values = c( "orange",  "black", "black"))+
-  scale_fill_manual( values = c("gold", "grey27", "lightgrey"))+
-  geom_jitter(width = .1, size=1 )+
-  theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
-        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14) )+
-  ylab("Simpson diversity")+
-  xlab("Compartment")
-dev.off()
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)
+
+m1<-lm(Observed ~ Compartment+ BONCAT + Compartment*BONCAT,  data = df)
+summary(m1)
+
+#rhizosphere verse nodule
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Nodule")
+
+m1<-lm(Observed ~ Compartment+ BONCAT + Compartment*BONCAT,  data = df)
+summary(m1)
+
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Nodule", BONCAT=="POS")
+
+m1<-lm(Observed ~ Compartment,  data = df)
+summary(m1)
+# compartments are different 
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Nodule", BONCAT=="SYBR")
+
+m1<-lm(Observed ~ Compartment,  data = df)
+summary(m1)
+# compartments are different 
+
+
+
+
+#rhizosphere verse roots
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment== "Roots")
+
+m1<-lm(Observed ~ Compartment+ BONCAT + Compartment*BONCAT,  data = df)
+summary(m1)
+
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Roots", BONCAT=="POS")
+
+m1<-lm(Observed ~ Compartment,  data = df)
+summary(m1)
+# compartments are different 
+#CompartmentRoots  -895.35      45.35  -19.74 2.14e-07 ***
+
+# rhizo sybr verse endo
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Roots", BONCAT=="SYBR")
+
+m1<-lm(Observed ~ Compartment,  data = df)
+summary(m1)
+
+  
+
+# in nodule
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Nodule")
+m1<-lm(Observed ~ BONCAT,  data = df)
+summary(m1)
+### boncat pos and active are different 
+### BONCATSYBR    12.350      4.716   2.619  0.03447 * 
+
+# in endo
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Roots")
+m1<-lm(Observed ~ BONCAT,  data = df)
+summary(m1)
+### boncat pos and active are different 
+### BONCATSYBR   -54.150     13.032  -4.155  0.00427 ** 
+
+# in rhizosphere sybr verse boncat
+df<-rich %>%
+filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT!="DNA") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere")
+m1<-lm(Observed ~ BONCAT,  data = df)
+summary(m1)
+# sybr and boncat pos are different
+#BONCATSYBR    316.65      68.69    4.61  0.00246 ** 
+  
+
+# in rhizosphere DNA verse sYBR
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT!="POS") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere")
+m1<-lm(Observed ~ BONCAT,  data = df)
+summary(m1)
+# sybr and DNA are different
+#BONCATSYBR   -267.00      59.18  -4.512  0.00197 ** 
+  
+
+# in rhizosphere DNA verse boncat
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT!="SYBR") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere")
+m1<-lm(Observed ~ BONCAT,  data = df)
+summary(m1)
+# sybr and DNA are different
+#BONCATSYBR   -267.00      59.18  -4.512  0.00197 ** 
+
+
+# bulk soil dna verse rhizosphere DNA
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT=="DNA") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Bulk_Soil")
+m1<-lm(Observed ~ Compartment,  data = df)
+summary(m1)
+## rhizosphere DNA verse bulk soil dna are not different
+#CompartmentRhizosphere  -100.60      96.51  -1.042     0.32    
+
+
+
+# nodule verse endosphere 
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT=="POS") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Nodule"| Compartment=="Roots")
+m1<-lm(Observed ~ Compartment,  data = df)
+summary(m1)
+
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT=="SYBR") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Nodule"| Compartment=="Roots")
+m1<-lm(Observed ~ Compartment,  data = df)
+summary(m1)
+
+
+
+
+
+
+#####stats for shannon diversity #########
+### t test
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)
+
+m1<-lm(Shannon ~ Compartment+ BONCAT + Compartment*BONCAT,  data = df)
+summary(m1)
+
+#rhizosphere verse nodule
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Nodule")
+
+m1<-lm(Shannon ~ Compartment+ BONCAT + Compartment*BONCAT,  data = df)
+summary(m1)
+
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Nodule", BONCAT=="POS")
+
+m1<-lm(Shannon ~ Compartment,  data = df)
+summary(m1)
+# compartments are different 
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Nodule", BONCAT=="SYBR")
+
+m1<-lm(Shannon ~ Compartment,  data = df)
+summary(m1)
+# compartments are different 
+
+# roots boncat active verse total nodule
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(compartment_BCAT=="NoduleTotal_Cells"| compartment_BCAT=="RootsBONCAT_Active")
+
+m1<-lm(Shannon ~ compartment_BCAT,  data = df)
+summary(m1)
+# compartments are different 
+
+
+
+#rhizosphere verse roots
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment== "Roots")
+
+m1<-lm(Shannon ~ Compartment+ BONCAT + Compartment*BONCAT,  data = df)
+summary(m1)
+
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Roots", BONCAT=="POS")
+
+m1<-lm(Shannon ~ Compartment,  data = df)
+summary(m1)
+# compartments are different 
+#CompartmentRoots  -895.35      45.35  -19.74 2.14e-07 ***
+
+# rhizo sybr verse endo
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Roots", BONCAT=="SYBR")
+
+m1<-lm(Shannon ~ Compartment,  data = df)
+summary(m1)
+
+# rhizo boncat verse endo
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Roots", BONCAT=="POS")
+
+m1<-lm(Shannon ~ Compartment,  data = df)
+summary(m1)
+
+# rhizo boncat verse nod boncat
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Nodule", BONCAT=="POS")
+
+m1<-lm(Shannon ~ Compartment,  data = df)
+summary(m1)
+
+# rhizo boncat verse nod sybr
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Nodule", BONCAT=="SYBR")
+
+m1<-lm(Shannon ~ Compartment,  data = df)
+summary(m1)
+
+# in nodule
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Nodule")
+m1<-lm(Shannon ~ BONCAT,  data = df)
+summary(m1)
+### boncat pos and active are different 
+### BONCATSYBR    12.350      4.716   2.619  0.03447 * 
+
+# in endo
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Roots")
+m1<-lm(Shannon ~ BONCAT,  data = df)
+summary(m1)
+
+
+# in rhizosphere sybr verse boncat
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT!="DNA") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere")
+m1<-lm(Shannon ~ BONCAT,  data = df)
+summary(m1)
+#  0.13285    0.10457   1.271    0.244    
+
+# in rhizosphere DNA verse sYBR
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT!="POS") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere")
+m1<-lm(Shannon ~ BONCAT,  data = df)
+summary(m1)
+# sybr and DNA are different
+
+
+# in rhizosphere DNA verse boncat
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT!="SYBR") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere")
+m1<-lm(Shannon ~ BONCAT,  data = df)
+summary(m1)
+
+
+# bulk soil dna verse rhizosphere DNA
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT=="DNA") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Rhizosphere"| Compartment=="Bulk_Soil")
+m1<-lm(Shannon ~ Compartment,  data = df)
+summary(m1)
+
+
+
+# nodule verse endosphere bcat pos
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT=="POS") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Nodule"| Compartment=="Roots")
+m1<-lm(Shannon ~ Compartment,  data = df)
+summary(m1)
+
+# nod vs endo sybr
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT=="SYBR") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Nodule"| Compartment=="Roots")
+m1<-lm(Shannon ~ Compartment,  data = df)
+summary(m1)
+
+
+
+
 
 
 
@@ -579,16 +894,20 @@ window("total")
 hist(nod_active$sum)
 
 
-############################PCOA plots OTU level ########################
-#Pcoa on rarefied Otu Data
+############################PCOA plots ASVS level ########################
+#Pcoa on rarefied asvs Data
+
+# rm ctl
+ps<-subset_samples(ps, Compartment !="ctl")
 
 # Calculate Bray-Curtis distance between samples
-otus.bray<-vegdist(otu_table(ps.r), method = "bray")
-ps.r
+
+otus.bray<-vegdist(otu_table(ps), method = "bray")
+ps
 
 
 # Perform PCoA analysis of BC distances #
-otus.pcoa <- cmdscale(otus.bray, k=(42-1), eig=TRUE)
+otus.pcoa <- cmdscale(otus.bray, k=(40-1), eig=TRUE)
 
 # Store coordinates for first two axes in new variable #
 otus.p <- otus.pcoa$points[,1:2]
@@ -608,6 +927,7 @@ metadat
 #p<-otus.p[which(metadat$BONCAT != "ctl",)]
 
 # subset metadata
+metadat<-filter(metadat, Compartment!="ctl")
 as.factor(metadat$Compartment)
 as.factor(metadat$Fraction)
 as.factor(metadat$compartment_BCAT)
@@ -620,16 +940,21 @@ levels(as.factor(metadat$Fraction))
 #blue <- "#739AFF"
 #pink <- "#DC267F"
 
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/pcoa/Pcoa_plantvsoil_raw.svg",width = 6, height=6 )
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s/pcoa")
 
-windows(title="PCoA on plant asvs- Bray Curtis", width = 7, height = 6)
-ordiplot(otus.pcoa,choices=c(2,1), type="none", main="PCoA of Bray Curtis dissimilarities",xlab=paste("PCoA1 (",round(pe2,2),"% variance explained)"),
-         ylab=paste("PCoA2 (",round(pe1,2),"% variance explained)"))
-points(switch, col=c("black"),
-       pch=c(22, 21,22,24, 23)[as.factor(metadat$Fraction)],
+svg(file="Pcoa_plantvsoil_raw.svg",width = 6, height=6 )
+
+windows(title="PCoA on plant asvs- Bray Curtis", width = 6, height = 6)
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis dissimilarities",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+points(otus.p, col=c("black"),
+       pch=c(circle, triangle, diamond)[as.factor(metadat$Fraction)],
        lwd=1,cex=2,
-       bg=c( blue, "black", "white", pink , pink, purple, purple, purple, gold, gold)[as.factor(metadat$compartment_BCAT)])
+       bg=c( blue, pink , pink, purple, purple, purple, gold, gold)[as.factor(metadat$compartment_BCAT)])
+ordiellipse(otus.pcoa, metadat$Compartment,  
+            kind = "se", conf=0.95, #label=T, 
+            #draw = "polygon",
+            lwd=2, col="black")
 
 
 legend("top",legend=c("beads", "Bulk_SoilTotal_DNA" ,      "neg control"   ,  "NoduleBONCAT_Active"    ,  "Nodule Total Cells"     ,      "RhizosphereBONCAT_Active",
@@ -644,18 +969,20 @@ dev.off()
 
 
 ##########-------run a new pcoa on just soil <3
-ps.r
-ps2<-subset_samples(ps.r, Compartment !=  "Nodule" & Compartment != "Roots")
+ps
+metadat
+ps2<-subset_samples(ps, Compartment !=  "Nodule" & Compartment != "Roots" & Compartment !="ctl")
 ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
 any(taxa_sums(ps2) == 0)
 ps2
 sample_names(ps2)
-# 7401 taXA
+# 13390 asvs
 # Calculate Bray-Curtis distance between samples
 otus.bray<-vegdist(otu_table(ps2), method = "bray")
 
+
 # Perform PCoA analysis of BC distances #
-otus.pcoa <- cmdscale(otus.bray, k=(24-1), eig=TRUE)
+otus.pcoa <- cmdscale(otus.bray, k=(20-1), eig=TRUE)
 
 # Store coordinates for first two axes in new variable #
 otus.p <- otus.pcoa$points[,1:2]
@@ -667,7 +994,7 @@ pe1<-perc.exp[1]
 pe2<-perc.exp[2]
 
 # subset metadata
-metadat2<-metadat%>% filter(Compartment !=  "Nodule" & Compartment != "Roots") 
+metadat2<-metadat%>% filter(Compartment !=  "Nodule" & Compartment != "Roots" & Compartment!="ctl") 
 
 as.factor(metadat2$Compartment)
 as.factor(metadat2$Fraction)
@@ -680,90 +1007,28 @@ diamond <- 23
 triangle <- 24
 circle <- 21
 
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 svg(file="figures/16s/pcoa/soil_raw.svg",width = 4, height=4 )
 windows(title="PCoA on asvs- Bray Curtis", width = 4, height = 4)
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 points(otus.p[,1:2],
-       pch=c(square, circle, square, triangle, diamond)[as.factor(metadat2$Fraction)],
+       pch=c(circle,triangle, diamond)[as.factor(metadat2$Fraction)],
        lwd=1,cex=2,
-       bg=c(blue,"black", "white", purple , purple, purple)[as.factor(metadat2$compartment_BCAT)])
+       bg=c(blue, purple , purple, purple)[as.factor(metadat2$compartment_BCAT)])
 
-legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR control",  "Rhizosphere BONCAT_Active" , "Rhizosphere Inactive",  "Rhizosphere Total DNA"), 
-       pch=c(15,5, 0, 1,2,5),
+ordiellipse(otus.pcoa, metadat2$Fraction,  
+            kind = "se", conf=0.95, #label=T, 
+            #draw = "polygon",
+            lwd=2, col="black")
+
+legend("top",legend=c( "Rhizosphere BONCAT_Active", "Rhizosphere Total Cells", "Rhizosphere Total DNA" ,  "Bulk soil total DNA" ), 
+       pch=c(circle, triangle, diamond, diamond),
        cex=1.1, 
-       col=c("black", "#739AFF",  "black", "#785EF0", "#785EF0",  "#785EF0"),
+       col=c("#785EF0", "#785EF0",  "#785EF0","#739AFF"),
        bty = "n")
 
 dev.off()
-
-################# just active verse total
-
-ps.r
-ps2<-subset_samples(ps.r, Compartment !=  "Nodule" & Compartment != "Roots" & Fraction!="Total_DNA")
-ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
-any(taxa_sums(ps2) == 0)
-ps2
-sample_names(ps2)
-df<-as.data.frame(otu_table(ps2))
-# 7401 taXA
-# Calculate Bray-Curtis distance between samples
-otus.bray<-vegdist(otu_table(ps2), method = "bray")
-
-# Perform PCoA analysis of BC distances #
-otus.pcoa <- cmdscale(otus.bray, k=(11-1), eig=TRUE)
-
-#add species scores
-#add.spec.scores(ordi, comm, method="cor.scores", multi=1, Rscale=F, scaling="1")
-#install.packages("BiodiversityR")
-#library(BiodiversityR)
-#otus.pcoa<-add.spec.scores(otus.pcoa, df , method="pcoa.scores", multi=1, Rscale=F, scaling="1")
-
-sppscores(otus.pcoa)
-
-# Store coordinates for first two axes in new variable #
-otus.p <- otus.pcoa$points[,1:2]
-
-# Calculate % variance explained by each axis #
-otus.eig<-otus.pcoa$eig
-perc.exp<-otus.eig/(sum(otus.eig))*100
-pe1<-perc.exp[1]
-pe2<-perc.exp[2]
-
-# subset metadata
-metadat2<-metadat%>% filter(Compartment !=  "Nodule" & Compartment != "Roots" & Fraction!="Total_DNA") 
-
-as.factor(metadat2$Compartment)
-as.factor(metadat2$Fraction)
-as.factor(metadat2$compartment_BCAT)
-levels(as.factor(metadat2$compartment_BCAT))
-levels(as.factor(metadat2$Fraction))
-
-square <- 22
-diamond <- 23
-triangle <- 24
-circle <- 21
-
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/pcoa/soil_simple_raw.svg",width = 4, height= 4)
-windows(title="PCoA on asvs- Bray Curtis", width = 7, height = 6)
-ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
-         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
-points(otus.p[,1:2],
-       pch=c(square, circle, square, triangle)[as.factor(metadat2$Fraction)],
-       lwd=1,cex=2,
-       bg=c("black", "white", purple, purple)[as.factor(metadat2$compartment_BCAT)])
-
-legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR control",  "Rhizosphere BONCAT_Active" , "Rhizosphere Inactive",  "Rhizosphere Total DNA"), 
-       pch=c(15,5, 0, 1,2,5),
-       cex=1.1, 
-       col=c("black", "#739AFF",  "black", "#785EF0", "#785EF0",  "#785EF0"),
-       bty = "n")
-
-dev.off()
-
-
 
 ####### active verse total RDA
 
@@ -772,12 +1037,12 @@ dev.off()
 
 
 #################-------------------just plant##
-ps.r
-ps2<-subset_samples(ps.r, Compartment !=  "Bulk_Soil" & Compartment != "Rhizosphere" & Compartment != "ctl")
+ps
+ps2<-subset_samples(ps, Compartment !=  "Bulk_Soil" & Compartment != "Rhizosphere" & Compartment != "ctl")
 ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
 any(taxa_sums(ps2) == 0)
 ps2
-sample.names(ps2)
+sample_names(ps2)
 df<-as.data.frame(otu_table(ps2))
 # 446 taXA
 # Calculate Bray-Curtis distance between samples
@@ -785,11 +1050,6 @@ otus.bray<-vegdist(otu_table(ps2), method = "bray")
 
 # Perform PCoA analysis of BC distances #
 otus.pcoa <- cmdscale(otus.bray, k=(15-1), eig=TRUE)
-
-#add species scores
-#add.spec.scores(ordi, comm, method="cor.scores", multi=1, Rscale=F, scaling="1")
-#add.spec.scores(otus.pcoa, , method="cor.scores", multi=1, Rscale=F, scaling="1")
-
 
 # Store coordinates for first two axes in new variable #
 otus.p <- otus.pcoa$points[,1:2]
@@ -814,7 +1074,7 @@ diamond <- 23
 triangle <- 24
 circle <- 21
 
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 svg(file="figures/16s/pcoa/plant_raw.svg",width = 4, height=4 )
 windows(title="PCoA on asvs- Bray Curtis", width = 4, height = 4)
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
@@ -823,6 +1083,13 @@ points(otus.p[,1:2],
        pch=c(circle, triangle)[as.factor(metadat2$Fraction)],
        lwd=1,cex=2,
        bg=c(pink, pink, gold, gold)[as.factor(metadat2$compartment_BCAT)])
+ordiellipse(otus.pcoa, metadat2$Fraction,  
+            kind = "se", conf=0.95, label=T, 
+            draw = "polygon",
+            lwd=2, col=NULL)
+
+
+
 
 legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR control",  "Rhizosphere BONCAT_Active" , "Rhizosphere Inactive",  "Rhizosphere Total DNA"), 
        pch=c(15,5, 0, 1,2,5),
@@ -835,31 +1102,210 @@ dev.off()
 
 #########-------------- permanova----------------#########
 
+#full model
 # use output that doesn't have chloroplast for permanova. 
-
-
-otu.r.clean.t <- t(otu.r.clean)
-otu.perm<- adonis2(t(otu.r.clean)~ Compartment*Fraction, data = metadat, permutations = 999, method="bray")
-
+dim(asvs.clean)
+asvs.clean
+otu.perm<- adonis2(t(asvs.clean)~ Compartment+ Fraction+Compartment*Fraction, data = metadat, permutations = 999, method="bray")
 otu.perm
-# Fraction         4   8.3386 0.59802 18.4333  0.001 ***
-#  BONCAT           2   1.2988 0.09315  5.7422  0.001 ***
-#  Fraction:BONCAT  2   0.5742 0.04118  2.5387  0.126   
+#Df SumOfSqs      R2       F Pr(>F)    
+#Compartment           3   7.9377 0.68157 33.0965  0.001 ***
+#  Fraction              2   0.8828 0.07580  5.5211  0.001 ***
+#  Compartment:Fraction  2   0.2675 0.02297  1.6728  0.122    
 
 #analysis of similarities
 otu.ano<- anosim(t(otu.r.clean), grouping =  metadat$Compartment, permutations = 999)
 summary(otu.ano)
 
 #test for dispersion between groups
+# compartments are not equaly dispersed
 dispersion <- betadisper(otus.bray, group=metadat$Compartment)
 permutest(dispersion)
 plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
 
 
 
-##### subset data by fraction 
-#rhizo active verse total cells
+##### subset data by compartment
+# with in a compartment (rhizo, root, nodule) are the fractions evenly dispersed?
+# just soil
+ps
+metadat
+ps2<-subset_samples(ps, Compartment !=  "Nodule" & Compartment != "Roots" & Compartment !="ctl")
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+sample_names(ps2)
+# 13390 asvs
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+# subset metadata
+metadat2<-metadat%>% filter(Compartment !=  "Nodule" & Compartment != "Roots" & Compartment!="ctl") 
+#test for dispersion between groups
+# compartments are not equaly dispersed
+dispersion <- betadisper(otus.bray, group=as.factor(metadat2$compartment_BCAT))
+permutest(dispersion)
+anova(dispersion)
+plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
+# unequal varience
 
+# just rhizosphere
+ps
+metadat
+ps2<-subset_samples(ps, Compartment ==  "Rhizosphere" & Compartment !="ctl")
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+sample_names(ps2)
+# 8665 asvs
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+# subset metadata
+metadat2<-metadat%>% filter(Compartment ==  "Rhizosphere" & Compartment!="ctl") 
+#test for dispersion between groups
+# compartments are not equaly dispersed
+dispersion <- betadisper(otus.bray, group=as.factor(metadat2$Fraction))
+permutest(dispersion)
+anova(dispersion)
+plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
+# unequal variance
+
+
+# just rhizosphere total cells and active
+ps
+metadat
+ps2<-subset_samples(ps, Compartment ==  "Rhizosphere" & Compartment !="ctl" & Fraction!="Total_DNA")
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+sample_names(ps2)
+# 8665 asvs
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+# subset metadata
+metadat2<-metadat%>% filter(Compartment ==  "Rhizosphere" & Compartment!="ctl" & Fraction!="Total_DNA")
+#test for dispersion between groups
+# compartments are not equaly dispersed
+dispersion <- betadisper(otus.bray, group=as.factor(metadat2$Fraction))
+permutest(dispersion)
+anova(dispersion)
+plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
+# unequal variance
+
+
+# just Total DNA
+ps
+metadat
+ps2<-subset_samples(ps, Fraction=="Total_DNA" & Plant =="Clover")
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+sample_names(ps2)
+# 8665 asvs
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+# subset metadata
+metadat2<-metadat%>% filter(Fraction=="Total_DNA" & Plant=="Clover")
+#test for dispersion between groups
+# compartments are not equaly dispersed
+dispersion <- betadisper(otus.bray, group=as.factor(metadat2$Compartment))
+permutest(dispersion)
+anova(dispersion)
+plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
+# unequal variance
+
+
+
+
+
+
+
+
+
+
+
+######## Permanova just plant #############
+ps
+metadat
+ps2<-subset_samples(ps, Compartment !=  "Rhizosphere" & Compartment !="Bulk_Soil" & Compartment != "ctl")
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+sample_names(ps2)
+# 691 asvs
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+# subset metadata
+metadat2<-metadat%>% filter(Compartment !=  "Rhizosphere" & Compartment !="Bulk_Soil" & Compartment != "ctl")
+#test for dispersion between groups
+# compartments are not equaly dispersed
+dispersion <- betadisper(otus.bray, group=as.factor(metadat2$Fraction))
+permutest(dispersion)
+anova(dispersion)
+plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
+# equal variance :)
+otu.perm<- adonis2((otu_table(ps2))~ Compartment+ Fraction + Compartment*Fraction, data = metadat2, permutations = 999, method="bray")
+otu.perm
+# significant effect of compartment and fraction
+#                     Df SumOfSqs      R2       F Pr(>F)    
+#Compartment           1  0.18467 0.36664 17.4150  0.001 ***
+#  Fraction              1  0.13593 0.26986 12.8180  0.002 ** 
+#  Compartment:Fraction  1  0.03463 0.06876  3.2659  0.076 .  
+#Residual             14  0.14846 0.29474                   
+#Total                17  0.50369 1.00000
+
+### nodule active verse bulk
+ps2<-subset_samples(ps, Compartment ==  "Nodule" )
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+# 131 asvs
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+# subset metadata
+metadat2<-metadat%>% filter(Compartment ==  "Nodule" )
+#test for dispersion between groups
+dispersion <- betadisper(otus.bray, group=as.factor(metadat2$Fraction))
+permutest(dispersion)
+anova(dispersion)
+plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
+# equal variance :)
+otu.perm<- adonis2((otu_table(ps2))~ Fraction, data = metadat2, permutations = 999, method="bray")
+otu.perm
+# significant effect of compartment and fraction
+#Fraction  1 0.035435 0.43128 5.3083  0.032 *
+  
+
+### endo active verse bulk
+ps2<-subset_samples(ps, Compartment ==  "Roots" )
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+# 603 asvs
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+# subset metadata
+metadat2<-metadat%>% filter(Compartment ==  "Roots" )
+#test for dispersion between groups
+dispersion <- betadisper(otus.bray, group=as.factor(metadat2$Fraction))
+permutest(dispersion)
+anova(dispersion)
+plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
+# equal variance :)
+otu.perm<- adonis2((otu_table(ps2))~ Fraction, data = metadat2, permutations = 999, method="bray")
+otu.perm
+# significant effect of compartment and fraction
+#Fraction  1  0.13512 0.57049 9.2975  0.012 *
+
+
+
+
+
+
+
+
+
+
+##rhizo active verse rhizo total cells
 ps.r
 ps2<-subset_samples(ps.r, Compartment ==  "Rhizosphere"  & Fraction!="Total_DNA")
 ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
@@ -875,7 +1321,9 @@ otu.perm<- adonis2(df~ Fraction, data = metadat_y, permutations = 999, method="b
 otu.perm
 
 
-#cry runa  PCA
+dispersion <- betadisper(otus.bray, group=metadat$Compartment)
+permutest(dispersion)
+plot(dispersion, hull=FALSE, ellipse=TRUE) ##sd ellipse
 
 
 
