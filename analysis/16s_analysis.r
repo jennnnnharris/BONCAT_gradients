@@ -84,6 +84,19 @@ blue <- "#739AFF"
 pink <- "#DC267F"
 lightpink <- "#ffc6e5"
 
+######### poster colors #########
+#navyblue<-"#161D64"
+#dustypurple<-"#A79EB6"
+lightpurple <- "#8563C1"
+purple<-"#543A81"
+lightblue <-"#739AFF"
+blue<-"#5560A7"
+pink <- "#E48888"
+lightpink<- "#FEDDD2"
+gold<- "#AE330D"
+lightgold<-"#E48888"
+
+
 
 ######-------------import Asvs data -----------------##############
 ## Set the working directory; ###
@@ -416,9 +429,10 @@ rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
   ggplot(aes(x=compartment_BCAT, y=Observed, fill = Compartment, col= Compartment))+
   geom_boxplot() +
-  scale_colour_manual(values = c( "black",  "black", gold, pink))+
-  scale_fill_manual( values = c(blue, purple, lightgold, lightpink))+
+  scale_colour_manual(values = c( blue, purple, gold, pink))+
+  scale_fill_manual( values = c(lightblue, lightpurple, lightgold, lightpink))+
   geom_jitter(width = .1, size=1 )+
+  theme_classic(base_size = 18)+
   theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
         legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14),
         legend.position =  c(0.8, 0.8))+
@@ -435,9 +449,10 @@ rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
   ggplot(aes(x=compartment_BCAT, y=Shannon, fill = Compartment, col= Compartment))+
   geom_boxplot() +
-  scale_colour_manual(values = c( "black",  "black", gold, pink))+
-  scale_fill_manual( values = c(blue, purple, lightgold, lightpink))+
+  scale_colour_manual(values = c( blue,  purple, gold, pink))+
+  scale_fill_manual( values = c(lightblue, lightpurple, lightgold, lightpink))+
   geom_jitter(width = .1, size=1 )+
+  theme_classic(base_size = 18)+
   theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
         legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14),
         legend.position =  c(0.8, 0.8))+
@@ -579,13 +594,15 @@ summary(m1)
 
 
 
-# nodule verse endosphere 
+# nodule verse endosphere boncart
 df<-rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT=="POS") %>%
   select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
   filter(Compartment=="Nodule"| Compartment=="Roots")
 m1<-lm(Observed ~ Compartment,  data = df)
 summary(m1)
+
+# nodule verse endosphere total
 
 df<-rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive", BONCAT=="SYBR") %>%
@@ -782,6 +799,54 @@ summary(m1)
 
 ############ taxa exploration in  the endophyte ######################
 
+######### remove rare taxa, is the endosphyte diversity still higher in active??
+
+root_total<-subset_samples(ps, Compartment=="Roots")
+sample_names(root_total)
+root_total<-prune_taxa(taxa_sums(root_total) > 0, root_total)
+any(taxa_sums(root_total) == 0)
+root_total
+#603 taxa
+
+## fitler for taxa that are rare
+root_total<-prune_taxa(taxa_sums(root_total) > 15, root_total)
+any(taxa_sums(root_total) == 0)
+root_total
+# 186 taxa
+
+x<-otu_table(root_total)
+
+#calc richness
+rich<-estimate_richness(root_total, measures = c("Observed", "Shannon", "Simpson", "InvSimpson" ))
+
+# make little metadata
+metadat2<-metadat %>% filter(Compartment == "Roots")
+
+# Data wrangling fo rdiversity of active microbes in each fraction
+rich<-cbind(rich, metadat2)
+rich<-as.data.frame(rich)
+colnames(rich)
+rich$Compartment<-factor(rich$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
+rich %>%
+  arrange( -Observed)
+
+## t test
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Shannon, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Roots")
+m1<-lm(Shannon ~ BONCAT,  data = df)
+summary(m1)
+
+## t test
+df<-rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
+  select(Observed, BONCAT, Compartment, compartment_BCAT)%>%
+  filter(Compartment=="Roots")
+m1<-lm(Observed ~ BONCAT,  data = df)
+summary(m1)
+
+########### more exploration
 rich %>%
   filter(BONCAT!="DNA", Fraction!="ctl", Compartment== "Roots", REP!=1)%>%
   ggplot(aes(x=Fraction, y=Observed, col=REP))+
@@ -1297,12 +1362,41 @@ otu.perm
 #Fraction  1  0.13512 0.57049 9.2975  0.012 *
 
 
+# total cells endo vs nod
+
+ps2<-subset_samples(ps, Compartment !=  "Rhizosphere" & Compartment !="Bulk_Soil" & Compartment != "ctl" &Fraction ==  "Total_Cells" )
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+sample_names(ps2)
+# 266 asvs
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+# subset metadata
+metadat2<-metadat%>% filter(Compartment !=  "Rhizosphere" & Compartment !="Bulk_Soil" & Compartment != "ctl" &Fraction ==  "Total_Cells")
 
 
+otu.perm<- adonis2((otu_table(ps2))~ Compartment, data = metadat2, permutations = 999, method="bray")
+otu.perm
+# significan
+
+# boncat endo vs nod
+
+ps2<-subset_samples(ps, Compartment !=  "Rhizosphere" & Compartment !="Bulk_Soil" & Compartment != "ctl" &Fraction ==  "BONCAT_Active" )
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+sample_names(ps2)
+# 266 asvs
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+# subset metadata
+metadat2<-metadat%>% filter(Compartment !=  "Rhizosphere" & Compartment !="Bulk_Soil" & Compartment != "ctl" &Fraction == "BONCAT_Active")
 
 
-
-
+otu.perm<- adonis2((otu_table(ps2))~ Compartment, data = metadat2, permutations = 999, method="bray")
+otu.perm
+#0.179721 0.67208 16.396  0.008 **
 
 
 ##rhizo active verse rhizo total cells
