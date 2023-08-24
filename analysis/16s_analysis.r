@@ -139,11 +139,11 @@ min.s<-min(rowSums(asvs.t))
 set.seed(336)
 asvs.r<-rrarefy(asvs.t, min.s)
 #------------ rarefaction curve------------#
-S <- specnumber(otus.t) # observed number of species
-raremax <- min(rowSums(otus.t))
-plot(otus.t, otus.r, xlab = "Observed No. of Species", ylab = "Rarefied No. of Species")
+S <- specnumber(asvs.t) # observed number of species
+raremax <- min(rowSums(asvs.t))
+plot(asvs.t, asvs.r, xlab = "Observed No. of Species", ylab = "Rarefied No. of Species")
 abline(0, 1)
-out<-rarecurve(otus.t, step = 20, sample = raremax, col = "blue", cex = 0.6)
+out<-rarecurve(asvs.t, step = 20, sample = raremax, col = "blue", cex = 0.6)
 ## build plots
 col <- c("black")
 lty <- c("solid")
@@ -272,37 +272,37 @@ taxon<-as.data.frame(tax_table(ps))
 
 ######rarefying taxa and importing into phyloseq #
 ## Determine minimum available reads per sample ##
-min.seqs<-min(rowSums(otu.t))
+#min.seqs<-min(rowSums(otu.t))
 ## Rarefy to obtain even numbers of reads by sample ##
-set.seed(336)
-otu.r<-rrarefy(otu.t, 41351)
+#set.seed(336)
+#otu.r<-rrarefy(otu.t, 41351)
 ## rearrange data for phyloseq
-otu.phyloseq<- (otu.r)
-taxon<-taxon[,1:7]
-metadat<-as.matrix(metadat)
-y<-colnames(otu.raw)
-rownames(metadat) <- y
-metadat<-as.data.frame(metadat)
+#otu.phyloseq<- (otu.r)
+#taxon<-taxon[,1:7]
+#metadat<-as.matrix(metadat)
+#y<-colnames(otu.raw)
+#rownames(metadat) <- y
+#metadat<-as.data.frame(metadat)
 ## import it phyloseq
-Workshop_OTU <- otu_table(otu.phyloseq, taxa_are_rows = FALSE)
-Workshop_metadat <- sample_data(metadat)
-Workshop_taxo <- tax_table(as.matrix(taxon))
-ps.r <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
-ps.r
+#Workshop_OTU <- otu_table(otu.phyloseq, taxa_are_rows = FALSE)
+#Workshop_metadat <- sample_data(metadat)
+#Workshop_taxo <- tax_table(as.matrix(taxon))
+#ps.r <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
+#ps.r
 # we a get a Plyloseq object with  7727 taxa
 #######------ remove chloroplasts-------#
 # remove chloroplast DNA
-ps.r<-subset_taxa(ps.r, Class!=" Chloroplast")
-ps.r<-subset_taxa(ps.r, Genus!=" Mitochondria")
-ps.r<-subset_taxa(ps.r, Genus!=" Chloroplast")
+#ps.r<-subset_taxa(ps.r, Class!=" Chloroplast")
+#ps.r<-subset_taxa(ps.r, Genus!=" Mitochondria")
+#ps.r<-subset_taxa(ps.r, Genus!=" Chloroplast")
 # get rid of taxa that arent in any samples
-ps.r<-prune_taxa(taxa_sums(ps.r) > 0, ps.r)
-any(taxa_sums(ps.r) == 0)
-ps.r
-ps <- ps.r
+#ps.r<-prune_taxa(taxa_sums(ps.r) > 0, ps.r)
+#any(taxa_sums(ps.r) == 0)
+#ps.r
+#ps <- ps.r
 # 7516 taxa
 # output df 
-otu.r.clean<-as.data.frame(t(as.data.frame(otu_table(ps.r))))
+#otu.r.clean<-as.data.frame(t(as.data.frame(otu_table(ps.r))))
 #taxon<-as.data.frame(tax_table(ps))
 
 #####################------Import OTU data normalize data by number of cells#################
@@ -429,8 +429,26 @@ rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
   ggplot(aes(x=compartment_BCAT, y=Observed, fill = Compartment, col= Compartment))+
   geom_boxplot() +
-  scale_colour_manual(values = c( blue, purple, gold, pink))+
-  scale_fill_manual( values = c(lightblue, lightpurple, lightgold, lightpink))+
+  scale_colour_manual(values = c("black", "black", gold, pink))+
+  scale_fill_manual( values = c(blue, purple, lightgold, lightpink))+
+  geom_jitter(width = .1, size=1 )+
+  theme_classic(base_size = 18)+
+  theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
+        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14),
+        legend.position =  c(0.8, 0.8))+
+  ylab("Number of ASVS")+
+  xlab("Compartment")
+dev.off()
+
+## just active alpha
+svg(file="figures/16s/observed_divserity_act.svg",width = 6, height=7 )
+windows(width = 6, height=7)
+rich %>%
+  filter(Plant!="NOPLANT", Fraction!="Inactive", Fraction=="BONCAT_Active")%>%
+  ggplot(aes(x=compartment_BCAT, y=Observed, fill = Compartment, col= Compartment))+
+  geom_boxplot() +
+  scale_colour_manual(values = c("black", "black", gold, pink))+
+  scale_fill_manual( values = c(blue, lightpurple, lightgold, lightpink))+
   geom_jitter(width = .1, size=1 )+
   theme_classic(base_size = 18)+
   theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
@@ -442,6 +460,7 @@ dev.off()
 
 
 
+
 # total + active shannon
 svg(file="figures/16s/shannon_diversity.svg",width = 6, height=7 )
 windows(width = 6, height=7)
@@ -450,7 +469,7 @@ rich %>%
   ggplot(aes(x=compartment_BCAT, y=Shannon, fill = Compartment, col= Compartment))+
   geom_boxplot() +
   scale_colour_manual(values = c( blue,  purple, gold, pink))+
-  scale_fill_manual( values = c(lightblue, lightpurple, lightgold, lightpink))+
+  scale_fill_manual( values = c(blue, lightpurple, lightgold, lightpink))+
   geom_jitter(width = .1, size=1 )+
   theme_classic(base_size = 18)+
   theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
@@ -459,6 +478,7 @@ rich %>%
   ylab("Shannon Diversity")+
   xlab("Compartment")
 dev.off()
+
 
 
 ### t test
@@ -959,6 +979,109 @@ window("total")
 hist(nod_active$sum)
 
 
+
+#########################are most taxa generalists or specialists?#################################
+df<-subset_samples(ps, Fraction=="BONCAT_Active")
+df<-prune_taxa(taxa_sums(df) > 0, df)
+# subset for active
+df<-prune_taxa(taxa_sums(df) > 5, df)
+any(taxa_sums(df) == 0)
+
+# don't include taxa that are super rare less then 5 reads
+taxon<-tax_table(df)
+df<-as.data.frame((otu_table(df)))
+
+dim(df)
+df
+n<-row.names.data.frame(df)
+n[grepl("R" , n)]="rhizo"
+n[grepl("E" , n)]="roots"
+n[grepl("N" , n)]="nodule"
+
+# summ by group
+df<-rowsum(df, n)
+
+df<-t(df)
+df<-as.data.frame(df)
+dim(df)
+df
+habitat<-rep(NA, 2621)
+habitat[df$nodule==0 & df$roots==0 & df$rhizo>1]="rhizo specailist"
+habitat[df$nodule==0 & df$roots>1 & df$rhizo==0]="root specialist"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="nodule specialist"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="rhizo and root generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="plant generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hyper generalist"
+habitat
+unique(habitat)
+
+# rhizo   root    nod
+# 1       0         0     -> rhizo specialist
+# 0       1         0     -> root specialist
+# 0       0         1     -> nod specialist
+# 1       1         0     -> rhizo and root generalist
+# 0       1         1     -> plant generalist
+# 1       1         1     -> hyper generalist
+
+df_habitat<-cbind(df, habitat)
+df_habitat
+############### calucating sums by hand
+df_sums<-rowsum(df, habitat)
+df_sums$rhizo
+value <- df_sums$rhizo
+value[c(2,3)]<-df_sums$nodule[c(2,3)]
+value[c(6,7)]<-df_sums$roots[c(6,7)]
+value
+df_sums<-mutate(df_sums, value = value)
+
+################ df wrangling for venndriagram
+df[df>1] <- 1
+
+nodule<-rownames(df[df$nodule==1,])
+roots<-rownames(df[df$roots==1,])
+rhizo<-rownames(df[df$rhizo==1,])
+
+x <- list(
+  nodule = nodule, 
+  roots = roots, 
+  rhizo = rhizo
+)
+x
+
+################################## venn diagram #
+#if (!require(devtools)) install.packages("devtools")
+#devtools::install_github("yanlinlin82/ggvenn")
+library(ggvenn)
+ggvenn(
+  x, 
+  fill_color = c(pink, "#EFC000FF", purple),
+  stroke_size = 0.5, set_name_size = 5
+)
+######################### what if we did this just for taxa that were present the plant
+## df wrangling for venndriagram
+df[df>1] <- 1
+df1<-df %>% filter(nodule>0 | roots>0)
+dim(df1)
+
+nodule<-rownames(df1[df1$nodule==1,])
+roots<-rownames(df1[df1$roots==1,])
+rhizo<-rownames(df1[df1$rhizo==1,])
+
+
+x <- list(
+  nodule = nodule, 
+  roots = roots, 
+  rhizo = rhizo
+)
+
+ggvenn(
+  x, 
+  fill_color = c(pink, "#EFC000FF", purple),
+  stroke_size = 0.5, set_name_size = 5
+)
+
+
+
 ############################PCOA plots ASVS level ########################
 #Pcoa on rarefied asvs Data
 
@@ -1036,7 +1159,7 @@ dev.off()
 ##########-------run a new pcoa on just soil <3
 ps
 metadat
-ps2<-subset_samples(ps, Compartment !=  "Nodule" & Compartment != "Roots" & Compartment !="ctl")
+ps2<-subset_samples(ps, Compartment !=  "Nodule" & Compartment != "Roots" & Compartment !="ctl" & Fraction != "Total_DNA")
 ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
 any(taxa_sums(ps2) == 0)
 ps2
@@ -1047,7 +1170,7 @@ otus.bray<-vegdist(otu_table(ps2), method = "bray")
 
 
 # Perform PCoA analysis of BC distances #
-otus.pcoa <- cmdscale(otus.bray, k=(20-1), eig=TRUE)
+otus.pcoa <- cmdscale(otus.bray, k=(8-1), eig=TRUE)
 
 # Store coordinates for first two axes in new variable #
 otus.p <- otus.pcoa$points[,1:2]
@@ -1058,8 +1181,8 @@ perc.exp<-otus.eig/(sum(otus.eig))*100
 pe1<-perc.exp[1]
 pe2<-perc.exp[2]
 
-# subset metadata
-metadat2<-metadat%>% filter(Compartment !=  "Nodule" & Compartment != "Roots" & Compartment!="ctl") 
+# subset metadata1
+metadat2<-metadat%>% filter(Compartment !=  "Nodule" & Compartment != "Roots" & Compartment!="ctl" & Fraction != "Total_DNA")
 
 as.factor(metadat2$Compartment)
 as.factor(metadat2$Fraction)
@@ -1078,20 +1201,24 @@ windows(title="PCoA on asvs- Bray Curtis", width = 4, height = 4)
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 points(otus.p[,1:2],
-       pch=c(circle,triangle, diamond)[as.factor(metadat2$Fraction)],
+       pch=c(circle,triangle)[as.factor(metadat2$Fraction)],
        lwd=1,cex=2,
-       bg=c(blue, purple , purple, purple)[as.factor(metadat2$compartment_BCAT)])
+       bg=c(purple)[as.factor(metadat2$Compartment)])
 
 ordiellipse(otus.pcoa, metadat2$Fraction,  
-            kind = "se", conf=0.95, #label=T, 
+            kind = "se", conf=0.95, label=T, 
             #draw = "polygon",
             lwd=2, col="black")
 
-legend("top",legend=c( "Rhizosphere BONCAT_Active", "Rhizosphere Total Cells", "Rhizosphere Total DNA" ,  "Bulk soil total DNA" ), 
-       pch=c(circle, triangle, diamond, diamond),
+legend("center",legend=c( "Rhizosphere BONCAT_Active", "Rhizosphere Total Cells"), 
+       pch=c(circle, triangle),
        cex=1.1, 
-       col=c("#785EF0", "#785EF0",  "#785EF0","#739AFF"),
+       fill=c(blue,"#739AFF"),
        bty = "n")
+
+legend("topright", inset=c(-0.2,0), legend=c("Rhizosphere BONCAT_Active", "Rhizosphere Total Cells"), pch=c(circle, triangle))
+
+
 
 dev.off()
 
@@ -1148,7 +1275,7 @@ points(otus.p[,1:2],
        pch=c(circle, triangle)[as.factor(metadat2$Fraction)],
        lwd=1,cex=2,
        bg=c(pink, pink, gold, gold)[as.factor(metadat2$compartment_BCAT)])
-ordiellipse(otus.pcoa, metadat2$Fraction,  
+ordiellipse(otus.pcoa, metadat2$compartment_BCAT,  
             kind = "se", conf=0.95, label=T, 
             draw = "polygon",
             lwd=2, col=NULL)
@@ -1156,11 +1283,11 @@ ordiellipse(otus.pcoa, metadat2$Fraction,
 
 
 
-legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR control",  "Rhizosphere BONCAT_Active" , "Rhizosphere Inactive",  "Rhizosphere Total DNA"), 
-       pch=c(15,5, 0, 1,2,5),
-       cex=1.1, 
-       col=c("black", "#739AFF",  "black", "#785EF0", "#785EF0",  "#785EF0"),
-       bty = "n")
+#legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR control",  "Rhizosphere BONCAT_Active" , "Rhizosphere Inactive",  "Rhizosphere Total DNA"), 
+#       pch=c(15,5, 0, 1,2,5),
+#       cex=1.1, 
+#       col=c("black", "#739AFF",  "black", "#785EF0", "#785EF0",  "#785EF0"),
+#       bty = "n")
 
 dev.off()
 ####### PCA ##############
