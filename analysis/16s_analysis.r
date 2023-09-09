@@ -6,6 +6,7 @@
 
 rm(list=ls())
 
+
 ## if trouble loading phyloseq, see: http://joey711.github.io/phyloseq/install
 
 #source("http://bioconductor.org/biocLite.R")
@@ -17,7 +18,7 @@ rm(list=ls())
 #BiocManager::install("Heatplus")
 
 
-### Load required libraries ###
+################## Load required libraries ### ############
 
 #install.packages("tidyverse")
 library(tidyverse)
@@ -39,7 +40,7 @@ library(readxl)
 #install.packages("TreeTools")
 library('TreeTools')
 
-############-----load functions-------------######
+#-----load functions-------------#
 
 # load in the function for making a heatmap with the tree #
 heatmap.phylo <- function(x, Rowp, Colp, ...) {
@@ -75,7 +76,7 @@ heatmap.phylo <- function(x, Rowp, Colp, ...) {
        cex=1.5)
 }
 
-###### load colors ##########
+### load colors 
 # colors :)
 gold <- "#FFB000"
 lightgold <- "#fffaa2"
@@ -83,24 +84,26 @@ purple <- "#785EF0"
 blue <- "#739AFF"
 pink <- "#DC267F"
 lightpink <- "#ffc6e5"
+lightpurple <- "#8563C1"
 
-######### poster colors #########
+# poster colors 
 #navyblue<-"#161D64"
 #dustypurple<-"#A79EB6"
-lightpurple <- "#8563C1"
-purple<-"#543A81"
-lightblue <-"#739AFF"
-blue<-"#5560A7"
-pink <- "#E48888"
-lightpink<- "#FEDDD2"
-gold<- "#AE330D"
-lightgold<-"#E48888"
+
+#purple<-"#543A81"
+#lightblue <-"#739AFF"
+#blue<-"#5560A7"
+#pink <- "#E48888"
+#lightpink<- "#FEDDD2"
+#gold<- "#AE330D"
+#lightgold<-"#E48888"
 
 
 
 ######-------------import Asvs data -----------------##############
 ## Set the working directory; ###
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
+
 
 ### Import Data ###
 taxon <- read.table("asv_level_output/taxonomy.txt", sep="\t", header=T, row.names=1)
@@ -115,21 +118,21 @@ metadat<-metadat[order(metadat$SampleID),]
 asvs.t<-asvs.t[order(row.names(asvs.t)),]
 
 # rearrange asv table
-asvs.phyloseq<- (asvs.t)
-taxon<-taxon[,1:7]
-metadat<-as.matrix(metadat)
-y<-colnames(asvs.raw)
-rownames(metadat) <- y
-metadat<-as.data.frame(metadat)
+#asvs.phyloseq<- (asvs.t)
+#taxon<-taxon[,1:7]
+#metadat<-as.matrix(metadat)
+#y<-colnames(asvs.raw)
+#rownames(metadat) <- y
+#metadat<-as.data.frame(metadat)
 
 #import it phyloseq
-Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
-Workshop_metadat <- sample_data(metadat)
-Workshop_taxo <- tax_table(as.matrix(taxon))
-ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
+#Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
+#Workshop_metadat <- sample_data(metadat)
+#Workshop_taxo <- tax_table(as.matrix(taxon))
+#ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
 
 # take a look at PS object
-print(ps)
+#print(ps)
 # we a get a Plyloseq object with  15027 taxa
 
 ## Determine minimum available reads per sample ##
@@ -139,40 +142,40 @@ min.s<-min(rowSums(asvs.t))
 set.seed(336)
 asvs.r<-rrarefy(asvs.t, min.s)
 #------------ rarefaction curve------------#
-S <- specnumber(asvs.t) # observed number of species
-raremax <- min(rowSums(asvs.t))
-plot(asvs.t, asvs.r, xlab = "Observed No. of Species", ylab = "Rarefied No. of Species")
-abline(0, 1)
-out<-rarecurve(asvs.t, step = 20, sample = raremax, col = "blue", cex = 0.6)
+#S <- specnumber(asvs.t) # observed number of species
+#raremax <- min(rowSums(asvs.t))
+#plot(asvs.t, asvs.r, xlab = "Observed No. of Species", ylab = "Rarefied No. of Species")
+#abline(0, 1)
+#out<-rarecurve(asvs.t, step = 20, sample = raremax, col = "blue", cex = 0.6)
 ## build plots
-col <- c("black")
-lty <- c("solid")
-lwd <- rep(1, 42)
-pars <- expand.grid(col = col, lty = lty, lwd = lwd, 
-                    stringsAsFactors = FALSE)
-Nmax <- sapply(out, function(x) max(attr(x, "Subsample")))
-Smax <- sapply(out, max)
-# save
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/rarecurve.svg",width = 6, height=6 )
-plot(c(1, max(Nmax)), c(1, max(Smax)), xlab = "Number of Sequences",
-     ylab = "ASV", type = "n")
-abline(v = raremax)
-for (i in seq_along(out)) {
-  N <- attr(out[[i]], "Subsample")
-  with(pars, lines(N, out[[i]], col = col[i], lty = lty[i], lwd = lwd[i]))
-}
-dev.off()
+#col <- c("black")
+#lty <- c("solid")
+#lwd <- rep(1, 42)
+#pars <- expand.grid(col = col, lty = lty, lwd = lwd, 
+#                    stringsAsFactors = FALSE)
+#Nmax <- sapply(out, function(x) max(attr(x, "Subsample")))
+#Smax <- sapply(out, max)
+## save
+#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+#svg(file="figures/16s/rarecurve.svg",width = 6, height=6 )
+#plot(c(1, max(Nmax)), c(1, max(Smax)), xlab = "Number of Sequences",
+#     ylab = "ASV", type = "n")
+#abline(v = raremax)
+#for (i in seq_along(out)) {
+#  N <- attr(out[[i]], "Subsample")
+#  with(pars, lines(N, out[[i]], col = col[i], lty = lty[i], lwd = lwd[i]))
+#}
+#dev.off()
 
 
-######--- recode metadata----- #
+###--- recode metadata----- #
 metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
 metadat<-metadat[, c(1,3:6)]
 metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
 #to make coloring things easier I'm gong to added a combined fractionXboncat column 
 metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
 
-#####------make phyloseq object with rarefied data -------#
+##------make phyloseq object with rarefied data -------#
 
 asvs.phyloseq<- (asvs.r)
 taxon<-taxon[,1:7]
@@ -202,24 +205,22 @@ any(taxa_sums(ps) == 0)
 ps
 # 14593 taxa
 
-asvs.clean<-as.data.frame(t(as.data.frame(otu_table(ps))))
+#asvs.clean<-as.data.frame(t(as.data.frame(otu_table(ps))))
 taxon<-as.data.frame(tax_table(ps))
 
 
 
-####### import OTU 97% data##################
-  # I chose to cluster into OTUs because when I looked at the sequencing inside the nodules
-  # there were many asvs that all mapped to the rhizobia genus.
-  # Those are all likely 1 species, given I they all BLAST to rhizobium leguminosarium v. trifoilia with WGS
-  # I want to reduce the organism in the alpha diversity that are due to the dada2 clustering methods
-  
+# rareferying by number of cells 
 ## Set the working directory; modify to your own ###
 #setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
 
 ### Import Data ###
-#taxon <- read.delim("otu_output/taxonomy.txt", sep="\t", header=T, row.names=1)
-#otu.raw <- read.table("otu_output/feature-table.txt", sep="\t", header = T , row.names = 1 )
-#metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
+
+
+#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/sequencing")
+#n_cells <- read_excel("Cell_counts_For_sequencing.xlsx", na = "NA")
+#n_cells<-select(n_cells, Sample_ID, Number_cells)
+#n_cells
 
 #data wrangleing and importing into Phyloseq#
 ## recode metadata 
@@ -236,9 +237,6 @@ taxon<-as.data.frame(tax_table(ps))
 ## order asvs table
 #otu.t<-otu.t[order(row.names(otu.t)),]
 
-
-
-########-----------import non rarefied data into phyloseq #
 ## rearrange data for phyloseq
 #otu.phyloseq<- (otu.t)
 #taxon<-taxon[,1:7]
@@ -246,17 +244,46 @@ taxon<-as.data.frame(tax_table(ps))
 #y<-colnames(otu.raw)
 #rownames(metadat) <- y
 #metadat<-as.data.frame(metadat)
+## import it phyloseq
+#Workshop_OTU <- otu_table(otu.phyloseq, taxa_are_rows = FALSE)
+#Workshop_metadat <- sample_data(metadat)
+#Workshop_taxo <- tax_table(as.matrix(taxon))
+#ps <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
+#ps
+# 7727 taxa
+# grab samples of total cells and boncat pos
+#ps1 <- subset_samples(ps,Fraction =="BONCAT_Active"  |Fraction=="Total_Cells")
+#ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
+#any(taxa_sums(ps1) == 0)
+#ps1
+# 3208 taxa
+#sample_data(ps1)
+
+#normalize by the number of cells in each sample.
+#otu.cells<-as.data.frame(otu_table(ps1))
+#n_cells<-na.omit(n_cells)
+#n_cells
+
+#otu.cells<-cbind(otu.cells, n_cells)
+
+#seq<-rowSums(otu.cells)
+#otu.cells<-otu.cells*n_cells$Number_cells/seq
+
+### looks great now put it back into phyloseq.
+
+## rearrange data for phyloseq
+#otu.phyloseq<- (otu.cells)
 
 ## import it phyloseq
 #Workshop_OTU <- otu_table(otu.phyloseq, taxa_are_rows = FALSE)
 #Workshop_metadat <- sample_data(metadat)
 #Workshop_taxo <- tax_table(as.matrix(taxon))
 #ps <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
-##  take a look at PS object
-#print(ps)
-# we a get a Plyloseq object with  7727 taxa
+#ps
+# 3208 taxa
 
-#######------ remove chloroplasts#
+
+#######------ remove chloroplasts-------#
 # remove chloroplast DNA
 #ps<-subset_taxa(ps, Class!=" Chloroplast")
 #ps<-subset_taxa(ps, Genus!=" Mitochondria")
@@ -265,139 +292,15 @@ taxon<-as.data.frame(tax_table(ps))
 #ps<-prune_taxa(taxa_sums(ps) > 0, ps)
 #any(taxa_sums(ps) == 0)
 #ps
-# 7623 taxa
-# output df 
-#otus<-as.data.frame(t(as.data.frame(otu_table(ps))))
-#taxon<-as.data.frame(tax_table(ps))
-
-######rarefying taxa and importing into phyloseq #
-## Determine minimum available reads per sample ##
-#min.seqs<-min(rowSums(otu.t))
-## Rarefy to obtain even numbers of reads by sample ##
-#set.seed(336)
-#otu.r<-rrarefy(otu.t, 41351)
-## rearrange data for phyloseq
-#otu.phyloseq<- (otu.r)
-#taxon<-taxon[,1:7]
-#metadat<-as.matrix(metadat)
-#y<-colnames(otu.raw)
-#rownames(metadat) <- y
-#metadat<-as.data.frame(metadat)
-## import it phyloseq
-#Workshop_OTU <- otu_table(otu.phyloseq, taxa_are_rows = FALSE)
-#Workshop_metadat <- sample_data(metadat)
-#Workshop_taxo <- tax_table(as.matrix(taxon))
-#ps.r <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
-#ps.r
-# we a get a Plyloseq object with  7727 taxa
-#######------ remove chloroplasts-------#
-# remove chloroplast DNA
-#ps.r<-subset_taxa(ps.r, Class!=" Chloroplast")
-#ps.r<-subset_taxa(ps.r, Genus!=" Mitochondria")
-#ps.r<-subset_taxa(ps.r, Genus!=" Chloroplast")
-# get rid of taxa that arent in any samples
-#ps.r<-prune_taxa(taxa_sums(ps.r) > 0, ps.r)
-#any(taxa_sums(ps.r) == 0)
-#ps.r
-#ps <- ps.r
-# 7516 taxa
-# output df 
-#otu.r.clean<-as.data.frame(t(as.data.frame(otu_table(ps.r))))
-#taxon<-as.data.frame(tax_table(ps))
-
-#####################------Import OTU data normalize data by number of cells#################
-
-## Set the working directory; modify to your own ###
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
-
-### Import Data ###
-taxon <- read.delim("otu_output/taxonomy.txt", sep="\t", header=T, row.names=1)
-otu.raw <- read.table("otu_output/feature-table.txt", sep="\t", header = T , row.names = 1 )
-metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/sequencing")
-n_cells <- read_excel("Cell_counts_For_sequencing.xlsx", na = "NA")
-n_cells<-select(n_cells, Sample_ID, Number_cells)
-n_cells
-
-#data wrangleing and importing into Phyloseq#
-## recode metadata 
-metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
-metadat<-metadat[, c(1,3:6)]
-metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
-#to make coloring things easier I'm gong to added a combined fractionXboncat column 
-metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
-
-## Transpose ASVS table ##
-otu.t <- t(otu.raw)
-## order metadata
-metadat<-metadat[order(metadat$SampleID),]
-## order asvs table
-otu.t<-otu.t[order(row.names(otu.t)),]
-
-## rearrange data for phyloseq
-otu.phyloseq<- (otu.t)
-taxon<-taxon[,1:7]
-metadat<-as.matrix(metadat)
-y<-colnames(otu.raw)
-rownames(metadat) <- y
-metadat<-as.data.frame(metadat)
-## import it phyloseq
-Workshop_OTU <- otu_table(otu.phyloseq, taxa_are_rows = FALSE)
-Workshop_metadat <- sample_data(metadat)
-Workshop_taxo <- tax_table(as.matrix(taxon))
-ps <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
-ps
-# 7727 taxa
-# grab samples of total cells and boncat pos
-ps1 <- subset_samples(ps,Fraction =="BONCAT_Active"  |Fraction=="Total_Cells")
-ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
-any(taxa_sums(ps1) == 0)
-ps1
-# 3208 taxa
-sample_data(ps1)
-
-#normalize by the number of cells in each sample.
-otu.cells<-as.data.frame(otu_table(ps1))
-n_cells<-na.omit(n_cells)
-n_cells
-
-#otu.cells<-cbind(otu.cells, n_cells)
-
-seq<-rowSums(otu.cells)
-otu.cells<-otu.cells*n_cells$Number_cells/seq
-
-### looks great now put it back into phyloseq.
-
-## rearrange data for phyloseq
-otu.phyloseq<- (otu.cells)
-
-## import it phyloseq
-Workshop_OTU <- otu_table(otu.phyloseq, taxa_are_rows = FALSE)
-Workshop_metadat <- sample_data(metadat)
-Workshop_taxo <- tax_table(as.matrix(taxon))
-ps <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
-ps
-# 3208 taxa
-
-
-#######------ remove chloroplasts-------#
-# remove chloroplast DNA
-ps<-subset_taxa(ps, Class!=" Chloroplast")
-ps<-subset_taxa(ps, Genus!=" Mitochondria")
-ps<-subset_taxa(ps, Genus!=" Chloroplast")
-# get rid of taxa that arent in any samples
-ps<-prune_taxa(taxa_sums(ps) > 0, ps)
-any(taxa_sums(ps) == 0)
-ps
 
 # 3173 taxa
 # output df 
-asvs.clean<-as.data.frame(t(as.data.frame(otu_table(ps))))
-taxon<-as.data.frame(tax_table(ps))
+#asvs.clean<-as.data.frame(t(as.data.frame(otu_table(ps))))
+#taxon<-as.data.frame(tax_table(ps))
 
 
 
-########------diversity figure---------########
+########------DIVERSITY  figure---------########
 # set wd for figures
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 
@@ -447,8 +350,8 @@ rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive", Fraction=="BONCAT_Active")%>%
   ggplot(aes(x=compartment_BCAT, y=Observed, fill = Compartment, col= Compartment))+
   geom_boxplot() +
-  scale_colour_manual(values = c("black", "black", gold, pink))+
-  scale_fill_manual( values = c(blue, lightpurple, lightgold, lightpink))+
+  scale_colour_manual(values = c( "black", gold, pink))+
+  scale_fill_manual( values = c( purple, lightgold, lightpink))+
   geom_jitter(width = .1, size=1 )+
   theme_classic(base_size = 18)+
   theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
@@ -636,7 +539,7 @@ summary(m1)
 
 
 
-#####stats for shannon diversity #########
+#####stats for diversity #########
 ### t test
 df<-rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
@@ -817,7 +720,7 @@ summary(m1)
 
 
 
-############ taxa exploration in  the endophyte ######################
+############ taxa exploration  ######################
 
 ######### remove rare taxa, is the endosphyte diversity still higher in active??
 
@@ -916,7 +819,7 @@ total<-cbind(otu.clean,taxon)
 window("total")
 hist(total$sum)
 
-####### not including taxa that are really rare less than 5 reads
+####### not including taxa that are really rare less than 5 reads 
 ####### are all those taxa in the root present in the bulk soil? ##########
 otu<-as.data.frame(otu)
 colnames(otu)
@@ -980,7 +883,7 @@ hist(nod_active$sum)
 
 
 
-#########################are most taxa generalists or specialists?#################################
+#########################VENN DIAGRAM are most taxa generalists or specialists?#################################
 df<-subset_samples(ps, Fraction=="BONCAT_Active")
 df<-prune_taxa(taxa_sums(df) > 0, df)
 # subset for active
@@ -1055,25 +958,89 @@ library(ggvenn)
 ggvenn(
   x, 
   fill_color = c(pink, "#EFC000FF", purple),
-  stroke_size = 0.5, set_name_size = 5
+  stroke_size = 0.5, set_name_size = 5,
+  auto_scale = TRUE
 )
-######################### what if we did this just for taxa that were present the plant
-## df wrangling for venndriagram
+
+####genus level??
+
+
+
+
+###########-------- total cells 
+df<-subset_samples(ps, Fraction=="Total_Cells")
+df<-prune_taxa(taxa_sums(df) > 0, df)
+# subset for active
+#df<-prune_taxa(taxa_sums(df) > 5, df)
+any(taxa_sums(df) == 0)
+
+# don't include taxa that are super rare less then 5 reads
+taxon<-tax_table(df)
+df<-as.data.frame((otu_table(df)))
+
+dim(df)
+head(df)
+n<-row.names.data.frame(df)
+n[grepl("N" , n)]="nodule"
+n[grepl("E" , n)]="roots"
+n[grepl("R" , n)]="rhizo"
+n
+
+# summ by group
+df<-rowsum(df, n)
+dim(df)
+df<-t(df)
+df<-as.data.frame(df)
+dim(df)
+head(df)
+#habitat<-rep(NA, 2621)
+
+#habitat[df$nodule==0 & df$roots==0 & df$rhizo>1]="rhizo specailist"
+#habitat[df$nodule==0 & df$roots>1 & df$rhizo==0]="root specialist"
+#habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="nodule specialist"
+#habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="rhizo and root generalist"
+#habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="plant generalist"
+#habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hyper generalist"
+#habitat
+#unique(habitat)
+
+# rhizo   root    nod
+# 1       0         0     -> rhizo specialist
+# 0       1         0     -> root specialist
+# 0       0         1     -> nod specialist
+# 1       1         0     -> rhizo and root generalist
+# 0       1         1     -> plant generalist
+# 1       1         1     -> hyper generalist
+
+#df_habitat<-cbind(df, habitat)
+#df_habitat
+############### calucating sums by hand
+#df_sums<-rowsum(df, habitat)
+#df_sums$rhizo
+#value <- df_sums$rhizo
+#value[c(2,3)]<-df_sums$nodule[c(2,3)]
+#value[c(6,7)]<-df_sums$roots[c(6,7)]
+#value
+#df_sums<-mutate(df_sums, value = value)
+
+################ df wrangling for venndriagram
 df[df>1] <- 1
-df1<-df %>% filter(nodule>0 | roots>0)
-dim(df1)
 
-nodule<-rownames(df1[df1$nodule==1,])
-roots<-rownames(df1[df1$roots==1,])
-rhizo<-rownames(df1[df1$rhizo==1,])
-
+nodule<-rownames(df[df$nodule==1,])
+roots<-rownames(df[df$roots==1,])
+rhizo<-rownames(df[df$rhizo==1,])
 
 x <- list(
   nodule = nodule, 
   roots = roots, 
   rhizo = rhizo
 )
+x
 
+################################## venn diagram #
+#if (!require(devtools)) install.packages("devtools")
+#devtools::install_github("yanlinlin82/ggvenn")
+library(ggvenn)
 ggvenn(
   x, 
   fill_color = c(pink, "#EFC000FF", purple),
@@ -1081,8 +1048,102 @@ ggvenn(
 )
 
 
+####Bar chart - are taxa that are generalist realy abundant?
 
-############################PCOA plots ASVS level ########################
+df<-subset_samples(ps, Fraction=="BONCAT_Active")
+df<-prune_taxa(taxa_sums(df) > 0, df)
+# subset for active
+df<-prune_taxa(taxa_sums(df) > 5, df)
+any(taxa_sums(df) == 0)
+
+# don't include taxa that are super rare less then 5 reads
+taxon<-tax_table(df)
+df<-as.data.frame((otu_table(df)))
+
+dim(df)
+df
+n<-row.names.data.frame(df)
+n[grepl("R" , n)]="rhizo"
+n[grepl("E" , n)]="roots"
+n[grepl("N" , n)]="nodule"
+
+# summ by group
+df<-rowsum(df, n)
+
+df<-t(df)
+df<-as.data.frame(df)
+dim(df)
+df
+habitat<-rep(NA, 2621)
+habitat[df$nodule==0 & df$roots==0 & df$rhizo>1]="rhizo specailist"
+habitat[df$nodule==0 & df$roots>1 & df$rhizo==0]="root specialist"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="nodule specialist"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="rhizo and root generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="plant generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hyper generalist"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo>0]="nodule and rhizo generalist"
+
+
+habitat
+unique(habitat)
+
+# rhizo   root    nod
+# 1       0         0     -> rhizo specialist
+# 0       1         0     -> root specialist
+# 0       0         1     -> nod specialist
+# 1       1         0     -> rhizo and root generalist
+# 0       1         1     -> plant generalist
+# 1       1         1     -> hyper generalist
+
+
+
+df_habitat<-cbind(df, habitat)
+dim(df_habitat)
+unique(df_habitat$habitat)
+
+df_habitat$abundace<- rowSums(df_habitat %>% 
+            dplyr::select(contains("O"))) %>% 
+  glimpse()
+
+df_habitat$mean_abundance<- rowMeans(df_habitat %>% 
+             dplyr::select(contains("O"))) %>% 
+  glimpse()
+
+head(df_habitat)
+
+df_habitat%>% filter(rhizo>1)%>%
+  ggplot()+
+  geom_boxplot(mapping=aes(x = reorder(habitat, +rhizo), y = log10(rhizo)))+
+  #geom_jitter(mapping=aes(x = reorder(habitat, +rhizo), y = log10(rhizo)))+
+  theme_bw()+
+  theme(axis.text.x=element_text(angle=45, hjust=0.9))+
+  ylab("log 10 relative abundance in rhizosphere")
+
+df_habitat%>% filter(roots>1)%>%
+  ggplot()+
+  geom_boxplot(mapping=aes(x = reorder(habitat, +roots), y = log10(roots)))+
+  geom_jitter(mapping=aes(x = reorder(habitat, +roots), y = log10(roots)))+
+  theme_bw()+
+  theme(axis.text.x=element_text(angle=45, hjust=0.9))+
+  ylab("log 10 relative abundance in root")
+
+
+df_habitat%>% filter(nodule>1)%>%
+  ggplot()+
+  geom_boxplot(mapping=aes(x = reorder(habitat, +nodule), y = log10(nodule)))+
+  geom_jitter(mapping=aes(x = reorder(habitat, +nodule), y = log10(nodule)))+
+  theme_bw()+
+  theme(axis.text.x=element_text(angle=45, hjust=0.9))+
+  ylab("log 10 relative abundance in root")
+
+
+
+
+
+
+
+
+############################PCOA plots  ########################
 #Pcoa on rarefied asvs Data
 
 # rm ctl
@@ -1290,7 +1351,6 @@ ordiellipse(otus.pcoa, metadat2$compartment_BCAT,
 #       bty = "n")
 
 dev.off()
-####### PCA ##############
 
 #########-------------- permanova----------------#########
 
@@ -1703,105 +1763,523 @@ legend("bottom",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR contr
 
 dev.off()
 
-#####-------heatmaps #1A just activity genus level ---------###########
-
+#####-------PHYLOGENIC SIGNAL STARTS HERE ---------##########
 
 ## select active taxa
 ps1<- subset_samples(ps, Fraction=="BONCAT_Active" ) 
-ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
+ps1<-prune_taxa(taxa_sums(ps1) > 10, ps1)
 any(taxa_sums(ps1) == 0)
 ps1
-# 3240 taxa from rarefied ASVS
+taxon<-as.data.frame(tax_table(ps1))
+
+# 2169 taxa from rarefied ASVS
 otu<-as.data.frame(t(as.data.frame(otu_table(ps1))))
 dim(otu)
-
-####### agregate to the genus level
+head(otu)
+####### adding taxa information #######
+# add taxa names
 n<-row.names(otu)
 otu<-mutate(otu, OTU=n)
 n<-row.names(taxon)
 taxon<- mutate(taxon, OTU=n)
 otu<-left_join(otu, taxon)
-### if genus is missing put family name, if still missing put order, class, domain, etc. 
-otu$Genus[which(otu$Genus == '')] <- otu$Family[which(otu$Genus == '')]
-otu$Genus[which(otu$Genus == '')] <- otu$Order[which(otu$Genus == '')]
-otu$Genus[which(otu$Genus == '')] <- otu$Class[which(otu$Genus == '')]
-otu$Genus[which(otu$Genus == '')] <- otu$Domain[which(otu$Genus == '')]
 
-length(otu$Genus)
-unique(otu$Genus)
+# put g__ in front
+otu$Genus <- gsub('\\ ' , '', otu$Genus)
+otu$Genus<-paste0( "g__",otu$Genus)
+otu$Family <- gsub('\\ ' , '', otu$Family)
+otu$Family<-paste0( "f__",otu$Family)
+otu$Order <- gsub('\\ ' , '', otu$Order)
+otu$Order<-paste0( "o__",otu$Order)
+otu$Class <- gsub('\\ ' , '', otu$Class)
+otu$Class<-paste0( "c__",otu$Class)
+otu$Phyla <- gsub('\\ ' , '', otu$Phyla)
+otu$Phyla<-paste0( "p__",otu$Phyla)
+
+
+# if genus is missing put family name, if still missing put order, class, domain, etc. 
+otu$Genus[which(otu$Genus == 'g__')] <- otu$Family[which(otu$Genus == 'g__')]
+otu$Genus[which(otu$Genus == 'f__')] <- otu$Order[which(otu$Genus == 'f__')]
+otu$Genus[which(otu$Genus == 'o__')] <- otu$Class[which(otu$Genus == 'o__')]
+otu$Genus[which(otu$Genus == 'c__')] <- otu$Phyla[which(otu$Genus == 'c__')]
+otu$Genus[which(otu$Genus == 'p__')] <- otu$Domain[which(otu$Genus == 'p__')]
+
+# separate archaea and bacteria
+#otu<-otu %>% filter( Domain == "Bacteria")
+#otu_arch<-otu %>% filter( Domain == "Archaea")
+
+
+# aggregate by genus level 
+#otu<-aggregate(cbind(C10E.POS_S60,  C10N.POS_S65, C1E.POS_S31, C1N.POS_S61,  C2E.POS_S32,  C2N.POS_S62,  C5E.POS_S33,  C5N.POS_S63, C10R.POS_S30, C1R.POS_S27, C2R.POS_S28, C5R.POS_S29 ) ~ Genus, data = otu, FUN = sum, na.rm = TRUE)
+#otu_arch<-aggregate(cbind(C10E.POS_S60,  C10N.POS_S65, C1E.POS_S31, C1N.POS_S61,  C2E.POS_S32,  C2N.POS_S62,  C5E.POS_S33,  C5N.POS_S63, C10R.POS_S30, C1R.POS_S27, C2R.POS_S28, C5R.POS_S29 ) ~ Genus, data = otu_arch, FUN = sum, na.rm = TRUE)
+
+# make row names genuses
+#row.names(otu) <- otu$Genus
+#row.names(otu_arch) <- otu_arch$Genus
+
+# how many genuses are there?
 length(unique(otu$Genus))
-    
+# 395 bacteria unique taxa groups
 
-otu<-select(otu, -Phyla, -Domain, -Class, -Order, -Family, -Species, -OTU)
-#colnames(otu)
-#(otu)
-#otu$Family <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu$Family)
+
+###################changing my data's names so they match the tree ####################
+
+# put order as same for type III 
+otu$Genus[grepl("g__type_III", otu$Genus )] <- otu$Order[grepl("g__type_III", otu$Genus) ]
+
+
+#g__Tepidisphaeraceae" is a family
+otu$Genus[grepl("g__Tepidisphaeraceae", otu$Genus)] <- otu$Family[grepl("g__Tepidisphaeraceae", otu$Genus)]
+
+# switch "g__Nitrospira_ to "g__Nitrospira_A" 
+otu$Genus <- sub("g__Nitrospira" ,  "g__Nitrospira_A"   ,  otu$Genus )
+
+# "g__Vicinamibacteraceae" is a family
+otu$Genus[grepl("g__Vicinamibacteraceae", otu$Genus)] <-  otu$Family[grepl("g__Vicinamibacteraceae", otu$Genus )] 
+
+#  "g__Vampirovibrionaceae"  is a family
+otu$Genus[grepl("g__Vampirovibrionaceae" , otu$Genus)] <-  otu$Family[grepl("g__Vampirovibrionaceae" , otu$Genus )] 
+
+# "g__Vermiphilaceae"     is family
+otu$Genus[grepl( "g__Vermiphilaceae"   , otu$Genus)] <-  otu$Family[grepl(  "g__Vermiphilaceae" , otu$Genus )] 
+
+# "g__Vampirovibrionales"  is a order
+otu$Genus[grepl( "g__Vampirovibrionales" , otu$Genus)] <-  otu$Order[grepl("g__Vampirovibrionales" , otu$Genus )] 
+
+
+#### change g__Peribacteria" to  "g__Peribacter"
+otu$Genus <- sub("g__Peribacteria", "g__Peribacter" ,  otu$Genus )
+
+# Parcubacteria is a phyla so make it a phyla
+otu$Genus[grepl("g__Parcubacteria", otu$Genus)] <-  otu$Phyla[grepl("g__Parcubacteria", otu$Genus )] 
+
+
+### _Pedosphaeraceae is a family, call it a family
+otu$Genus[grepl("g__Pedosphaeraceae", otu$Genus)] <-  otu$Family[grepl("g__Pedosphaeraceae", otu$Genus )] 
+
+
+### replace unknown family with order
+otu$Genus[grepl("g__Unknown_Family", otu$Genus)] <-  otu$Order[grepl("g__Unknown_Family", otu$Genus )] 
+
+### Berkelbacteria is actual a phyla
+otu$Genus[grepl("g__Berkelbacteria", otu$Genus)] <-  otu$Phyla[grepl("g__Berkelbacteria", otu$Genus )] 
+
+### Gracilibacteria is actual a phyla
+otu$Genus[grepl("g__Gracilibacteria", otu$Genus)] <-  otu$Phyla[grepl("g__Gracilibacteria", otu$Genus )] 
+
+#"g__Chthoniobacteraceae" is an family, but only 1 genus in it, so I'm gonna call it that 
+otu$Genus <- sub("g__Chthoniobacteraceae", "g__Chthonomonas" ,  otu$Genus , ignore.case = TRUE)
+
+#"g__Chthoniobacteraceae" is an order, but only 1 genus in it, so I'm gonna call it that 
+otu$Genus <- sub("g__Chthonomonadales", "g__Chthonomonas" ,  otu$Genus , ignore.case = TRUE)
+
+#"g__#Entotheonaella" is an family, but only 1 genus in it, so I'm gonna call it that 
+otu$Genus <- sub("g__Entotheonellaceae", "g__Entotheonella" ,  otu$Genus )
+
+#Fimbriimonadaceae is a family  , but only 1 genus in it, so I'm gonna call it that 
+otu$Genus <- sub("g__Fimbriimonadaceae", "g__Fimbriimonas" ,  otu$Genus )
+
+# Fimbriimonadales is an order , but only 1 genus in it, so I'm gonna call it that 
+otu$Genus <- sub("g__Fimbriimonadales", "g__Fimbriimonas" ,  otu$Genus )
+
+# Hyphomicrobium call it g__Hyphomicrobium_A
+otu$Genus <- sub("g__Hyphomicrobium", "g__Hyphomicrobium_A" ,  otu$Genus )
+
+### change "g__Latescibacteraceae" to lascibacter
+otu$Genus <- sub("g__Latescibacterota", "g__Latescibacter" ,  otu$Genus )
+
+### change "g__Latescibacterota" to lascibacter
+otu$Genus <- sub("g__Latescibacteraceae", "g__Latescibacter" ,  otu$Genus )
+
+## change  to g__Massilia to "g__Massilibacterium"  because they are the same
+otu$Genus <- sub("g__Massilia", "g__Massilibacterium" ,  otu$Genus )
+
+# Methyloligellaceae is a family so call it a family
+otu$Genus[grepl("Methyloligellaceae", otu$Genus)] <-  otu$Family[grep("Methyloligellaceae", otu$Genus )] 
+
+# Microgenomatia is a phyla so call it a phyla
+otu$Genus[grepl("g__Microgenomatia", otu$Genus)] <-  otu$Phyla[grep("g__Microgenomatia", otu$Genus )] 
+
+# Rokubacteriales is an order. call it an order
+otu$Genus[grepl("g__Rokubacteriales", otu$Genus)] <-  otu$Order[grep("g__Rokubacteriales", otu$Genus )] 
+
+
+# replace linage with phyla
+otu$Genus[grepl("g__Lineage", otu$Genus)] <-  otu$Phyla[grep("g__Lineage", otu$Genus )] 
+
+## anything with number replace with a higher taxonomic level
+otu$Genus[grep("[7]", otu$Genus)] <-  otu$Family[grep("[7]", otu$Genus )] 
+otu$Genus[grep("[7]", otu$Genus)] <-  otu$Order[grep("[7]", otu$Genus )] 
+otu$Genus[grep("[7]", otu$Genus)] <-  otu$Class[grep("[7]", otu$Genus )] 
+otu$Genus[grep("[7]", otu$Genus)] <-  otu$Phyla[grep("[7]", otu$Genus )] 
+
+otu$Genus[grep("[-]", otu$Genus)] <-  otu$Family[grep("[-]", otu$Genus )] 
+otu$Genus[grep("[-]", otu$Genus)] <-  otu$Order[grep("[-]", otu$Genus )] 
+otu$Genus[grep("[-]", otu$Genus)] <-  otu$Class[grep("[-]", otu$Genus )] 
+otu$Genus[grep("[-]", otu$Genus)] <-  otu$Phyla[grep("[-]", otu$Genus )] 
+
+otu$Genus[grep("[1]", otu$Genus)] <-  otu$Family[grep("[1]", otu$Genus )] 
+otu$Genus[grep("[1]", otu$Genus)] <-  otu$Order[grep("[1]", otu$Genus )] # A0
+otu$Genus[grep("[1]", otu$Genus)] <-  otu$Class[grep("[1]", otu$Genus )] 
+otu$Genus[grep("[1]", otu$Genus)] <-  otu$Phyla[grep("[1]", otu$Genus )] 
+otu$Genus[grep("[1]", otu$Genus)] <-  otu$Domain[grep("[1]", otu$Genus )] 
+
+otu$Genus[grep("[2]", otu$Genus)] <-  otu$Family[grep("[2]", otu$Genus )] 
+otu$Genus[grep("[2]", otu$Genus)] <-  otu$Order[grep("[2]", otu$Genus )] 
+otu$Genus[grep("[2]", otu$Genus)] <-  otu$Class[grep("[2]", otu$Genus )] 
+otu$Genus[grep("[2]", otu$Genus)] <-  otu$Phyla[grep("[2]", otu$Genus )] 
+otu$Genus[grep("[2]", otu$Genus)] <-  otu$Domain[grep("[2]", otu$Genus )] 
+
+otu$Genus[grep("[3]", otu$Genus)] <-  otu$Family[grep("[3]", otu$Genus )] 
+otu$Genus[grep("[3]", otu$Genus)] <-  otu$Order[grep("[3]", otu$Genus )] 
+
+otu$Genus[grep("[4]", otu$Genus)] <-  otu$Family[grep("[4]", otu$Genus )] 
+otu$Genus[grep("[4]", otu$Genus)] <-  otu$Order[grep("[4]", otu$Genus )] 
+otu$Genus[grep("[4]", otu$Genus)] <-  otu$Class[grep("[4]", otu$Genus )] 
+otu$Genus[grep("[4]", otu$Genus)] <-  otu$Phyla[grep("[4]", otu$Genus )] 
+otu$Genus[grep("[4]", otu$Genus)] <-  otu$Domain[grep("[4]", otu$Genus )] 
+
+otu$Genus[grep("[5]", otu$Genus)] <-  otu$Family[grep("[5]", otu$Genus )] 
+otu$Genus[grep("[5]", otu$Genus)] <-  otu$Order[grep("[5]", otu$Genus )] 
+otu$Genus[grep("[5]", otu$Genus)] <-  otu$Class[grep("[5]", otu$Genus )] 
+otu$Genus[grep("[5]", otu$Genus)] <-  otu$Phyla[grep("[5]", otu$Genus )] 
+otu$Genus[grep("[5]", otu$Genus)] <-  otu$Domain[grep("[5]", otu$Genus )] 
+
+otu$Genus[grep("[6]", otu$Genus)] <-  otu$Family[grep("[6]", otu$Genus )] 
+
+otu$Genus[grep("[8]", otu$Genus)] <-  otu$Order[grep("[8]", otu$Genus )] 
+otu$Genus[grep("[8]", otu$Genus)] <-  otu$Class[grep("[8]", otu$Genus )]
+
+otu$Genus[grep("[9]", otu$Genus)] <-  otu$Order[grep("[9]", otu$Genus )] 
+
+
+# swap "o__Absconditabacteriales_(SR1)" for "g__Absconditicoccus"]
+otu$Genus <- sub("\\o__Absconditabacteriales_\\(SR1\\)", "o__Absconditabacteriales",  otu$Genus )
+
+# swap "g__Clostridium_sensu_stricto_13"for "g__Clostridium" 
+otu$Genus <- sub("g__Clostridium_sensu_stricto_13", "g__Clostridium" ,  otu$Genus , ignore.case = TRUE)
+
+
+# candidatus, because that just means it hasn't been cultured
+otu$Genus<- gsub('g__Candidatus_', 'g__', otu$Genus )
+
+#change Armatimonadota to  "g__Armatimonas
+otu$Genus<- gsub('g__Armatimonadales', 'g__Armatimonas', otu$Genus )
+
+## change g__Altererythrobacter to g__Altererythrobacter_D" 
+otu$Genus <- gsub('g__Altererythrobacter', 'g__Altererythrobacter_D', otu$Genus )
+
+# for the groups with genusus that are just number use higher taxonomic classification
+otu$Genus[grepl('g__0', otu$Genus )] <- otu$Class[grepl('g__0', otu$Genus)]
+
+# for the groups with uncultured as genus  use higher taxonomic classification
+otu$Genus[grepl('g__un', otu$Genus )] <- otu$Family[grepl('g__un', otu$Genus)]
+otu$Genus[grepl('f__un', otu$Genus )] <- otu$Order[grepl('f__un', otu$Genus)]
+otu$Genus[grepl('o__un', otu$Genus )] <- otu$Class[grepl('o__un', otu$Genus)]
+
+# for the groups with subgroup as genus  use higher taxonomic classification
+otu$Genus[grepl('Subgroup', otu$Genus )] <- otu$Family[grepl('Subgroup', otu$Genus)]
+otu$Genus[grepl('f__Sub', otu$Genus )] <- otu$Order[grepl('f__Sub', otu$Genus)]
+otu$Genus[grepl('o__Sub', otu$Genus )] <- otu$Class[grepl('o__Sub', otu$Genus)]
+
+# rename rhizobium group as such
+otu$Genus <- gsub('g__Allorhizobium-Neorhizobium-Pararhizobium-Rhizobium' , 'g__Rhizobium', otu$Genus)
+
+# rename burkholderia group as such
+otu$Genus <- gsub( 'g__Burkholderia-Caballeronia-Paraburkholderia' , 'g__Burkholderia', otu$Genus)
+
+# replace Acidibacter with the order
+otu$Genus <- gsub('g__Acidibacter',  'o__Gammaproteobacteria_Incertae_Sedis' , otu$Genus)
+
+# replace "g__Absconditabacteriales_(SR1)") with the order level
+otu$Genus[grepl('g__Abscond', otu$Genus )] <- otu$Order[grepl('Abscond', otu$Genus)]
+
+################### aggregate by genus  #############
+
+# how many genuses are there now?
+length(unique(otu$Genus))
+# 352 bacteria unique taxa groups
+
+# aggregate by genus level 
 otu<-aggregate(cbind(C10E.POS_S60,  C10N.POS_S65, C1E.POS_S31, C1N.POS_S61,  C2E.POS_S32,  C2N.POS_S62,  C5E.POS_S33,  C5N.POS_S63, C10R.POS_S30, C1R.POS_S27, C2R.POS_S28, C5R.POS_S29 ) ~ Genus, data = otu, FUN = sum, na.rm = TRUE)
-row.names(otu) <- otu$Genus
 
-#dim(otu)
-colnames(otu)
-#rownames(otu)
-n<-c("Genus", "Root4", "Nodule4", "Root1",  "Nodule1",  "Root2",  "Nodule2", "Root3", "Nodule3", "Rhizosphere4", "Rhizosphere1", "Rhizosphere2", "Rhizosphere3") 
-colnames(otu)<-n
-head(otu)
+# make row names genuses
+row.names(otu) <- otu$Genus
+dim(otu)
+
+# 352 genuses
+
+# rename#  columns
+#otu<-select(otu, -Phyla, -Domain, -Class, -Order, -Family, -Species, -OTU)
+#n<-c("Genus", "Root4", "Nodule4", "Root1",  "Nodule1",  "Root2",  "Nodule2", "Root3", "Nodule3", "Rhizosphere4", "Rhizosphere1", "Rhizosphere2", "Rhizosphere3") 
+#colnames(otu)<-n
+
 ## filter for taxa that were not present in the plant.
 #otu1<-filter(otu, Root4 > 0 | Nodule4 > 0 | Root1 > 0 | Nodule1 > 0 | Root2 > 0 | Nodule2 > 0 | Root3 > 0 | Nodule3 > 0  )
 
-
-# grab phylogeny and Read in the tree file 
+#------> skip this part if you jsut want to group without phylogeny
+ 
+#######################Read in the tree file and taxonomy file 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/GTDB")
+#bacteria
+#tree = read.tree("bac120.tree")
 tree = read.tree("genus.nwk")
-tree = read.tree("bac120.tree")
-# get a new tree with more taxa
+#tax = read.table("bac120_taxonomy.tsv")
+map = read.table("family.map")
 
 
-length(tree$tip.label) # look at the tip labels 
+
+
+################# making tip names genus  ############ 
+# put a g__ in front of all of these
+tree$tip.label<-paste0("g__", tree$tip.label)
 tree$tip.label
-# modify tip labels
-tree$tip.label <- gsub("\\_1","",tree$tip.label)
-tree$tip.label <- gsub("\\'","",tree$tip.label)
-#lol my taxa asignment all have a space so I'll remove thAT
-otu$Genus <- gsub(" ", "", otu$Genus)
-
-#modeify tip labls
-#otu$Genus <- gsub('\\_()', '' , otu$Genus)
-#otu$Genus <- gsub('_\\(*)*', '' , otu$Genus)
-#otu$Genus <- gsub('*Subgroup1*', '' , otu$Genus)
-#otu$Genus <- gsub('\\(SR1)', '' , otu$Genus)
-#otu$Genus <- gsub('*\\(*)*', '' , otu$Genus)
-
-# which nodes are genuses?
-tree$node.label[1]
-
-tree$node.label[tree$node.label ==  "'100.0:f__Rectinemataceae'"]
-
-tree$node.label[grep("g__", tree$node.label)]
-
-"g" %in% tree$node.label
-
-
-n[grepl("R" , n)]="rhizo"
-
-
-
-tree$node.label
-
-
+# remove random little /'-
+tree$tip.label<-gsub("\\'", "", tree$tip.label)
+length(tree$tip.label)
+## 3474 genus
 
 length(intersect(unique(otu$Genus), tree$tip.label)) # Apply setdiff function to see what's missing from the tree
+# 153 intersect
 length(setdiff(unique(otu$Genus), tree$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
+# 199 don't match
 mynames<-(setdiff(unique(otu$Genus), tree$tip.label))
+mynames
+#df<-otu %>% filter( Genus %in% mynames)
 
-#### hehe 290 genus are not in the nwk file.
-#### maybe I need a more diverse file.
+############ edit label in my data set so they match the df
+###### exploration
+mynames[grepl("g__", mynames)]
+length(mynames[grepl("g__", mynames)])
+# 59 genus
+mynames[grepl("f__", mynames)]
+length(mynames[grepl("f__", mynames)])
+#76 families
+mynames[grepl("o__", mynames)]
+length(mynames[grepl("o__", mynames)])
+#33 orders
+mynames[grepl("c__", mynames)]
+length(mynames[grepl("c__", mynames)])
+# 20 classes 
+mynames[grepl("p__", mynames)]
+length(mynames[grepl("p__", mynames)])
+# 11 phyla
+
+
+### make a smaller tree for my data
 
 
 
 #shorten phylogeny to match what is in our data frame
 asvs_remove<-setdiff(tree$tip.label, otu$Genus) #asvs we don't want
-tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-plot(tree.short, no.margin=TRUE,  cex = .5)
+tree.short<-drop.tip(tree, asvs_remove,  collapse.singles = TRUE,) # remove asvs we don't need
+length(tree.short$tip.label)
+####### node labels
+# add names of families
+# grab names from map file
+tree.label<-tree.short
+(tree.label$node.label)
+head(map$V1)
+# remove the G0 ones
+m<-map$V1[grepl("N", map$V1)]
+map.short<-filter(map, map$V1 %in% m)
+head(map.short)
+
+# find nodes that match my data frame
+x<-tree.label$node.label
+df<-data.frame(x)
+k<-intersect(df$x, map.short$V1)
+
+#grab names
+df1<-filter(map.short, V1 %in% k)
+df1$V2
+k
+#df<-left_join(df, df1)
+for (i in seq_along(k)) {
+tree.label$node.label<-sub(k[i], df1$V2[i], tree.label$node.label)
+}
+tree.label$node.label
+
+#### add names of orders
+map = read.table("order.map")
+# remove the G0 ones
+#map
+m<-map$V1[grepl("N", map$V1)]
+map.short<-filter(map, map$V1 %in% m)
+#dim(map.short)
+# find nodes that match my data frame
+x<-tree.label$node.label
+df<-data.frame(x)
+k<-intersect(df$x, map.short$V1)
+k
+#grab names
+df1<-filter(map.short, V1 %in% k)
+df1$V2
+#k
+#df<-left_join(df, df1)
+for (i in seq_along(k)) {
+  tree.label$node.label<-sub(k[i], df1$V2[i], tree.label$node.label)
+}
+tree.label$node.label
+
+#### add names of class
+map = read.table("class.map")
+# remove the G0 ones
+#map
+m<-map$V1[grepl("N", map$V1)]
+map.short<-filter(map, map$V1 %in% m)
+#dim(map.short)
+
+# find nodes that match my data frame
+x<-tree.label$node.label
+df<-data.frame(x)
+k<-intersect(map.short$V1,df$x)
+k
+#grab names
+df1<-filter(map.short, V1 %in% k)
+df1$V2
+#k
+#df<-left_join(df, df1)
+for (i in seq_along(k)) {
+  tree.label$node.label<-sub(k[i], df1$V2[i], tree.label$node.label)
+  
+}
+tree.label$node.label
+
+#### add names of phyla
+map = read.table("phylum.map")
+# remove the G0 ones
+#map
+m<-map$V1[grepl("N", map$V1)]
+map.short<-filter(map, map$V1 %in% m)
+#dim(map.short)
+
+# find nodes that match my data frame
+x<-tree.label$node.label
+df<-data.frame(x)
+k<-intersect(map.short$V1,df$x)
+k
+#grab names
+df1<-filter(map.short, V1 %in% k)
+df1$V2
+#k
+#df<-left_join(df, df1)
+for (i in seq_along(k)) {
+  tree.label$node.label<-sub(k[i], df1$V2[i], tree.label$node.label)
+  
+}
+tree.label$node.label
+
+
+###### this didn't add all the names, but added some
+tree.label$node.label<-sub("N14", "Bacteria", tree.label$node.label)
+tree.label$node.label <- sub ("N1800", 	"Solirubrobacterales", tree.label$node.label)
+tree.label$node.label <- gsub ("N3651", "Geodermatophilaceae", tree.label$node.label)
+tree.label$node.label <- gsub ("N924", "Actinomycetota", tree.label$node.label)
+tree.label$node.label <- gsub( "N3653", "Pseudonocardiaceae",  tree.label$node.label)
+tree.label$node.label <- gsub( "N1301", "Armatimonadota",  tree.label$node.label)
+tree.label$node.label <- gsub("N321", "Bacillota", tree.label$node.label)
+tree.label$node.label <- gsub("N39", "Gram postive", tree.label$node.label)
+tree.label$node.label <- gsub("N234", "Gram negative", tree.label$node.label)
+tree.label$node.label <- gsub("N4739", "Actinomycetaceae", tree.label$node.label)
+tree.label$node.label <- gsub("N2980", "Actinomycetia" , tree.label$node.label)
+tree.label$node.label <- gsub("N4368", "Micrococcaceae", tree.label$node.label)
+tree.label$node.label <- gsub("N1390",  "Pseudomonadota" , tree.label$node.label)
+tree.label$node.label <- gsub("N2203" , "Betaproteobacteria", tree.label$node.label)
+tree.label$node.label <- gsub("N3518", "Burkholderiales" , tree.label$node.label)
+tree.label$node.label <- gsub("N8500", "Comamonadaceae", tree.label$node.label)
+tree.label$node.label <- gsub("N3889", "Coxiellaceae", tree.label$node.label)
+tree.label$node.label <- gsub("N2521", "Gammaproteobacteria", tree.label$node.label)
+tree.label$node.label <- gsub("N5794", "Xanthomonadaceae", tree.label$node.label)
+tree.label$node.label <- gsub("N4999", "superorder1", tree.label$node.label)
+tree.label$node.label <- gsub("N3180", "superorder2", tree.label$node.label)
+tree.label$node.label <- gsub("N7080", "subfamily1", tree.label$node.label)
+tree.label$node.label <- gsub("N6230", "subfamily2", tree.label$node.label)
+
+
+tree.label$node.label[grepl( "N31", tree.label$node.label)]
+
+windows(10,10)
+plot(tree.label, no.margin=TRUE,  cex = .5, show.node.label = TRUE)
+nodelabels()
+dev.off()
+length(tree.label$tip.label)
+
+tree.label$node.label
+
+
+############## tips to add################
+
+## add families
+#mynames[grepl("f__", mynames)]
+#            "f__Anaerolineaceae"            "f__Ardenticatenaceae"         
+#[4] "f__Azospirillaceae"            "f__Bacillaceae"                "f__Bdellovibrionaceae"        
+#[7] "f__Beijerinckiaceae"           "f__Blastocatellaceae"          "f__Burkholderiaceae"          
+#[10] "f__Caldilineaceae"             "f__Caulobacteraceae"           "f__Chitinophagaceae"          
+#[13] "f__Chloroflexaceae"            "f__Chthoniobacteraceae"        "f__Clostridiaceae"            
+#[16] "f__Comamonadaceae"             "f__Devosiaceae"                "f__Diplorickettsiaceae"       
+#[19] "f__Enterobacteriaceae"         "f__Erwiniaceae"                "f__Gemmataceae"               
+#[22] "f__Gemmatimonadaceae"          "f__Geobacteraceae"             "f__Ilumatobacteraceae"        
+#[25] "f__Intrasporangiaceae"         "f__Isosphaeraceae"             "f__Legionellaceae"            
+#[28] "f__Longimicrobiaceae"          "f__Methylacidiphilaceae"       "f__Methyloligellaceae"        
+#[31] "f__Microbacteriaceae"          "f__Micrococcaceae"             "f__Micromonosporaceae"        
+#[34] "f__Micropepsaceae"             "f__Microscillaceae"            "f__Moraxellaceae"             
+#[37] "f__Myxococcaceae"              "f__Nitrosomonadaceae"          "f__Nitrososphaeraceae"        
+#[40] "f__Nocardioidaceae"            "f__Opitutaceae"                "f__Oxalobacteraceae"          
+#[43] "f__Parachlamydiaceae"          "f__Pedosphaeraceae"            "f__Phormidiaceae"             
+#[46] "f__Phycisphaeraceae"           "f__Pirellulaceae"              "f__Planococcaceae"            
+#[49] "f__Pyrinomonadaceae"           "f__Reyranellaceae"             "f__Rhizobiaceae"              
+#[52] "f__Rhizobiales_Incertae_Sedis" "f__Rhodanobacteraceae"         "f__Rhodobacteraceae"          
+#[55] "f__Rhodospirillaceae"          "f__Rhodothermaceae"            "f__Rickettsiaceae"            
+#[58] "f__Roseiflexaceae"             "f__Rubinisphaeraceae"          "f__Saccharimonadaceae"        
+#[61] "f__Sandaracinaceae"            "f__Saprospiraceae"             "f__Silvanigrellaceae"         
+#[64] "f__Solirubrobacteraceae"       "f__Sphingomonadaceae"          "f__Sporichthyaceae"           
+#[67] "f__Steroidobacteraceae"        "f__Tepidisphaeraceae"          "f__Thermoanaerobaculaceae"    
+#[70] "f__Vampirovibrionaceae"        "f__Vermiphilaceae"             "f__Verrucomicrobiaceae"       
+#[73] "f__Vicinamibacteraceae"        "f__Xanthobacteraceae"          "f__Xanthomonadaceae"          
+#[76] "f__Yersiniaceae"        
+
+
+# Aurantisolimonas, in 	Family:	Chitinophagaceae
+# g__Edaphobaculum under family 	Chitinophagaceae
+# Heliimonas genus under family Chitinophagaceae
+# genus "g__Pseudoflavitalea" to family Chitinophagaceae
+# Taibaiella to Chitinophagaceae
+k# g__Babeliales")    under phyla = depentiae 
+
+# Genus == "g__Brevifollis" under family   f__Verrucomicrobiaceae
+# Genus == "g__Chthonomonadales")  under family  Geobacteraceae
+# Genus == "g__Captivus"  under family Paracaedibacteraceae
+# Enhydrobacter under Moraxellaceae
+# Halocella genus under family 	Halanaerobiaceae
+# Genus "g__Ovatusbacter" under Family o__Gammaproteobacteria
+# add genus Obscuribacteraceae under c__Vampirivibrionia o__Obscuribacterales f__Obscuribacteraceae
+# genus Rhabdanaerobium under 	Eubacteriaceae
+# genus Roseisolibacter under Gemmatimonadaceae
+# genus Peredibacter to family  Bacteriovoracaceae
+# genus Paeniclostridium to family 	Clostridiaceae
+# Pedomicrobium to 	Hyphomicrobiaceae
+# genus  Phaselicystis which is in  family   Phaselicystidaceae, order Polyangiales
+# genus  Tellurimicrobium in family Blastocatellaceae;
+
+
+
+##################################### HEATMAP by phylogeny  ###############
+
+otu<-select(otu, -Phyla, -Domain, -Class, -Order, -Family, -Species, -OTU)
+n<-c("Genus", "Root4", "Nodule4", "Root1",  "Nodule1",  "Root2",  "Nodule2", "Root3", "Nodule3", "Rhizosphere4", "Rhizosphere1", "Rhizosphere2", "Rhizosphere3") 
+colnames(otu)<-n
+head(otu)
+
+## filter for taxa that were not present in the plant.
+#otu1<-filter(otu, Root4 > 0 | Nodule4 > 0 | Root1 > 0 | Nodule1 > 0 | Root2 > 0 | Nodule2 > 0 | Root3 > 0 | Nodule3 > 0  )
+
+tree.short
+head(otu)
+
+#get the otus that are in the the tree.short
+otu<-filter(otu, Genus %in% tree.short$tip.label)
+
 # grab correct order 
 target<-tree.short$tip.label
 otu<-otu[match(target, otu$Genus),]
@@ -1812,8 +2290,8 @@ otu<-subset(otu, select = c( -Genus))
 row.names(otu) <- n
 
 
-# make matrix
-m<-as.matrix(otu1)
+############### make matrix
+m<-as.matrix(otu)
 row.names(m)
 m<-structure(m)
 # summary stats
@@ -1846,11 +2324,239 @@ heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = tr)
 dev.off
 
 
+############################## HEAT MAP group my habitat use type ######
+
+#what do you need?
+###genus level data
+###df of abundance of active taxa
+###habitat use type assigned
+
+dim(otu)
+head(otu)
+#otu<-select(otu, -Phyla, -Domain, -Class, -Order, -Family, -Species, -OTU)
+n<-c("Genus", "Root4", "Nodule4", "Root1",  "Nodule1",  "Root2",  "Nodule2", "Root3", "Nodule3", "Rhizosphere4", "Rhizosphere1", "Rhizosphere2", "Rhizosphere3") 
+colnames(otu)<-n
+head(otu)
+
+#summarize by location
+otu$rhizo <- rowSums(otu %>% dplyr::select(contains("Rhizo"))) 
+
+otu$roots <- rowSums(otu %>% dplyr::select(contains("Root"))) 
+
+otu$nodule <- rowSums(otu %>% dplyr::select(contains("Nod")))
+
+df<-otu%>% select(Genus, rhizo, roots, nodule) %>% filter(rhizo!=0 |nodule!=0 | roots!=0)
+
+head(df)
+dim(df)
+#df<-t(df)
+#df<-as.data.frame(df)
+#dim(df)
+#df
+habitat<-rep(NA, 348)
+habitat[df$nodule==0 & df$roots==0 & df$rhizo>0]="rhizo specailist"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo==0]="root specialist"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="nodule specialist"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="rhizo and root generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="plant generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hyper generalist"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo>0]="rhizo and nodule generalist"
+
+habitat
+unique(habitat)
+df$habitat <- habitat
+head(df)
+
+
+# what if we made a little tree with the habitat types
+head(df)
+t<-df%>% select(Genus, habitat)
+head(t)
+t<-t[,c(2,1)]
+
+row.names(t)<- NULL
+head(t)
+## recursion function
+traverse <- function(a,i,innerl){
+  if(i < (ncol(df))){
+    alevelinner <- as.character(unique(df[which(as.character(df[,i])==a),i+1]))
+    desc <- NULL
+    if(length(alevelinner) == 1) (newickout <- traverse(alevelinner,i+1,innerl))
+    else {
+      for(b in alevelinner) desc <- c(desc,traverse(b,i+1,innerl))
+      il <- NULL; if(innerl==TRUE) il <- a
+      (newickout <- paste("(",paste(desc,collapse=","),")",il,sep=""))
+    }
+  }
+  else { (newickout <- a) }
+}
+
+## data.frame to newick function
+df2newick <- function(df, innerlabel=FALSE){
+  alevel <- as.character(unique(df[,1]))
+  newick <- NULL
+  for(x in alevel) newick <- c(newick,traverse(x,1,innerlabel))
+  (newick <- paste("(",paste(newick,collapse=","),");",sep=""))
+}
+
+t
+tree<-df2newick(t)
+mytree <- read.tree(text=tree)
+plot(mytree)
+#
+############### make matrix
+df<-df %>% select(rhizo,roots, nodule)
+
+n<-row.names(df)
+#row.names(df)<-habitat
+
+m<-as.matrix(df)
+row.names(m)
+m<-structure(m)
+# summary stats
+max(m)
+min(m)
+mean(m)
+summary(m)
+# i think this matrix needs a log transform
+m<-log10(m)
+m[m== "-Inf"] <- 0
+m
+summary(m)
+#make a dendrogram              
+col_dendro = as.dendrogram(hclust(dist(t(m))))
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/heatmap2.svg", width = 10, height=10 )
+# And make the plot with phylogeny
+windows(16,12)
+heatmap.phylo(x = m, Rowp = mytree, Colp = as.phylo(as.hclust(col_dendro)))
+dev.off()
+# change order
+#tr<-read.tree(text =  "((Nodule1:3,Nodule2:3, Nodule3:3,Nodule4:3):2, (Root1:3,Root2:3,Root3:3,Root4:3):2, (Rhizosphere1:3, Rhizosphere2:3,Rhizosphere3:3, Rhizosphere4:3):2);")
+heatmap.phylo(x = m, Rowp = tree.short, Colp = tr)
+dev.off
+# no phylogeny
+#make a dendrogram              
+row_dendro = as.dendrogram(hclust(dist((m))))
+windows(10,10)
+heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = tr)
+dev.off
 
 
 
 
 
+
+############## use the package that determined the phylogenic signal
+
+
+library(phylosignal)
+#install.packages("phylosignal")
+library(adephylo)
+#library(ape)
+library(phylobase)
+data(carni19)
+
+#get the tree
+tre <- read.tree(text=carni19$tre)
+tree.short
+#And we create a dataframe of 3 traits for the 19 carnivora species
+#. - Body mass - Random values - 
+#Simulated values under a Brownian Motion model along the tree
+dat <- list()
+dat$mass <- carni19$bm
+dat$random <- rnorm(19, sd = 10)
+dat$bm <- rTraitCont(tre)
+dat <- as.data.frame(dat)
+
+#And we create a dataframe of 3 traits for the  153 microbial species
+dim(otu)
+head(otu)
+#rhizosphere - root - nodule - - Random values - -Simulated values under a Brownian Motion model 
+##
+dat <- list()
+
+dat$rhizo.mean <- rowMeans(otu %>% 
+  dplyr::select(contains("Rhizo"))) %>% 
+  glimpse()
+
+#dat$rhizo.log <- rowMeans(otu %>% 
+#            dplyr::select(contains("Rhizo"))) %>% 
+#            log10() %>%
+#            glimpse() 
+
+dat$root.mean <- rowMeans(otu %>% 
+      dplyr::select(contains("Root"))) %>% 
+      glimpse()
+
+#dat$root.log <- rowMeans(otu %>% 
+#                dplyr::select(contains("Root"))) %>% 
+#                log10() %>%
+#                glimpse()
+
+dat$nodule.mean <- rowMeans(otu %>% 
+      dplyr::select(contains("Nod"))) %>% 
+      glimpse()
+
+#dat$nodule.log <- rowMeans(otu %>% 
+#                    dplyr::select(contains("Nod"))) %>% 
+#                    log10() %>%
+#                    glimpse()
+
+
+dat$random <- rnorm(153, sd = 10)
+dat$bm <- rTraitCont(tree.short)
+#turn it into a data frame now?
+dat <- as.data.frame(dat)
+ 
+dat[dat== "-Inf"] <- 0 # change -inf into 0
+head(dat)
+
+#dim(tree.short)
+tree.short
+#We can combine phylogeny and traits into a phylo4d object.
+p4d <- phylo4d(tree.short, dat)
+barplot.phylo4d(p4d, tree.type = "phylo", tree.ladderize = TRUE)
+#
+phyloSignal(p4d = p4d, method = "all")
+# calculating the phylogenitic signal with all the mehtods
+
+phylosim <- phyloSim(tree = tree.short, method = "all", nsim = 100, reps = 99)
+windows(10,10)
+plot(phylosim, stacked.methods = FALSE, quantiles = c(0.05, 0.95))
+# they are simillar but a little dif
+plot.phylosim(phylosim, what = "pval", stacked.methods = TRUE)
+# calc the phylogenic signal for the rhizo abundance trait
+rhizo.gen <- phyloCorrelogram(p4d, trait = "rhizo.mean")
+# root
+root.gen <- phyloCorrelogram(p4d, trait = "root.mean")
+# nodule
+nodule.gen <- phyloCorrelogram(p4d, trait = "nodule.mean")
+# for the random trait
+window(10,10)
+random.gen <- phyloCorrelogram(p4d, trait = "random")
+# and fro Simulated values under a Brownian Motion model along the tree
+#where continuous traits evolve randomly over time along a branch,
+#with a fixed rate. As soon as descents split at a node of the phylogeny,
+#evolution on both branches becomes independent
+# so there is autocorrelation in a branch
+# this a potential null hypthesis other than random
+bm.gen <- phyloCorrelogram(p4d, trait = "bm")
+
+plot(rhizo.gen, main= "rhizosphere")
+plot(root.gen, main="root")
+windows(10,10)
+  plot(nodule.gen, main="nodule")
+
+plot(random.gen, main = "random")
+plot(bm.gen, main = "Brownian Motion model")
+
+
+# what is there are certain parts of the taxa this is true for
+carni.lipa <- lipaMoran(p4d)
+carni.lipa.p4d <- lipaMoran(p4d, as.p4d = TRUE)
+
+barplot.phylo4d(p4d, bar.col=(carni.lipa$p.value < 0.05) + 1, center = FALSE , scale = FALSE)
 
 
 
