@@ -1,0 +1,205 @@
+### pplacer ###
+# I just want to put my 16S bits in a tree
+
+### logging on to roar ###
+ssh jeh6121@submit.hpc.psu.edu
+
+### starting interactive job ###
+salloc -N 1 -n 4 --mem-per-cpu=1024 -t 1:00:00
+
+### go to place ###
+cd /storage/group/ltb5167/default/JennHarris/BONCAT_16S
+
+##### create conda env install software ###########
+# create conda environment
+module load anaconda3
+conda create -n pplacer -y
+# add wget
+conda install wget
+#add raxml
+conda install -c bioconda raxml
+#add pplacer
+conda install -c bioconda pplacer
+#add guppy
+conda install -c conda-forge guppy3
+#add sepp
+conda install -c bioconda sepp
+# newick utils
+conda install -c bioconda newick_utils
+
+
+### start conda ####
+module load python3
+module load anaconda3
+source activate pplacer
+
+
+################################################# placer
+pplacer
+
+ -c                           Specify the path to the reference package.
+  -t                           Specify the reference tree filename.
+  -r                           Specify the reference alignment filename.
+  -s                           Supply a phyml stats.txt or a RAxML info file giving the model parameters.
+  -d                           Specify the directory containing the reference information.
+
+
+
+
+#### testing with demo data
+
+pplacer -c vaginal_16s.refpkg src/p4z1r36.fasta
+
+#this gives p4z1r36.jplace
+
+################################################## make ref package ##############
+
+Creating a reference alignment
+The first step in any pipeline involving Infernal (assuming you already have an alignment profile but are not working from a reference package) is to create an alignment of reference sequences. See the Infernal docs for a description of options not mentioned here. For example:
+
+cmalign --hbanded --sub --dna -1 -o refalign.sto profile.cm refseqs.fasta
+
+Inputs to this command include an alignment profile (profile.cm) and unaligned reference sequences (refs.fasta). The output file, identified using the -o option, contains the aligned reference sequences in Stockholm format. The -1 (that’s a one, not an L) specifies non-interleaved output, one sequence per line.
+ #############################hmmer
+
+alg=/storage/group/ltb5167/default/JennHarris/BONCAT_16S/ref/gg_13_5_ssu_align_99_pfiltered.fasta
+
+my reference files has to be a stockholm file
+so I snagged this piece of perl script
+but i can't make it work
+
+install biopython
+
+from Bio import SeqIO
+
+records = SeqIO.parse($alg, "fasta")
+count = SeqIO.write(records, "THIS_IS_YOUR_OUTPUT_FILE.stockholm", "stockholm")
+print("Converted %i records" % count)
+
+
+
+
+
+hmmbuild refseqs.hmm $alg
+
+
+
+
+#alignment
+#raxml info file
+#tree
+alg=/storage/group/ltb5167/default/JennHarris/BONCAT_16S/sepp-package/ref/gg_13_5_ssu_align_99_pfiltered.fasta
+rax=/storage/group/ltb5167/default/JennHarris/BONCAT_16S/sepp-package/ref/RAxML_info-reference-gg-raxml-bl.info
+tr=/storage/group/ltb5167/default/JennHarris/BONCAT_16S/sepp-package/ref/reference-gg-raxml-bl.tre
+fr=/storage/group/ltb5167/default/JennHarris/BONCAT_16S/sepp-package/test.frag
+
+
+
+
+
+
+
+
+#########################################################
+
+
+#make nice tree
+#nw_topology -bI gg_13_5_otus_99_annotated.tree > gg_13_5_otus_99_annotated.tree
+
+
+t=gg_13_5_otus_99_annotated.tree
+alg=gg_13_5_pynast.fasta
+
+
+
+#raxmlHPC -f -n -s reference.alignment -m GTRGAMMA reference.tree -n like
+
+#raxmlHPC -f -n -s gg_13_5_ssualign.fasta.gz -m GTRGAMMA gg_13_5_otus_99_annotated.tree.gz -n like
+
+
+
+
+
+raxmlHPC-PTHREADS -s $alg -m GTRCAT -n score-bl-$alg -F -f e -t RAxML_result.score-$alg -T 16 -p $RANDOM 
+
+
+
+
+
+
+
+
+
+
+
+###### making tree with RAXML ############
+
+/raxmlHPC -f n -s gg_only_genomes.phy -m GTRGAMMA -z
+gg_only_genomes.tree -n like
+and
+./raxmlHPC -f e -s gg_only_genomes.phy -m GTRGAMMA -t
+gg_only_genomes.tree -n likeE
+
+
+
+# inputs:your alignment file called myalign.phy
+# outputs: tree, reference alignment, stats file. 
+
+## can I just run this with these sequences?
+#* 2022.10.seqs.fna.qza
+#    All sequences used in the construction of the tree
+
+
+#raxmlHPC -m GTRGAMMA -n ref_tree -s ref_aln.phy
+
+raxmlHPC -m GTRGAMMA -n ref_tree -s 2022.10.seqs.fna
+
+
+
+###### making alignment file #########
+
+#qiime phylogeny align-to-tree-mafft-raxml
+#	--i-sequences 2022.10.seqs.fna.qza
+
+qiime alignment mafft \
+  --i-sequences 2022.10.seqs.fna.gz \
+  --o-alignment aligned-gg2.qza
+
+### file is too big
+
+######### sepp ###########################
+https://github.com/smirarab/sepp/tree/master/sepp-package
+
+wget  "https://raw.github.com/smirarab/sepp-refs/master/gg/sepp-package.tar.bz"
+tar xvfj sepp-package.tar.bz
+
+cd sepp-package/sepp
+python setup.py config -c
+
+./run-sepp.sh [input fragments file] [prefix of the output]
+
+# this didn't work, so I'm gonna look at the file
+
+############ 
+
+
+#alignment
+#raxml info file
+#tree
+alg=/storage/group/ltb5167/default/JennHarris/BONCAT_16S/sepp-package/ref/gg_13_5_ssu_align_99_pfiltered.fasta
+rax=/storage/group/ltb5167/default/JennHarris/BONCAT_16S/sepp-package/ref/RAxML_info-reference-gg-raxml-bl.info
+tr=/storage/group/ltb5167/default/JennHarris/BONCAT_16S/sepp-package/ref/reference-gg-raxml-bl.tre
+fr=/storage/group/ltb5167/default/JennHarris/BONCAT_16S/sepp-package/test.frag
+
+python run_sepp.py -h
+
+python run_sepp.py -t $tr -r $rax -a $alg -f $fr
+
+python setup.py install --prefix=/storage/group/ltb5167/default/JennHarris/BONCAT_16S/sepp
+
+
+###note ###
+# installed SEPP because it has a the alignement file, and reference tree for greengenes
+
+# place 
+/storage/home/jeh6121/.conda/envs/pplacer/bin

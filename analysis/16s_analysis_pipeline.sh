@@ -27,12 +27,12 @@ conda env create -n qiime2-env --file qiime2-2022.2-py38-linux-conda.yml
 #logon to PSU roar collab
 ssh jeh6121@submit.hpc.psu.edu
 #start interactive job
-salloc -N 1 -n 4 --mem-per-cpu=1024 -t 1:00:00
+salloc -N 1 -n 4 --mem-per-cpu=1024 -t 2:00:00
 # go to work directory
 cd /storage/group/ltb5167/default/JennHarris/BONCAT_16S
 #start conda
 module load anaconda3
-conda activate qiime2-env
+source activate qiime2-env
 # if that doesn't work check what conda environemnt you already have. I couldn't remember if I install qiime
 cd /storage/home/jeh6121/.conda/envs
 
@@ -148,7 +148,12 @@ qiime feature-table tabulate-seqs \
 qiime feature-table summarize \
   --i-table table-dada2.qza \
   --o-visualization asvs/table-dada2.qzv \
-  --m-sample-metadata-file metadata.txt
+  --m-sample-metadata-file metadata.tls
+xt
+
+qiime tools export \
+  --input-path rep.seqs.dada2.qza\
+  --output-path ./
 
 
 ######################## silva classification ############################
@@ -172,6 +177,7 @@ qiime feature-classifier fit-classifier-naive-bayes \
   --o-classifier /silva/silva-138-99-classifier.qza
 
 # test the classifier
+qiime feature-classifier classify-sklearn
   --i-classifier silva/silva-138-99-nb-classifier.qza \
   --i-reads otu/rep.seqs.otu.qza \
   --o-classification otu/taxonomy.otu2.qza
@@ -200,11 +206,49 @@ qiime metadata tabulate \
 #output taxomny file
 
 qiime tools export \
-  --input-path taxonomy.otu.qza \
-  --output-path otu/output
+  --input-path taxonomy.pretrained.gg2.qza \
+  --output-path ./
 
+############### green genes classification #############################
 
+pip install q2-greengenes2
+wget http://ftp.microbio.me/greengenes_release/2022.10/2022.10.taxonomy.asv.nwk.qza
+
+qiime greengenes2 filter-features \
+	--i-feature-table feature-table.biom \
+	--i-reference 2022.10.taxonomy.asv.nwk.qza \
+	--o-filtered-feature-table filter.table.biom.qza
+
+qiime greengenes2 taxonomy-from-table \
+     --i-reference-taxonomy 2022.10.taxonomy.asv.nwk.qza \
+     --i-table filter.table.biom.qza \
+     --o-classification table.taxonomy.qza
+
+wget http://ftp.microbio.me/greengenes_release/current/2022.10.phylogeny.asv.nwk.qza
+
+# green genes2 has a tree I can probably use
 ####### assign phylogeny ##########
+
+qiime alignment mafft \
+--i-sequences rep.seqs.dada2.qza \
+--o-alignment aligned-rep-seq.qza
+
+
+
+
+
+
+
+
+
+
+
+##also those I could probably use MAFFT to make a reference alignment
+
+qiime alignment mafft \
+--i-sequences 2022.10.backbone.v4.fna.qza \
+--o-alignment aligned-ref-sequences.qza
+
 
 # another helpful tutorial https://john-quensen.com/tutorials/processing-16s-sequences-with-qiime2-and-dada2/
 
@@ -244,6 +288,14 @@ qiime tools export \
 --input-path feature.table.otu.qza \
 --output-path  /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/output
 
+qiime tools export \
+--input-path table-dada2.qza \
+--output-path /storage/group/ltb5167/default/JennHarris/BONCAT_16S/output_greengenes2
+
+
+
+
+#####################################################################33
 ## cluster into OTUS because I think that it's retaining asvs that are the same species
 # https://docs.qiime2.org/2023.2/plugins/available/vsearch/cluster-features-de-novo/
 
@@ -255,4 +307,46 @@ qiime vsearch cluster-features-de-novo \
   --o-clustered-table /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/feature.table.otu.qza \
   --o-clustered-sequences /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/rep.seqs.otu.qza  
 
+#######################################################################
+
+
+#qiime plug in for inserting fragments
+
+wget \
+  -O "sepp-refs-gg-13-8.qza" \
+  "https://data.qiime2.org/2019.10/common/sepp-refs-gg-13-8.qza"
+    
+qiime fragment-insertion sepp \
+  --i-representative-sequences rep-seqs.qza \
+  --i-reference-database sepp-refs-gg-13-8.qza \
+  --o-tree insertion-tree.qza \
+  --o-placements insertion-placements.qza
+
+qiime fragment-insertion filter-features \
+  --i-table table.qza \
+  --i-tree insertion-tree.qza \
+  --o-filtered-table filtered_table.qza \
+  --o-removed-table removed_table.qza
+
+qiime phylogeny filter-tree \
+ --i-tree insertion-tree.qza \
+ --i-table filter_table.qza \
+ --o-filtered-tree filter-tree.qza
+
+
+################
+
+#output tree
+
+
+qiime tools export \
+--input-path /storage/home/jeh6121/burghardt/JennHarris/BONCAT_16S/qiime_sepp/filter-tree.qza \
+--output-path /storage/home/jeh6121/burghardt/JennHarris/BONCAT_16S/qiime_sepp/output
+
+#output feature table
+qiime tools export \
+--input-path /storage/home/jeh6121/burghardt/JennHarris/BONCAT_16S/qiime_sepp/insertion-placements.qza \
+--output-path /storage/home/jeh6121/burghardt/JennHarris/BONCAT_16S/qiime_sepp/output
+
+######
 

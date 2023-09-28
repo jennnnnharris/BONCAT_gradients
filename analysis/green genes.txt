@@ -1,0 +1,58 @@
+#green genes
+
+####### logging on and starting software ############
+#logon to PSU roar collab
+ssh jeh6121@submit.hpc.psu.edu
+#start interactive job to install software
+salloc -N 1 -n 4 --mem-per-cpu=1024 -t 1:00:00
+
+##### install software ###########
+#start conda
+module load anaconda3
+source activate qiime2-env
+# go the right place
+cd /storage/group/ltb5167/default/JennHarris/BONCAT_16S
+# install greengenes2
+pip install q2-greengenes2
+# get the greengenes taxonomy
+wget http://ftp.microbio.me/greengenes_release/2022.10/2022.10.taxonomy.asv.nwk.qza
+
+
+########## running greengenes2 ################
+# filter the features? I'm not sure exactly what this step does?
+qiime greengenes2 filter-features \
+	--i-feature-table asvs/table-dada2.qza \
+	--i-reference 2022.10.taxonomy.asv.nwk.qza \
+	--o-filtered-feature-table filter.table.biom.qza
+
+# assign taxonomy with the for our feature tables
+qiime greengenes2 taxonomy-from-table \
+     --i-reference-taxonomy 2022.10.taxonomy.asv.nwk.qza \
+     --i-table filter.table.biom.qza \
+     --o-classification table.taxonomy.qza
+# this doesn't work, so I'm going to use the naive bayes approach
+
+############################# train classifier
+
+# optimize clasifier by finding sections that are with the primers you used
+qiime feature-classifier extract-reads \
+  --i-sequences 2022.10.seqs.fna.qza \
+  --p-f-primer GTGYCAGCMGCCGCGGTAA \
+  --p-r-primer CCGYCAATTYMTTTRAGTTT \
+  --o-reads gg2-extracts.qza
+
+# train the classifiers
+qiime feature-classifier fit-classifier-naive-bayes \
+  --i-reference-reads gg2-extracts.qza \
+  --i-reference-taxonomy 2022.10.taxonomy.asv.nwk.qza\
+  --o-classifier gg2.classifier.qza
+
+# test the classifier
+  --i-classifier gg2.classifier.qza \
+  --i-reads asvs/rep.seqs.qzas \
+  --o-classification taxonomy.gg2.qza
+
+
+# i think we can just use this file from green genes for phylogeny things?
+wget http://ftp.microbio.me/greengenes_release/current/2022.10.phylogeny.asv.nwk.qza
+

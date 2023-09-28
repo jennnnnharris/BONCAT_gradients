@@ -1,0 +1,488 @@
+
+
+############################################################### phylogeny graveyard
+# add taxa names
+#n<-row.names(otu)
+#otu<-mutate(otu, OTU=n)
+#n<-row.names(taxon)
+#taxon<- mutate(taxon, OTU=n)
+#otu<-left_join(otu, taxon)
+
+
+#otu
+# put g__ in front
+#otu$Genus <- gsub('\\ ' , '', otu$Genus)
+#otu$Genus<-paste0( "g__",otu$Genus)
+#otu$Family <- gsub('\\ ' , '', otu$Family)
+##otu$Family<-paste0( "f__",otu$Family)
+#otu$Order <- gsub('\\ ' , '', otu$Order)
+#otu$Order<-paste0( "o__",otu$Order)
+#otu$Class <- gsub('\\ ' , '', otu$Class)
+#otu$Class<-paste0( "c__",otu$Class)
+#otu$Phyla <- gsub('\\ ' , '', otu$Phyla)
+#otu$Phyla<-paste0( "p__",otu$Phyla)
+
+
+# if genus is missing put family name, if still missing put order, class, domain, etc. 
+#otu$Genus[which(otu$Genus == 'g__')] <- otu$Family[which(otu$Genus == 'g__')]
+#otu$Genus[which(otu$Genus == 'f__')] <- otu$Order[which(otu$Genus == 'f__')]
+#otu$Genus[which(otu$Genus == 'o__')] <- otu$Class[which(otu$Genus == 'o__')]
+#otu$Genus[which(otu$Genus == 'c__')] <- otu$Phyla[which(otu$Genus == 'c__')]
+#otu$Genus[which(otu$Genus == 'p__')] <- otu$Domain[which(otu$Genus == 'p__')]
+
+# separate archaea and bacteria
+#otu<-otu %>% filter( Domain == "Bacteria")
+#otu_arch<-otu %>% filter( Domain == "Archaea")
+
+
+# aggregate by genus level 
+#otu<-aggregate(cbind(C10E.POS_S60,  C10N.POS_S65, C1E.POS_S31, C1N.POS_S61,  C2E.POS_S32,  C2N.POS_S62,  C5E.POS_S33,  C5N.POS_S63, C10R.POS_S30, C1R.POS_S27, C2R.POS_S28, C5R.POS_S29 ) ~ Genus, data = otu, FUN = sum, na.rm = TRUE)
+#otu_arch<-aggregate(cbind(C10E.POS_S60,  C10N.POS_S65, C1E.POS_S31, C1N.POS_S61,  C2E.POS_S32,  C2N.POS_S62,  C5E.POS_S33,  C5N.POS_S63, C10R.POS_S30, C1R.POS_S27, C2R.POS_S28, C5R.POS_S29 ) ~ Genus, data = otu_arch, FUN = sum, na.rm = TRUE)
+
+# make row names genuses
+#row.names(otu) <- otu$Genus
+#row.names(otu_arch) <- otu_arch$Genus
+
+# how many genuses are there?
+#length(unique(otu$Genus))
+# 499 bacteria unique taxa groups
+
+
+###################changing my data's names so they match the tree ####################
+
+# put order as same for type III 
+#otu$Genus[grepl("g__type_III", otu$Genus )] <- otu$Order[grepl("g__type_III", otu$Genus) ]
+#g__Tepidisphaeraceae" is a family
+#otu$Genus[grepl("g__Tepidisphaeraceae", otu$Genus)] <- otu$Family[grepl("g__Tepidisphaeraceae", otu$Genus)]
+# switch "g__Nitrospira_ to "g__Nitrospira_A" 
+#otu$Genus <- sub("g__Nitrospira" ,  "g__Nitrospira_A"   ,  otu$Genus )
+# "g__Vicinamibacteraceae" is a family
+#otu$Genus[grepl("g__Vicinamibacteraceae", otu$Genus)] <-  otu$Family[grepl("g__Vicinamibacteraceae", otu$Genus )] 
+#  "g__Vampirovibrionaceae"  is a family
+#otu$Genus[grepl("g__Vampirovibrionaceae" , otu$Genus)] <-  otu$Family[grepl("g__Vampirovibrionaceae" , otu$Genus )] 
+# "g__Vermiphilaceae"     is family
+#otu$Genus[grepl( "g__Vermiphilaceae"   , otu$Genus)] <-  otu$Family[grepl(  "g__Vermiphilaceae" , otu$Genus )] 
+# "g__Vampirovibrionales"  is a order
+#otu$Genus[grepl( "g__Vampirovibrionales" , otu$Genus)] <-  otu$Order[grepl("g__Vampirovibrionales" , otu$Genus )] 
+#### change g__Peribacteria" to  "g__Peribacter"
+#otu$Genus <- sub("g__Peribacteria", "g__Peribacter" ,  otu$Genus )
+## Parcubacteria is a phyla so make it a phyla
+#otu$Genus[grepl("g__Parcubacteria", otu$Genus)] <-  otu$Phyla[grepl("g__Parcubacteria", otu$Genus )] 
+
+### _Pedosphaeraceae is a family, call it a family
+#otu$Genus[grepl("g__Pedosphaeraceae", otu$Genus)] <-  otu$Family[grepl("g__Pedosphaeraceae", otu$Genus )] 
+
+
+### replace unknown family with order
+#otu$Genus[grepl("g__Unknown_Family", otu$Genus)] <-  otu$Order[grepl("g__Unknown_Family", otu$Genus )] 
+
+### Berkelbacteria is actual a phyla
+#otu$Genus[grepl("g__Berkelbacteria", otu$Genus)] <-  otu$Phyla[grepl("g__Berkelbacteria", otu$Genus )] 
+
+### Gracilibacteria is actual a phyla
+#otu$Genus[grepl("g__Gracilibacteria", otu$Genus)] <-  otu$Phyla[grepl("g__Gracilibacteria", otu$Genus )] 
+
+#"g__Chthoniobacteraceae" is an family, but only 1 genus in it, so I'm gonna call it that 
+#otu$Genus <- sub("g__Chthoniobacteraceae", "g__Chthonomonas" ,  otu$Genus , ignore.case = TRUE)
+
+#"g__Chthoniobacteraceae" is an order, but only 1 genus in it, so I'm gonna call it that 
+#otu$Genus <- sub("g__Chthonomonadales", "g__Chthonomonas" ,  otu$Genus , ignore.case = TRUE)
+
+#"g__#Entotheonaella" is an family, but only 1 genus in it, so I'm gonna call it that 
+#otu$Genus <- sub("g__Entotheonellaceae", "g__Entotheonella" ,  otu$Genus )
+
+#Fimbriimonadaceae is a family  , but only 1 genus in it, so I'm gonna call it that 
+#otu$Genus <- sub("g__Fimbriimonadaceae", "g__Fimbriimonas" ,  otu$Genus )
+
+# Fimbriimonadales is an order , but only 1 genus in it, so I'm gonna call it that 
+#otu$Genus <- sub("g__Fimbriimonadales", "g__Fimbriimonas" ,  otu$Genus )
+
+# Hyphomicrobium call it g__Hyphomicrobium_A
+#otu$Genus <- sub("g__Hyphomicrobium", "g__Hyphomicrobium_A" ,  otu$Genus )
+
+### change "g__Latescibacteraceae" to lascibacter
+#otu$Genus <- sub("g__Latescibacterota", "g__Latescibacter" ,  otu$Genus )
+
+### change "g__Latescibacterota" to lascibacter
+#otu$Genus <- sub("g__Latescibacteraceae", "g__Latescibacter" ,  otu$Genus )
+
+## change  to g__Massilia to "g__Massilibacterium"  because they are the same
+#otu$Genus <- sub("g__Massilia", "g__Massilibacterium" ,  otu$Genus )
+
+# Methyloligellaceae is a family so call it a family
+#otu$Genus[grepl("Methyloligellaceae", otu$Genus)] <-  otu$Family[grep("Methyloligellaceae", otu$Genus )] 
+
+# Microgenomatia is a phyla so call it a phyla
+#otu$Genus[grepl("g__Microgenomatia", otu$Genus)] <-  otu$Phyla[grep("g__Microgenomatia", otu$Genus )] 
+
+# Rokubacteriales is an order. call it an order
+#otu$Genus[grepl("g__Rokubacteriales", otu$Genus)] <-  otu$Order[grep("g__Rokubacteriales", otu$Genus )] 
+
+
+# replace linage with phyla
+#otu$Genus[grepl("g__Lineage", otu$Genus)] <-  otu$Phyla[grep("g__Lineage", otu$Genus )] 
+
+## anything with number replace with a higher taxonomic level
+#otu$Genus[grep("[7]", otu$Genus)] <-  otu$Family[grep("[7]", otu$Genus )] 
+#otu$Genus[grep("[7]", otu$Genus)] <-  otu$Order[grep("[7]", otu$Genus )] 
+#otu$Genus[grep("[7]", otu$Genus)] <-  otu$Class[grep("[7]", otu$Genus )] 
+#otu$Genus[grep("[7]", otu$Genus)] <-  otu$Phyla[grep("[7]", otu$Genus )] 
+
+#otu$Genus[grep("[-]", otu$Genus)] <-  otu$Family[grep("[-]", otu$Genus )] 
+#otu$Genus[grep("[-]", otu$Genus)] <-  otu$Order[grep("[-]", otu$Genus )] 
+#otu$Genus[grep("[-]", otu$Genus)] <-  otu$Class[grep("[-]", otu$Genus )] 
+#otu$Genus[grep("[-]", otu$Genus)] <-  otu$Phyla[grep("[-]", otu$Genus )] 
+
+#otu$Genus[grep("[1]", otu$Genus)] <-  otu$Family[grep("[1]", otu$Genus )] 
+#otu$Genus[grep("[1]", otu$Genus)] <-  otu$Order[grep("[1]", otu$Genus )] # A0
+#otu$Genus[grep("[1]", otu$Genus)] <-  otu$Class[grep("[1]", otu$Genus )] 
+#otu$Genus[grep("[1]", otu$Genus)] <-  otu$Phyla[grep("[1]", otu$Genus )] 
+#otu$Genus[grep("[1]", otu$Genus)] <-  otu$Domain[grep("[1]", otu$Genus )] 
+
+#otu$Genus[grep("[2]", otu$Genus)] <-  otu$Family[grep("[2]", otu$Genus )] 
+#otu$Genus[grep("[2]", otu$Genus)] <-  otu$Order[grep("[2]", otu$Genus )] 
+#otu$Genus[grep("[2]", otu$Genus)] <-  otu$Class[grep("[2]", otu$Genus )] 
+#otu$Genus[grep("[2]", otu$Genus)] <-  otu$Phyla[grep("[2]", otu$Genus )] 
+#otu$Genus[grep("[2]", otu$Genus)] <-  otu$Domain[grep("[2]", otu$Genus )] 
+
+otu$Genus[grep("[3]", otu$Genus)] <-  otu$Family[grep("[3]", otu$Genus )] 
+otu$Genus[grep("[3]", otu$Genus)] <-  otu$Order[grep("[3]", otu$Genus )] 
+
+otu$Genus[grep("[4]", otu$Genus)] <-  otu$Family[grep("[4]", otu$Genus )] 
+otu$Genus[grep("[4]", otu$Genus)] <-  otu$Order[grep("[4]", otu$Genus )] 
+otu$Genus[grep("[4]", otu$Genus)] <-  otu$Class[grep("[4]", otu$Genus )] 
+otu$Genus[grep("[4]", otu$Genus)] <-  otu$Phyla[grep("[4]", otu$Genus )] 
+otu$Genus[grep("[4]", otu$Genus)] <-  otu$Domain[grep("[4]", otu$Genus )] 
+
+otu$Genus[grep("[5]", otu$Genus)] <-  otu$Family[grep("[5]", otu$Genus )] 
+otu$Genus[grep("[5]", otu$Genus)] <-  otu$Order[grep("[5]", otu$Genus )] 
+otu$Genus[grep("[5]", otu$Genus)] <-  otu$Class[grep("[5]", otu$Genus )] 
+otu$Genus[grep("[5]", otu$Genus)] <-  otu$Phyla[grep("[5]", otu$Genus )] 
+otu$Genus[grep("[5]", otu$Genus)] <-  otu$Domain[grep("[5]", otu$Genus )] 
+
+otu$Genus[grep("[6]", otu$Genus)] <-  otu$Family[grep("[6]", otu$Genus )] 
+
+otu$Genus[grep("[8]", otu$Genus)] <-  otu$Order[grep("[8]", otu$Genus )] 
+otu$Genus[grep("[8]", otu$Genus)] <-  otu$Class[grep("[8]", otu$Genus )]
+
+otu$Genus[grep("[9]", otu$Genus)] <-  otu$Order[grep("[9]", otu$Genus )] 
+
+
+# swap "o__Absconditabacteriales_(SR1)" for "g__Absconditicoccus"]
+#otu$Genus <- sub("\\o__Absconditabacteriales_\\(SR1\\)", "o__Absconditabacteriales",  otu$Genus )
+
+# swap "g__Clostridium_sensu_stricto_13"for "g__Clostridium" 
+#otu$Genus <- sub("g__Clostridium_sensu_stricto_13", "g__Clostridium" ,  otu$Genus , ignore.case = TRUE)
+
+
+# candidatus, because that just means it hasn't been cultured
+#otu$Genus<- gsub('g__Candidatus_', 'g__', otu$Genus )
+
+#change Armatimonadota to  "g__Armatimonas
+#otu$Genus<- gsub('g__Armatimonadales', 'g__Armatimonas', otu$Genus )
+
+## change g__Altererythrobacter to g__Altererythrobacter_D" 
+#otu$Genus <- gsub('g__Altererythrobacter', 'g__Altererythrobacter_D', otu$Genus )
+
+# for the groups with genusus that are just number use higher taxonomic classification
+#otu$Genus[grepl('g__0', otu$Genus )] <- otu$Class[grepl('g__0', otu$Genus)]
+
+# for the groups with uncultured as genus  use higher taxonomic classification
+#otu$Genus[grepl('g__un', otu$Genus )] <- otu$Family[grepl('g__un', otu$Genus)]
+#otu$Genus[grepl('f__un', otu$Genus )] <- otu$Order[grepl('f__un', otu$Genus)]
+#otu$Genus[grepl('o__un', otu$Genus )] <- otu$Class[grepl('o__un', otu$Genus)]
+
+# for the groups with subgroup as genus  use higher taxonomic classification
+#otu$Genus[grepl('Subgroup', otu$Genus )] <- otu$Family[grepl('Subgroup', otu$Genus)]
+#otu$Genus[grepl('f__Sub', otu$Genus )] <- otu$Order[grepl('f__Sub', otu$Genus)]
+#otu$Genus[grepl('o__Sub', otu$Genus )] <- otu$Class[grepl('o__Sub', otu$Genus)]
+
+# rename rhizobium group as such
+#otu$Genus <- gsub('g__Allorhizobium-Neorhizobium-Pararhizobium-Rhizobium' , 'g__Rhizobium', otu$Genus)
+
+# rename burkholderia group as such
+#otu$Genus <- gsub( 'g__Burkholderia-Caballeronia-Paraburkholderia' , 'g__Burkholderia', otu$Genus)
+
+# replace Acidibacter with the order
+#otu$Genus <- gsub('g__Acidibacter',  'o__Gammaproteobacteria_Incertae_Sedis' , otu$Genus)
+
+# replace "g__Absconditabacteriales_(SR1)") with the order level
+#otu$Genus[grepl('g__Abscond', otu$Genus )] <- otu$Order[grepl('Abscond', otu$Genus)]
+
+################### aggregate by genus  #############
+
+############ edit label in my data set so they match the df
+###### exploration
+mynames[grepl("g__", mynames)]
+length(mynames[grepl("g__", mynames)])
+# 59 genus
+mynames[grepl("f__", mynames)]
+length(mynames[grepl("f__", mynames)])
+#76 families
+mynames[grepl("o__", mynames)]
+length(mynames[grepl("o__", mynames)])
+#33 orders
+mynames[grepl("c__", mynames)]
+length(mynames[grepl("c__", mynames)])
+# 20 classes 
+mynames[grepl("p__", mynames)]
+length(mynames[grepl("p__", mynames)])
+# 11 phyla
+
+
+### make a smaller tree for my data
+
+
+
+#shorten phylogeny to match what is in our data frame
+asvs_remove<-setdiff(tree$tip.label, otu$Genus) #asvs we don't want
+tree.short<-drop.tip(tree, asvs_remove,  collapse.singles = TRUE,) # remove asvs we don't need
+length(tree.short$tip.label)
+####### node labels
+# add names of families
+# grab names from map file
+tree.label<-tree.short
+(tree.label$node.label)
+head(map$V1)
+# remove the G0 ones
+m<-map$V1[grepl("N", map$V1)]
+map.short<-filter(map, map$V1 %in% m)
+head(map.short)
+
+# find nodes that match my data frame
+x<-tree.label$node.label
+df<-data.frame(x)
+k<-intersect(df$x, map.short$V1)
+
+#grab names
+df1<-filter(map.short, V1 %in% k)
+df1$V2
+k
+#df<-left_join(df, df1)
+for (i in seq_along(k)) {
+tree.label$node.label<-sub(k[i], df1$V2[i], tree.label$node.label)
+}
+tree.label$node.label
+
+#### add names of orders
+map = read.table("order.map")
+# remove the G0 ones
+#map
+m<-map$V1[grepl("N", map$V1)]
+map.short<-filter(map, map$V1 %in% m)
+#dim(map.short)
+# find nodes that match my data frame
+x<-tree.label$node.label
+df<-data.frame(x)
+k<-intersect(df$x, map.short$V1)
+k
+#grab names
+df1<-filter(map.short, V1 %in% k)
+df1$V2
+#k
+#df<-left_join(df, df1)
+for (i in seq_along(k)) {
+  tree.label$node.label<-sub(k[i], df1$V2[i], tree.label$node.label)
+}
+tree.label$node.label
+
+#### add names of class
+map = read.table("class.map")
+# remove the G0 ones
+#map
+m<-map$V1[grepl("N", map$V1)]
+map.short<-filter(map, map$V1 %in% m)
+#dim(map.short)
+
+# find nodes that match my data frame
+x<-tree.label$node.label
+df<-data.frame(x)
+k<-intersect(map.short$V1,df$x)
+k
+#grab names
+df1<-filter(map.short, V1 %in% k)
+df1$V2
+#k
+#df<-left_join(df, df1)
+for (i in seq_along(k)) {
+  tree.label$node.label<-sub(k[i], df1$V2[i], tree.label$node.label)
+  
+}
+tree.label$node.label
+
+#### add names of phyla
+map = read.table("phylum.map")
+# remove the G0 ones
+#map
+m<-map$V1[grepl("N", map$V1)]
+map.short<-filter(map, map$V1 %in% m)
+#dim(map.short)
+
+# find nodes that match my data frame
+x<-tree.label$node.label
+df<-data.frame(x)
+k<-intersect(map.short$V1,df$x)
+k
+#grab names
+df1<-filter(map.short, V1 %in% k)
+df1$V2
+#k
+#df<-left_join(df, df1)
+for (i in seq_along(k)) {
+  tree.label$node.label<-sub(k[i], df1$V2[i], tree.label$node.label)
+  
+}
+tree.label$node.label
+
+
+###### this didn't add all the names, but added some
+tree.label$node.label<-sub("N14", "Bacteria", tree.label$node.label)
+tree.label$node.label <- sub ("N1800", 	"Solirubrobacterales", tree.label$node.label)
+tree.label$node.label <- gsub ("N3651", "Geodermatophilaceae", tree.label$node.label)
+tree.label$node.label <- gsub ("N924", "Actinomycetota", tree.label$node.label)
+tree.label$node.label <- gsub( "N3653", "Pseudonocardiaceae",  tree.label$node.label)
+tree.label$node.label <- gsub( "N1301", "Armatimonadota",  tree.label$node.label)
+tree.label$node.label <- gsub("N321", "Bacillota", tree.label$node.label)
+tree.label$node.label <- gsub("N39", "Gram postive", tree.label$node.label)
+tree.label$node.label <- gsub("N234", "Gram negative", tree.label$node.label)
+tree.label$node.label <- gsub("N4739", "Actinomycetaceae", tree.label$node.label)
+tree.label$node.label <- gsub("N2980", "Actinomycetia" , tree.label$node.label)
+tree.label$node.label <- gsub("N4368", "Micrococcaceae", tree.label$node.label)
+tree.label$node.label <- gsub("N1390",  "Pseudomonadota" , tree.label$node.label)
+tree.label$node.label <- gsub("N2203" , "Betaproteobacteria", tree.label$node.label)
+tree.label$node.label <- gsub("N3518", "Burkholderiales" , tree.label$node.label)
+tree.label$node.label <- gsub("N8500", "Comamonadaceae", tree.label$node.label)
+tree.label$node.label <- gsub("N3889", "Coxiellaceae", tree.label$node.label)
+tree.label$node.label <- gsub("N2521", "Gammaproteobacteria", tree.label$node.label)
+tree.label$node.label <- gsub("N5794", "Xanthomonadaceae", tree.label$node.label)
+tree.label$node.label <- gsub("N4999", "superorder1", tree.label$node.label)
+tree.label$node.label <- gsub("N3180", "superorder2", tree.label$node.label)
+tree.label$node.label <- gsub("N7080", "subfamily1", tree.label$node.label)
+tree.label$node.label <- gsub("N6230", "subfamily2", tree.label$node.label)
+
+
+tree.label$node.label[grepl( "N31", tree.label$node.label)]
+
+windows(10,10)
+plot(tree.label, no.margin=TRUE,  cex = .5, show.node.label = TRUE)
+nodelabels()
+dev.off()
+length(tree.label$tip.label)
+
+tree.label$node.label
+
+
+############## tips to add################
+
+## add families
+#mynames[grepl("f__", mynames)]
+#            "f__Anaerolineaceae"            "f__Ardenticatenaceae"         
+#[4] "f__Azospirillaceae"            "f__Bacillaceae"                "f__Bdellovibrionaceae"        
+#[7] "f__Beijerinckiaceae"           "f__Blastocatellaceae"          "f__Burkholderiaceae"          
+#[10] "f__Caldilineaceae"             "f__Caulobacteraceae"           "f__Chitinophagaceae"          
+#[13] "f__Chloroflexaceae"            "f__Chthoniobacteraceae"        "f__Clostridiaceae"            
+#[16] "f__Comamonadaceae"             "f__Devosiaceae"                "f__Diplorickettsiaceae"       
+#[19] "f__Enterobacteriaceae"         "f__Erwiniaceae"                "f__Gemmataceae"               
+#[22] "f__Gemmatimonadaceae"          "f__Geobacteraceae"             "f__Ilumatobacteraceae"        
+#[25] "f__Intrasporangiaceae"         "f__Isosphaeraceae"             "f__Legionellaceae"            
+#[28] "f__Longimicrobiaceae"          "f__Methylacidiphilaceae"       "f__Methyloligellaceae"        
+#[31] "f__Microbacteriaceae"          "f__Micrococcaceae"             "f__Micromonosporaceae"        
+#[34] "f__Micropepsaceae"             "f__Microscillaceae"            "f__Moraxellaceae"             
+#[37] "f__Myxococcaceae"              "f__Nitrosomonadaceae"          "f__Nitrososphaeraceae"        
+#[40] "f__Nocardioidaceae"            "f__Opitutaceae"                "f__Oxalobacteraceae"          
+#[43] "f__Parachlamydiaceae"          "f__Pedosphaeraceae"            "f__Phormidiaceae"             
+#[46] "f__Phycisphaeraceae"           "f__Pirellulaceae"              "f__Planococcaceae"            
+#[49] "f__Pyrinomonadaceae"           "f__Reyranellaceae"             "f__Rhizobiaceae"              
+#[52] "f__Rhizobiales_Incertae_Sedis" "f__Rhodanobacteraceae"         "f__Rhodobacteraceae"          
+#[55] "f__Rhodospirillaceae"          "f__Rhodothermaceae"            "f__Rickettsiaceae"            
+#[58] "f__Roseiflexaceae"             "f__Rubinisphaeraceae"          "f__Saccharimonadaceae"        
+#[61] "f__Sandaracinaceae"            "f__Saprospiraceae"             "f__Silvanigrellaceae"         
+#[64] "f__Solirubrobacteraceae"       "f__Sphingomonadaceae"          "f__Sporichthyaceae"           
+#[67] "f__Steroidobacteraceae"        "f__Tepidisphaeraceae"          "f__Thermoanaerobaculaceae"    
+#[70] "f__Vampirovibrionaceae"        "f__Vermiphilaceae"             "f__Verrucomicrobiaceae"       
+#[73] "f__Vicinamibacteraceae"        "f__Xanthobacteraceae"          "f__Xanthomonadaceae"          
+#[76] "f__Yersiniaceae"        
+
+
+# Aurantisolimonas, in 	Family:	Chitinophagaceae
+# g__Edaphobaculum under family 	Chitinophagaceae
+# Heliimonas genus under family Chitinophagaceae
+# genus "g__Pseudoflavitalea" to family Chitinophagaceae
+# Taibaiella to Chitinophagaceae
+k# g__Babeliales")    under phyla = depentiae 
+
+# Genus == "g__Brevifollis" under family   f__Verrucomicrobiaceae
+# Genus == "g__Chthonomonadales")  under family  Geobacteraceae
+# Genus == "g__Captivus"  under family Paracaedibacteraceae
+# Enhydrobacter under Moraxellaceae
+# Halocella genus under family 	Halanaerobiaceae
+# Genus "g__Ovatusbacter" under Family o__Gammaproteobacteria
+# add genus Obscuribacteraceae under c__Vampirivibrionia o__Obscuribacterales f__Obscuribacteraceae
+# genus Rhabdanaerobium under 	Eubacteriaceae
+# genus Roseisolibacter under Gemmatimonadaceae
+# genus Peredibacter to family  Bacteriovoracaceae
+# genus Paeniclostridium to family 	Clostridiaceae
+# Pedomicrobium to 	Hyphomicrobiaceae
+# genus  Phaselicystis which is in  family   Phaselicystidaceae, order Polyangiales
+# genus  Tellurimicrobium in family Blastocatellaceae;
+
+
+
+##################################### HEATMAP by phylogeny  ###############
+
+otu<-select(otu, -Phyla, -Domain, -Class, -Order, -Family, -Species, -OTU)
+n<-c("Genus", "Root4", "Nodule4", "Root1",  "Nodule1",  "Root2",  "Nodule2", "Root3", "Nodule3", "Rhizosphere4", "Rhizosphere1", "Rhizosphere2", "Rhizosphere3") 
+colnames(otu)<-n
+head(otu)
+
+## filter for taxa that were not present in the plant.
+#otu1<-filter(otu, Root4 > 0 | Nodule4 > 0 | Root1 > 0 | Nodule1 > 0 | Root2 > 0 | Nodule2 > 0 | Root3 > 0 | Nodule3 > 0  )
+
+tree.short
+head(otu)
+
+#get the otus that are in the the tree.short
+otu<-filter(otu, Genus %in% tree.short$tip.label)
+
+# grab correct order 
+target<-tree.short$tip.label
+otu<-otu[match(target, otu$Genus),]
+dim(otu)
+# rm Genus column from df
+n <- otu$Genus
+otu<-subset(otu, select = c( -Genus))
+row.names(otu) <- n
+
+
+############### make matrix
+m<-as.matrix(otu)
+row.names(m)
+m<-structure(m)
+# summary stats
+max(m)
+min(m)
+mean(m)
+summary(m)
+# i think this matrix needs a log transform
+m<-log10(m)
+m[m== "-Inf"] <- 0
+m
+summary(m)
+#make a dendrogram              
+col_dendro = as.dendrogram(hclust(dist(t(m))))
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/heatmap1.svg", width = 10, height=10 )
+# And make the plot with phylogeny
+windows(16,12)
+heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
+dev.off()
+# change order
+tr<-read.tree(text =  "((Nodule1:3,Nodule2:3, Nodule3:3,Nodule4:3):2, (Root1:3,Root2:3,Root3:3,Root4:3):2, (Rhizosphere1:3, Rhizosphere2:3,Rhizosphere3:3, Rhizosphere4:3):2);")
+heatmap.phylo(x = m, Rowp = tree.short, Colp = tr)
+dev.off
+# no phylogeny
+#make a dendrogram              
+row_dendro = as.dendrogram(hclust(dist((m))))
+windows(10,10)
+heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = tr)
+dev.off
