@@ -111,8 +111,8 @@ df<-df%>%mutate(cells_active_per_ul= Percent_Boncat_pos*cells_per_ul,
 
 ### recoding some names to be easier to understand
 df$Fraction<-factor(df$Fraction, levels = c("Bulk", "Rhizo", "Endo", "Nod"))
-df<-df%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
-df$Compartment<-factor(df$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
+df<-df%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
+df$Compartment<-factor(df$Compartment, levels = c("Bulk Soil", "Rhizosphere", "Roots", "Nodule"))
 df<-df%>% mutate(Plant=recode(Plant, 'A17'='Medicago', 'CLO'='Clover','PEA'='Pea', .default='soil'))
 df$Fraction
 df$Compartment
@@ -258,7 +258,7 @@ anova(m1)
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/data")
 
 #all plants
-svg(file="figures/allfractions_percentwihtpea.svg",width = 13, height=5 )
+svg(file="figures/allfractions_percentwihtpea.svg",width =6, height=6 )
 df %>%
   filter(Plant!="soil", Dyes=="BONCAT-SYTO", flowcyto=="Fortessa")%>%
   ggplot( aes(x=Compartment, y=Percent_Boncat_pos)) +
@@ -273,6 +273,26 @@ df %>%
   ylab("Percent Active")
   #ylim(0, 3E8)
 dev.off()
+
+
+#clover
+svg(file="figures/allfractions_percent_clo.svg",width = 5, height=5 )
+df %>%
+  filter(Plant=="Clover", Dyes=="BONCAT-SYTO", flowcyto=="Fortessa")%>%
+  ggplot( aes(x=Compartment, y=Percent_Boncat_pos)) +
+  geom_boxplot(alpha=.7, outlier.shape = NA)+
+  geom_jitter(width = .2)+
+  scale_color_manual(values = mycols[c(1,2,3)])+
+  theme_bw(base_size = 20, )+
+  theme(axis.text.x = element_text(angle=60, hjust=1))+
+  #facet_wrap(~flowcyto)+
+  scale_y_log10()+
+  xlab("compartment")+
+  ylab("Percent BONCAT Active")
+#ylim(0, 3E8)
+dev.off()
+
+df
 
 #---------model for percent active cells ---------
 # our data of boncat activity is a proportion

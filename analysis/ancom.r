@@ -1,14 +1,19 @@
 #Jenn
 # sep 2023
-######################### ANCOM ###############
+
 #library(BiocManager)
 #BiocManager::install("microbiome")
 
 #knitr::opts_chunk$set(message = FALSE, warning = FALSE, comment = NA, 
 #                      fig.width = 6.25, fig.height = 5)
 
+#install.packages("remotes")
+#remotes::install_github("Russel88/MicEco")
+#install.packages("MicEco")
 
 library(ANCOMBC)
+library(MicEco)
+
 library(tidyverse)
 library(microbiome)
 library(DT)
@@ -17,7 +22,7 @@ options(DT.options = list(
                     "$(this.api().table().header()).css({'background-color': 
   '#000', 'color': '#fff'});","}")))
 
-##########example data
+##########example data #######
 
 data(atlas1006, package = "microbiome")
 tse = mia::makeTreeSummarizedExperimentFromPhyloseq(atlas1006)
@@ -228,9 +233,11 @@ print(ps)
 
 
 #####################data frame prep sum and mean ########
+ps1
 
 
-df<-as.data.frame(t(otu_table(ps)))
+
+df<-as.data.frame(t(otu_table(ps1)))
 # BAR CHART with TOP 50 OTUS
 #nodule
 df$nodule.total.sum <-   rowSums(df %>% dplyr::select(contains("N.SYBR"))) %>%   glimpse()
@@ -265,16 +272,20 @@ colnames(df)
 
 
 ########ANCOM #########
+sample_data(ps)
+ps1<-subset_samples(ps, Compartment=="Rhizosphere")
+ps1<-ps_prune(ps1, min.samples = 3, min.reads = 10)
+sample_data(ps1)
 
-ps1<-subset_samples(ps, Compartment =="Rhizosphere", Compartment!="ctl")
-ps1<-prune_taxa(taxa_sums(ps1) > 5, ps1)
 any(taxa_sums(ps1) == 0)
+
 ps1
-#7687  taxa
+#1823 taxa if you remove things that are only present in at least 3 samples and just rhizo
+
+#taxa if you remove things that are only present in 1 sample
 #5995 if you want to rm taxa that are super rare
 sample_data(ps1)
 
-t(otu_table(df))
 ps2 = mia::makeTreeSummarizedExperimentFromPhyloseq(ps1)
 
 
@@ -295,8 +306,9 @@ sample_data(ps)
 # pseq = makePhyloseqFromTreeSummarizedE
 
 tab_lfc = res$lfc
-col_name1 = c("Taxon", "Intercept", "Fraction Total cells - Active ", "Fraction total DNA - Active", "Nodule-bulk soil", "Rhizo-bulksoil", 
-             "root-bulksoil")
+head(tab_lfc)
+#col_name = c("otu", "Intercept", "Fraction Total cells - Active ", "Fraction total DNA - Active", "Nodule-bulk soil", "Rhizo-bulksoil", 
+#             "root-bulksoil")
 
 col_name = c("otu", "Intercept", "Fraction Total cells - Active ", "Fraction total DNA - Active")
 
@@ -321,6 +333,7 @@ colnames(tab_w) = col_name
 tab_w %>% 
   datatable(caption = "Test Statistics from the Primary Result") %>%
   formatRound(col_name[-1], digits = 2)
+tab_w$`Fraction Total cells - Active `
 
 
 tab_p = res$p_val
@@ -328,32 +341,45 @@ colnames(tab_p) = col_name
 tab_p %>% 
   datatable(caption = "P-values from the Primary Result") %>%
   formatRound(col_name[-1], digits = 2)
+head(tab_p)
 
 tab_q = res$q
 colnames(tab_q) = col_name
 tab_q %>% 
   datatable(caption = "Adjusted p-values from the Primary Result") %>%
-  formatRound(col_name[-1], digits = 2)
-
+  formatRound(col_name[-1], digits = 7)
+head(tab_q)
 
 tab_diff = res$diff_abn
 colnames(tab_diff) = col_name
 tab_diff %>% 
   datatable(caption = "Differentially Abundant Taxa from the Primary Result")
+f<-filter(tab_diff, `Fraction Total cells - Active `==TRUE)
 
 #####Format df from ANCOM######
 
 #grab log fold change
-res$lfc
-colnames(tab_lfc) <- c("otu","lfcintercept", "lfc_total_active", "lfc_DNA_active")
-tab_lfc<-tab_lfc %>% select(otu, lfc_total_active)
+
+tab_lfc<-tab_lfc %>% select(otu, `Fraction Total cells - Active `)
+colnames(tab_lfc) <- c("otu", "lfc_total_active")
+head(tab_lfc)
+
+# grab pvalue
+colnames(tab_p)
+tab_p<-tab_p%>% select(otu, `Fraction Total cells - Active ` ) 
+colnames(tab_p) <- c("otu","pvalue_total_active")
+hist(tab_p$pvalue_total_active)
+head(tab_p)
 
 #grab adjusted p value
+colnames(tab_q)
 tab_q<-tab_q%>% select(otu, `Fraction Total cells - Active ` ) 
-colnames(tab_q) <- c("otu","pvalue_total_active")
+colnames(tab_q) <- c("otu","adj_pvalue_total_active")
+hist(tab_q$adj_pvalue_total_active)
 
 #grab TRUe FALSE
-colnames(tab_diff) <- c("otu", "Intercept" ,"diff_total_active" ,"Fraction total DNA - Active")
+tab_diff<-tab_diff%>% select(otu, `Fraction Total cells - Active ` ) 
+colnames(tab_diff) <- c("otu", "diff_total_active" )
 tab_diff<-tab_diff%>% select(c(otu, diff_total_active))
 
 
@@ -362,42 +388,63 @@ tab_diff<-tab_diff%>%filter(diff_total_active=="TRUE")
 dim(tab_diff)
 
 ##otus table
-df  
-colnames(df)
+row.names(df)
 df$otu<-row.names(df)
 
 # taxon table
-taxon<-tax_table(ps)
+taxon<-as.data.frame(tax_table(ps1))
 df<-left_join(df, taxon)
 df
 
 #add ancom values
-df2<-left_join(tab_diff, df) %>% select(-contains("R."))%>% 
+head(df)
+df1<- df %>% select(-contains("R."))%>% 
   select(-contains("N."))%>% 
   select(-contains("E.")) %>%
   select(-contains("DNA_")) %>%
-  left_join(., tab_lfc) %>% 
-  left_join(., tab_q)
 
-dim(df2)
+  left_join(., tab_p) %>%
+  left_join(., tab_lfc) 
 
+head(df1)
+
+df1$pvalue_total_active
+
+
+
+df_abund <- left_join(tab_diff, df2)
 # negative lower in total than active 
 # that confusing 
 # multiplyu by -1 to make negative is lower in total
 df2<-mutate(df2, lfc_total_active=lfc_total_active*-1)
 
 
+# lfc verse the pvalue
+ggplot(df1, aes(x=lfc_total_active , y=pvalue_total_active)) + 
+  geom_jitter()+ #(stat="identity", position="identity") +
+  #scale_fill_manual(values=c("#ab8af2" ,"#4c4b4d"))+
+  #xlab("differentially abundant otus")+
+  theme_bw()
+
+colnames(df2)
+df2$diff_total_active
+# cut offs
+df2<-df1 %>% filter(pvalue_total_active<.01, abs(lfc_total_active)>2)
+
+# 146 differentially abundant taxa rhizosphere. 
+
+df2
+
 #plot 
 #filter(df2,# abs(lfc_total_active)>3) 
 ggplot(df2, aes(x=otu , y=lfc_total_active)) + 
   geom_bar(stat="identity", position="identity") +
-  #scale_fill_manual(values=c("#ab8af2" ,"#4c4b4d"))+
-  xlab("differentially abundant otus")+
-  theme_bw()+
-  coord_flip()
+    #scale_fill_manual(values=c("#ab8af2" ,"#4c4b4d"))+
+  theme_bw()
+# cute
 
-filter(df2, abs(lfc_total_active)>2) 
-filter(df2, df2$rhizo.total.sum>1)
+#filter(df2, abs(lfc_total_active)>2) 
+#filter(df2, df2$rhizo.total.sum>1)
 
 
 filter(df2, df2$rhizo.total.mean>1) %>% filter(.,rhizo.bcat.mean>1)  %>%
@@ -480,39 +527,41 @@ taxon$Species
 df2
 #shorten phylogeny to match what is in our data frame
 asvs_remove<-setdiff(tree$tip.label, df2$otu) #asvs we don't want
-tree.short<-drop.tip(tree, asvs_remove,  collapse.singles = TRUE,) # remove asvs we don't need
+tree<-ape::drop.tip(tree, asvs_remove,  collapse.singles = TRUE,) # remove asvs we don't need
 length(tree.short$tip.label)
-
-
+tree
+tree_seq_nwk
 # grab correct order 
 target<-tree.short$tip.label
 df2<-df2[match(target, df2$otu),]
 dim(df2)
 
-
+plot(tree)
 ## load `tree_nwk`, `df_info`, `df_alleles`, and `df_bar_data` from 'TDbook'
 
 colnames(df2)
 ## visualize the tree 
-dim(tree.short)
+
 length(tree.short$tip.label)
 p <- ggtree(tree.short) 
-
+p
 ## attach the sampling information data set 
 ## and add symbols colored by location
 #p <- p %<+% df2 + geom_tippoint(aes(color=Phyla))
 
 ## visualize SNP and Trait data using dot and bar charts,
 ## and align them based on tree structure
-grDevices::windows(14,10)
+#grDevices::windows(14,10)
+tree.short
+head(df2)
 
 p + geom_facet(panel = "Log 10 abundance in Active", data = df2, geom = geom_col, 
-                aes(x =log10(rhizo.bcat.mean)), orientation = 'y', width = 1)+
-    geom_facet(panel = "Phyla", data = df2, geom = geom_text, size= 3 ,
-                           aes(x=0,label=ifelse(df2$first==1, unique(df2$Phyla), "")))+
-    theme(legend.position="none")
+                aes(x=lfc_total_active, orientation = y, width = 1))
+   # geom_facet(panel = "Phyla", data = df2, geom = geom_text, size= 3 ,
+    #                       aes(x=0,label=ifelse(df2$first==1, unique(df2$Phyla), "")))+
+    #theme(legend.position="none")
     
-df2  
+
 dev.off()
   # add node points
  # geom_nodelab(node='internal', size=2, color="green", nudge_x = 1)+

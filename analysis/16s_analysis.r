@@ -33,12 +33,16 @@ library(Heatplus)
 library(viridis)
 library(hrbrthemes)
 library(ade4)
-#library (gplots)
 library(ape)
 library(readxl)
 #install.packages(ggtree)
 #install.packages("TreeTools")
 library('TreeTools')
+
+library(NatParksPalettes)
+library(MicEco)
+library(ggtree)
+
 
 #-----load functions-------------#
 
@@ -78,27 +82,38 @@ heatmap.phylo <- function(x, Rowp, Colp, ...) {
 
 ### load colors 
 # colors :)
-gold <- "#FFB000"
-lightgold <- "#fffaa2"
-purple <- "#785EF0"
-blue <- "#739AFF"
-pink <- "#DC267F"
-lightpink <- "#ffc6e5"
-lightpurple <- "#8563C1"
 
-# poster colors 
-#navyblue<-"#161D64"
-#dustypurple<-"#A79EB6"
+library(NatParksPalettes)
+names(NatParksPalettes)
 
-#purple<-"#543A81"
-#lightblue <-"#739AFF"
-#blue<-"#5560A7"
-#pink <- "#E48888"
-#lightpink<- "#FEDDD2"
-#gold<- "#AE330D"
-#lightgold<-"#E48888"
+natparks.pals(name="Arches",n=8,type="discrete")
+natparks.pals(name="Arches2",n=4,type="discrete")
 
+#get colors from national park pal
 
+#DNA bulk soil
+"#b46db3"
+#DNA rhizo 
+"#3a1f46"
+
+#total rhizo
+"#8fcafd"
+#total root
+"#4499f5"
+#total nodule
+"#0c62af"
+
+#active rhizo
+"#f0ac7d"
+#active root
+"#cd622e"
+#active nodule
+"#993203"
+
+mycols6<-c("#8fcafd",  "#4499f5" ,  "#0c62af" ,   "#f0ac7d", "#cd622e" , "#993203")
+
+mycols8 <- c("#b46db3", "#3a1f46", "#8fcafd",  "#4499f5" ,  "#0c62af" ,   "#f0ac7d", "#cd622e" , "#993203")
+  
 
 ######-------------import Asvs data -----------------##############
 ## Set the working directory; ###
@@ -325,21 +340,28 @@ rich<- rich %>%  filter(Plant!="NOPLANT", Fraction!="Inactive")
 rich$compartment_BCAT <-factor(rich$compartment_BCAT, levels = c("Bulk_SoilTotal_DNA", "RhizosphereTotal_DNA", "RhizosphereTotal_Cells", "RhizosphereBONCAT_Active",
                                                                  "RootsTotal_Cells"   ,  "RootsBONCAT_Active" , "NoduleTotal_Cells" ,  "NoduleBONCAT_Active" ))          
 
+rich$Fraction <-factor(rich$Fraction, levels = c("Total_DNA", "Total_Cells", "BONCAT_Active"))
+
+
+
+
+
 # total + active number otus
-svg(file="figures/16s/observed_divserity.svg",width = 6, height=7 )
+svg(file="figures/16s/shannon_divserity.svg",width = 10, height=6 )
 windows(width = 6, height=7)
 rich %>%
-  filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
-  ggplot(aes(x=compartment_BCAT, y=Observed, fill = Compartment, col= Compartment))+
+  ggplot(aes(x=Compartment, y=Shannon,  col= Fraction))+
   geom_boxplot() +
-  scale_colour_manual(values = c("black", "black", gold, pink))+
-  scale_fill_manual( values = c(blue, purple, lightgold, lightpink))+
+  scale_color_manual(values=mycols8[c(4,7,1)]) +
   geom_jitter(width = .1, size=1 )+
   theme_classic(base_size = 18)+
   theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
-        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14),
-        legend.position =  c(0.8, 0.8))+
-  ylab("Number of ASVS")+
+        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14),
+        axis.text.y = element_text(size = 14),
+        legend.position = "none")+
+  facet_wrap(~Fraction, scales = "free_x")+
+  scale_x_discrete(drop = TRUE) +
+  ylab("Shannon Diversity")+
   xlab("Compartment")
 dev.off()
 
@@ -1220,13 +1242,19 @@ print(tse)
 
 
 #########################VENN DIAGRAM are most taxa generalists or specialists#################################
+### don't include taxa that are only in 1 samples and less than 50 reads total
+sample_data(ps)
+# at least in 2 samples min reads is 10
 df<-subset_samples(ps, Fraction=="BONCAT_Active")
+df<-ps_prune(df, min.samples = 2, min.reads = 10)
+df
+# 852 taxa
+
 df<-prune_taxa(taxa_sums(df) > 0, df)
 # subset for active
-df<-prune_taxa(taxa_sums(df) > 5, df)
+#df<-prune_taxa(taxa_sums(df) > 5, df)
 any(taxa_sums(df) == 0)
 
-# don't include taxa that are super rare less then 5 reads
 taxon<-tax_table(df)
 df<-as.data.frame((otu_table(df)))
 
@@ -1275,11 +1303,11 @@ df_sums<-mutate(df_sums, value = value)
 
 ################ df wrangling for venndriagram
 df[df>1] <- 1
-
+head(df)
 nodule<-rownames(df[df$nodule==1,])
 roots<-rownames(df[df$roots==1,])
 rhizo<-rownames(df[df$rhizo==1,])
-
+df
 x <- list(
   nodule = nodule, 
   roots = roots, 
@@ -1291,13 +1319,19 @@ x
 #if (!require(devtools)) install.packages("devtools")
 #devtools::install_github("yanlinlin82/ggvenn")
 library(ggvenn)
+# otu level
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s/venndiagram")
+svg(file="OTU_level_active_venn.svg",width = 6, height=6 )
+
+
 ggvenn(
   x, 
-  fill_color = c(pink, "#EFC000FF", purple),
-  stroke_size = 0.5, set_name_size = 5
+  fill_color = mycols6[c(4,5,6)],
+  stroke_size = 2, set_name_size = 9, text_size = 6, digits = 1, fill_alpha=.8
   #auto_scale = TRUE
-)
-
+ ) +
+  ggtitle("Active Otus")
+dev.off()
 ####genus level??
 
 
@@ -1305,6 +1339,10 @@ ggvenn(
 
 ###########-------- total cells 
 df<-subset_samples(ps, Fraction=="Total_Cells")
+# at least in 2 samples min reads is 10
+df<-ps_prune(df, min.samples = 2, min.reads = 10)
+df
+# 1342 taxa
 df<-prune_taxa(taxa_sums(df) > 0, df)
 # subset for active
 #df<-prune_taxa(taxa_sums(df) > 5, df)
@@ -1377,12 +1415,17 @@ x
 #if (!require(devtools)) install.packages("devtools")
 #devtools::install_github("yanlinlin82/ggvenn")
 library(ggvenn)
+
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s/venndiagram")
+svg(file="OTU_level_total_venn.svg",width = 6, height=6 )
 ggvenn(
   x, 
-  fill_color = c(pink, "#EFC000FF", purple),
-  stroke_size = 0.5, set_name_size = 5
-)
-
+  fill_color = mycols6[c(1,2,3)],
+  stroke_size = 2, set_name_size = 9, text_size = 6, digits = 1, fill_alpha=.8
+  #auto_scale = TRUE
+) +
+  ggtitle("Total Viable Otus")
+dev.off()
 
 ####Bar chart - are taxa that are generalist realy abundant?
 
@@ -2094,7 +2137,7 @@ legend("bottom",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR contr
 
 dev.off()
 
-#####-------PHYLOGENIC SIGNAL STARTS HERE ---------##########
+#####PHYLOGENIC SIGNAL STARTS HERE#########
 ####import feature table
 
 ######import asvs
@@ -2122,31 +2165,255 @@ metadat<- metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rh
   mutate(compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction)) %>%
   glimpse()
 
-##------filter for active taxa -------#
+### put into phyloseq
+##------make phyloseq object with rarefied data -------#
 
+asvs.phyloseq<- (asvs.t)
+taxon<-taxon[,1:7]
+metadat<-as.matrix(metadat)
+y<-colnames(asvs.filtered)
+rownames(metadat) <- y
+metadat<-as.data.frame(metadat)
+
+#import it phyloseq
+Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
+Workshop_metadat <- sample_data(metadat)
+Workshop_taxo <- tax_table(as.matrix(taxon))
+ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
+
+#test it worked
+#sample_names(ps)
+print(ps)
+# 13766 taxa taxa
+
+
+
+##------filter for active taxa -------#
 glimpse(asvs.t)
 dim(asvs.t)
-metadat2<-metadat[which(metadat$Fraction=="BONCAT_Active"),]
-asvs<-asvs.t[which(metadat$Fraction=="BONCAT_Active"),] 
-dim(asvs)
-
-# 13766 taxa
-
-
-# remove chloroplast DNA # do this later
-ps<-subset_taxa(ps, Class!=" Chloroplast")
-ps<-subset_taxa(ps, Genus!=" Mitochondria")
-ps<-subset_taxa(ps, Genus!=" Chloroplast")
-# get rid of taxa that aren; in any samples
-ps<-prune_taxa(taxa_sums(ps) > 0, ps)
-any(taxa_sums(ps) == 0)
-ps
-# 12855 taxa
-
-#asvs.clean<-as.data.frame(t(as.data.frame(otu_table(ps))))
+ps1<-subset_samples(ps, Fraction=="BONCAT_Active")
+ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
+ps1
+# 3319 taxa 
+# at least in 2 samples min reads is 10
+ps1<-ps_prune(ps1, min.samples = 2, min.reads = 10)
+ps1
+any(taxa_sums(ps1) == 0)
+# 850 taxa
+df<-as.data.frame(t(as.data.frame(otu_table(ps1))))
 taxon<-as.data.frame(tax_table(ps))
 
-### Import Data ###
+## summarise replicates
+head(df)
+#rhizo
+df$rhizo <-   rowMeans(df %>% dplyr::select(contains("R.POS"))) %>%   glimpse()
+#nodule
+df$nodule <-   rowMeans(df %>% dplyr::select(contains("N.POS"))) %>%   glimpse()
+# roots
+df$root <-   rowMeans(df %>% dplyr::select(contains("E.POS"))) %>%   glimpse()
+colnames(df)
+df<-df%>% select(c(nodule, root, rhizo)) %>% mutate(otu= row.names(df))
+dim(df)
+
+#### keep top 50 OTUS from each environment
+head(df)
+nod<-df[order(df$nodule, decreasing= TRUE),]
+nod<-row.names(nod[1:50,])
+
+head(df)
+root<-df[order(df$root, decreasing= TRUE),]
+root<-row.names(root[1:50,])
+
+head(df)
+rhizo<-df[order(df$rhizo, decreasing= TRUE),]
+rhizo<-row.names(rhizo[1:50,])
+
+otus<- unique(c(nod, root, rhizo))
+length(otus)
+# grab otus
+df<-df[match(otus, df$otu),]
+df<-df%>% filter(otu!="Others")
+head(df)
+dim(df)
+
+df<-df[,c(4,3,2,1)]
+# who are the taxa?
+taxon$otu <- row.names(taxon)
+lil_taxon<-left_join(df, taxon)
+head(lil_taxon)
+# make a list of genus
+# if genus is missing replace with higher taxa
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Family[which(lil_taxon$Genus == '')]
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Order[which(lil_taxon$Genus == '')]
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Class[which(lil_taxon$Genus == '')]
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Phyla[which(lil_taxon$Genus == '')]
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Domain[which(lil_taxon$Genus == '')]
+
+lil_taxon$Genus
+##
+lil_taxon$Genus[which(lil_taxon$Genus == ' g__')] <- lil_taxon$Family[which(lil_taxon$Genus == ' g__')]
+lil_taxon$Genus[which(lil_taxon$Genus == ' f__')] <- lil_taxon$Order[which(lil_taxon$Genus == ' f__')]
+lil_taxon$Genus[which(lil_taxon$Genus == ' o__')] <- lil_taxon$Class[which(lil_taxon$Genus == ' o__')]
+
+## also if genus is just number replace with higher taxa
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Family[which(lil_taxon$Genus == '')]
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Order[which(lil_taxon$Genus == '')]
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Class[which(lil_taxon$Genus == '')]
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Phyla[which(lil_taxon$Genus == '')]
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Domain[which(lil_taxon$Genus == '')]
+
+lil_taxon$Genus[grep("017", lil_taxon$Genus )] <- lil_taxon$Family[grep("017", lil_taxon$Genus) ]
+lil_taxon$Genus[grep("21", lil_taxon$Genus )] <- lil_taxon$Family[grep("21", lil_taxon$Genus) ]
+lil_taxon$Genus[grep("14", lil_taxon$Genus )] <- lil_taxon$Order[grep("14", lil_taxon$Genus) ]
+
+lil_taxon$Genus<-paste0(1:length(lil_taxon$Genus), lil_taxon$Genus)
+
+###############Import tree##########
+#tree <- read.tree("2022.10.phylogeny.asv.nwk")
+#tree <- read.tree("2022.10.phylogeny.id.nwk")
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
+tree <- read.tree("trees/SEPPoutput/tree.nwk" )
+tree$tip.label
+taxon$Species
+tree
+# make tree smaller
+asvs_remove<-setdiff(tree$tip.label, df$otu) #asvs we don't want
+tree.short<-ape::drop.tip(tree, asvs_remove,  collapse.singles = TRUE,) # remove asvs we don't need
+tree.short
+
+# grab correct order 
+target<-tree.short$tip.label
+df<-df[match(target, df$otu),]
+dim(df)
+head(df)
+# rm Genus column from df
+df<-subset(df, select = c( -otu))
+head(df)
+
+############### make matrix
+m<- df
+m
+m<-log10(m)
+m[m== "-Inf"] <- 0
+summary(m)
+m[m==0] <- NA
+m
+#m$genus <- lil_taxon$Genus
+m
+
+
+#### make tip labels genus
+tree.short$tip.label <- lil_taxon$Genus
+tree.short
+
+##### otu heatmap  ####  
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s/heatmap")
+#######heat map active top 150 otus
+#m$genus <- lil_taxon$Genus
+#m<-m[,c(4,1,2,3)]
+#m<-m[,c(2,3,4)]
+row.names(m) <- lil_taxon$Genus
+m
+svg(file="OTU_level_active_heatmap.svg",width = 8, height=8 )
+windows(8,8)
+p <- ggtree(tree.short, branch.length = .5) + 
+  #xlim_tree(5) +
+  geom_tiplab(size=3, align=TRUE, linesize=1, offset = 0) + 
+  theme_tree2()
+  #geom_cladelab()+
+  #geom_nodelab( size=2, color="green", nudge_x = 1)+
+ # nodelabels(node=tree.short$edge)
+p
+#p
+gheatmap(p, m, 
+         colnames=FALSE,
+          legend_title="active taxa", offset = .5) +
+  scale_x_ggtree() + 
+  scale_fill_gradient(low="#fffaa2", high = "#bb0000", aesthetics = "fill", na.value = "white",
+                      name="Abundance in Active")+
+  ggtitle("Top 50 ASVS in each compartment")
+ 
+######## otu level heatmap for total ##########
+# filter for active taxa
+sample_data(ps)
+ps1<-subset_samples(ps, Fraction=="Total_Cells")
+ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
+ps1
+# 4187 taxa 
+# at least in 2 samples min reads is 10
+ps1<-ps_prune(ps1, min.samples = 2, min.reads = 10)
+ps1
+any(taxa_sums(ps1) == 0)
+# 1344 taxa
+df<-as.data.frame(t(as.data.frame(otu_table(ps1))))
+taxon<-as.data.frame(tax_table(ps))
+
+## summarise replicates
+head(df)
+#rhizo
+df$rhizo <-   rowMeans(df %>% dplyr::select(contains("R.SYB"))) %>%   glimpse()
+#nodule
+df$nodule <-   rowMeans(df %>% dplyr::select(contains("N.SYB"))) %>%   glimpse()
+# roots
+df$root <-   rowMeans(df %>% dplyr::select(contains("E.SYB"))) %>%   glimpse()
+colnames(df)
+df<-df%>% select(c(nodule, root, rhizo)) %>% mutate(otu= row.names(df))
+dim(df)
+head(df)
+# maybe keep taxa that are in the top 10% ??
+
+
+#### keep top 50 OTUS from each environment
+head(df)
+nod<-df[order(df$nodule, decreasing= TRUE),]
+nod[1:50,] # only 48 are positive 
+nod<-row.names(nod[1:50,])
+
+head(df)
+root<-df[order(df$root, decreasing= TRUE),]
+root[1:50,]
+root<-row.names(root[1:50,])
+
+head(df)
+rhizo<-df[order(df$rhizo, decreasing= TRUE),]
+rhizo<-row.names(rhizo[1:50,])
+
+otus<- unique(c(nod, root, rhizo))
+length(otus)
+# grab otus
+df<-df[match(otus, df$otu),]
+df<-df%>% filter(otu!="Others")
+head(df)
+dim(df)
+
+df<-df[,c(4,3,2,1)]
+
+#
+# who are the taxa?
+taxon$otu <- row.names(taxon)
+lil_taxon<-left_join(df, taxon)
+head(lil_taxon)
+# make a list of genus
+# if genus is missing replace with higher taxa
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Family[which(lil_taxon$Genus == '')]
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Order[which(lil_taxon$Genus == '')]
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Class[which(lil_taxon$Genus == '')]
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Phyla[which(lil_taxon$Genus == '')]
+lil_taxon$Genus[which(lil_taxon$Genus == '')] <- lil_taxon$Domain[which(lil_taxon$Genus == '')]
+
+lil_taxon$Genus
+##
+lil_taxon$Genus[which(lil_taxon$Genus == ' g__')] <- lil_taxon$Family[which(lil_taxon$Genus == ' g__')]
+lil_taxon$Genus[which(lil_taxon$Genus == ' f__')] <- lil_taxon$Order[which(lil_taxon$Genus == ' f__')]
+lil_taxon$Genus[which(lil_taxon$Genus == ' o__')] <- lil_taxon$Class[which(lil_taxon$Genus == ' o__')]
+
+## also if genus is just number replace with higher taxa
+lil_taxon$Genus[grep("017", lil_taxon$Genus )] <- lil_taxon$Family[grep("017", lil_taxon$Genus) ]
+lil_taxon$Genus[grep("21", lil_taxon$Genus )] <- lil_taxon$Family[grep("21", lil_taxon$Genus) ]
+lil_taxon$Genus[grep("14", lil_taxon$Genus )] <- lil_taxon$Order[grep("14", lil_taxon$Genus) ]
+lil_taxon$Genus<-paste0(1:length(lil_taxon$Genus), lil_taxon$Genus)
+
+## Import tree ##
 #tree <- read.tree("2022.10.phylogeny.asv.nwk")
 #tree <- read.tree("2022.10.phylogeny.id.nwk")
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
@@ -2154,98 +2421,62 @@ tree <- read.tree("trees/SEPPoutput/tree.nwk" )
 tree$tip.label
 taxon$Species
 
-install.packages("rjson")
-library("rjson")
-placements<-fromJSON(file="trees/SEPPoutput/placements.json")
-df<-as.data.frame(placements)\
-
-
-##################################### HEATMAP by phylogeny  ###############
-
-otu<-select(otu, -Phyla, -Domain, -Class, -Order, -Family, -Species, -OTU)
-n<-c("Genus", "Root4", "Nodule4", "Root1",  "Nodule1",  "Root2",  "Nodule2", "Root3", "Nodule3", "Rhizosphere4", "Rhizosphere1", "Rhizosphere2", "Rhizosphere3") 
-colnames(otu)<-n
-head(otu)
-
-## filter for taxa that were not present in the plant.
-#otu1<-filter(otu, Root4 > 0 | Nodule4 > 0 | Root1 > 0 | Nodule1 > 0 | Root2 > 0 | Nodule2 > 0 | Root3 > 0 | Nodule3 > 0  )
-
+# make tree smaller
+asvs_remove<-setdiff(tree$tip.label, df$otu) #asvs we don't want
+tree.short<-ape::drop.tip(tree, asvs_remove,  collapse.singles = TRUE,) # remove asvs we don't need
 tree.short
-head(otu)
-
-#get the otus that are in the the tree.short
-otu<-filter(otu, Genus %in% tree.short$tip.label)
 
 # grab correct order 
 target<-tree.short$tip.label
-otu<-otu[match(target, otu$Genus),]
-dim(otu)
+df<-df[match(target, df$otu),]
+dim(df)
+head(df)
+
 # rm Genus column from df
-n <- otu$Genus
-otu<-subset(otu, select = c( -Genus))
-row.names(otu) <- n
+df<-subset(df, select = c( -otu))
 
+# make tip names genus
+tree.short$tip.label <- lil_taxon$Genus
 
-############### make matrix
-m<-as.matrix(otu)
-row.names(m)
-m<-structure(m)
+###### make matrix
+m<-df
+#row.names(m)
+#m<-structure(m)
 # summary stats
-max(m)
-min(m)
-mean(m)
-summary(m)
 # i think this matrix needs a log transform
 m<-log10(m)
 m[m== "-Inf"] <- 0
 m
 summary(m)
-#make a dendrogram              
-col_dendro = as.dendrogram(hclust(dist(t(m))))
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/heatmap1.svg", width = 10, height=10 )
-# And make the plot with phylogeny
-windows(16,12)
-heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
+m[m==0] <- NA
+#make row name shte genus
+row.names(m) <- lil_taxon$Genus
+
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s/heatmap")
+#######heat map active top 150 otus
+svg(file="OTU_level_total_heatmap.svg",width = 8, height=8 )
+
+windows(8,8)
+p <- ggtree(tree.short, branch.length = .1) + 
+  #xlim_tree(5) +
+  geom_tiplab(size=3, align=TRUE, linesize=1, offset = -.5) + 
+  theme_tree2()
+
+p
+gheatmap(p, m, 
+         colnames=FALSE, legend_title="active taxa") +
+  scale_x_ggtree() + 
+  # scale_color_gradient(l
+  scale_fill_gradient(low= mycols6[1], high = "#0c328a", aesthetics = "fill", na.value = "white",
+                      name="Abundance in TOTAL")+
+  ggtitle("Top 50 ASVS in each compartment")
 dev.off()
-# change order
-tr<-read.tree(text =  "((Nodule1:3,Nodule2:3, Nodule3:3,Nodule4:3):2, (Root1:3,Root2:3,Root3:3,Root4:3):2, (Rhizosphere1:3, Rhizosphere2:3,Rhizosphere3:3, Rhizosphere4:3):2);")
-heatmap.phylo(x = m, Rowp = tree.short, Colp = tr)
-dev.off
-# no phylogeny
-#make a dendrogram              
-row_dendro = as.dendrogram(hclust(dist((m))))
-windows(10,10)
-heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = tr)
-dev.off
 
 
 
-############################## HEAT MAP group my habitat use type ######
 
-#what do you need?
-###genus level data
-###df of abundance of active taxa
-###habitat use type assigned
+###### graveyard HEAT MAP group my habitat use type ######
 
-dim(otu)
-head(otu)
-#otu<-select(otu, -Phyla, -Domain, -Class, -Order, -Family, -Species, -OTU)
-n<-c("Genus", "Root4", "Nodule4", "Root1",  "Nodule1",  "Root2",  "Nodule2", "Root3", "Nodule3", "Rhizosphere4", "Rhizosphere1", "Rhizosphere2", "Rhizosphere3") 
-colnames(otu)<-n
-head(otu)
-
-#summarize by location
-otu$rhizo <- rowSums(otu %>% dplyr::select(contains("Rhizo"))) 
-otu$roots <- rowSums(otu %>% dplyr::select(contains("Root"))) 
-otu$nodule <- rowSums(otu %>% dplyr::select(contains("Nod")))
-df<-otu%>% select(Genus, rhizo, roots, nodule) %>% filter(rhizo!=0 |nodule!=0 | roots!=0)
-
-head(df)
-dim(df)
-#df<-t(df)
-#df<-as.data.frame(df)
-#dim(df)
 #df
 habitat<-rep(NA, 348)
 habitat[df$nodule==0 & df$roots==0 & df$rhizo>0]="rhizospecailist"
@@ -2261,52 +2492,6 @@ unique(habitat)
 df$habitat <- habitat
 df_habitat <-df
 head(df_habitat)
-
-
-## recursion function
-traverse <- function(a,i,innerl){
-  if(i < (ncol(df))){
-    alevelinner <- as.character(unique(df[which(as.character(df[,i])==a),i+1]))
-    desc <- NULL
-    if(length(alevelinner) == 1) (newickout <- traverse(alevelinner,i+1,innerl))
-    else {
-      for(b in alevelinner) desc <- c(desc,traverse(b,i+1,innerl))
-      il <- NULL; if(innerl==TRUE) il <- a
-      (newickout <- paste("(",paste(desc,collapse=","),")",il,sep=""))
-    }
-  }
-  else { (newickout <- a) }
-}
-
-## data.frame to newick function
-df2newick <- function(df, innerlabel=FALSE){
-  alevel <- as.character(unique(df[,1]))
-  newick <- NULL
-  for(x in alevel) newick <- c(newick,traverse(x,1,innerlabel))
-  (newick <- paste("(",paste(newick,collapse=","),");",sep=""))
-}
-
-
-# what if we made a little tree with the habitat types
-#head(df)
-df_habitat<-df_habitat[order(df_habitat$rhizo, df$roots),]
-
-df<-df_habitat%>% select(Genus, habitat)
-df<-df[,c(2,1)]
-
-
-colnames(df) <- c("x", "y")
-df<-df[order(df$x),]
-head(df)
-row.names(df)<- NULL
-#unique(df$x)
-
-
-newick<-df2newick(df, innerlabel = TRUE)
-#newick
-tree <- read.tree(text=newick)
-#plot(tree)
-tree
 
 # grab correct order 
 target<-tree$tip.label
@@ -2428,7 +2613,7 @@ dev.off
 # 499 bacteria unique taxa groups
 
 
-###################changing my data's names so they match the tree ####################
+###changing my data's names so they match the tree ####################
 
 # put order as same for type III 
 #otu$Genus[grepl("g__type_III", otu$Genus )] <- otu$Order[grepl("g__type_III", otu$Genus) ]
@@ -2589,7 +2774,7 @@ otu$Genus[grep("[9]", otu$Genus)] <-  otu$Order[grep("[9]", otu$Genus )]
 # replace "g__Absconditabacteriales_(SR1)") with the order level
 #otu$Genus[grepl('g__Abscond', otu$Genus )] <- otu$Order[grepl('Abscond', otu$Genus)]
 
-################### aggregate by genus  #############
+##aggregate by genus
 
 # how many genuses are there now?
 length(unique(otu$Genus))
@@ -2636,7 +2821,7 @@ placements<-fromJSON(file="trees/SEPPoutput/placements.json")
 df<-as.data.frame(placements)
 
 
-################# making tip names genus  ############ 
+###making tip names genus  ## 
 # put a g__ in front of all of these
 #tree$tip.label<-paste0("g__", tree$tip.label)
 #tree$tip.label
@@ -2813,7 +2998,7 @@ length(tree.label$tip.label)
 tree.label$node.label
 
 
-############## tips to add################
+###tips to add###
 
 ## add families
 #mynames[grepl("f__", mynames)]
@@ -2869,7 +3054,7 @@ k# g__Babeliales")    under phyla = depentiae
 
 
 
-##################################### HEATMAP by phylogeny  ###############
+##################################### heatmap genus level?? by phylogeny  ###############
 
 otu<-select(otu, -Phyla, -Domain, -Class, -Order, -Family, -Species, -OTU)
 n<-c("Genus", "Root4", "Nodule4", "Root1",  "Nodule1",  "Root2",  "Nodule2", "Root3", "Nodule3", "Rhizosphere4", "Rhizosphere1", "Rhizosphere2", "Rhizosphere3") 
@@ -2931,150 +3116,149 @@ dev.off
 
 ############################## HEAT MAP group my habitat use type ######
 
-#what do you need?
-###genus level data
-###df of abundance of active taxa
-###habitat use type assigned
+## grab taxa that are annotated by greengenes 2 
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
+### Import Data ###
+taxon <- read.table("asv_level_output/greengenes/taxonomy.txt", sep="\t", header=T, row.names=1)
+asvs.raw <- read.table("asv_level_output/greengenes/feature-table.tsv", sep="\t", header=T, row.names = 1 )
+metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
+## Transpose ASVS table ##
+asvs.t <- t(asvs.raw)
+## order metadata
+metadat<-metadat[order(metadat$SampleID),]
+## order asvs table
+asvs.t<-asvs.t[order(row.names(asvs.t)),]
 
-dim(otu)
-head(otu)
-#otu<-select(otu, -Phyla, -Domain, -Class, -Order, -Family, -Species, -OTU)
-n<-c("Genus", "Root4", "Nodule4", "Root1",  "Nodule1",  "Root2",  "Nodule2", "Root3", "Nodule3", "Rhizosphere4", "Rhizosphere1", "Rhizosphere2", "Rhizosphere3") 
-colnames(otu)<-n
-head(otu)
+###--- recode metadata----- #
+metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
+metadat<-metadat[, c(1,3:6)]
+metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
+#to make coloring things easier I'm gong to added a combined fractionXboncat column 
+metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
 
-#summarize by location
-otu$rhizo <- rowSums(otu %>% dplyr::select(contains("Rhizo"))) 
-otu$roots <- rowSums(otu %>% dplyr::select(contains("Root"))) 
-otu$nodule <- rowSums(otu %>% dplyr::select(contains("Nod")))
-df<-otu%>% select(Genus, rhizo, roots, nodule) %>% filter(rhizo!=0 |nodule!=0 | roots!=0)
+##---make phyloseq object with rarefied data -------#
+asvs.phyloseq<- (asvs.t)
+taxon<-taxon[,1:7]
+metadat<-as.matrix(metadat)
+y<-colnames(asvs.raw)
+rownames(metadat) <- y
+metadat<-as.data.frame(metadat)
+
+#import it phyloseq
+Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
+Workshop_metadat <- sample_data(metadat)
+Workshop_taxo <- tax_table(as.matrix(taxon))
+ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
+print(ps)
+# 12855 taxa
+
+
+##select active taxa 
+# at least in 2 samples min reads is 50
+ps1<-subset_samples(ps, Fraction=="BONCAT_Active")
+ps1<-ps_prune(ps1, min.samples = 2, min.reads = 50)
+df<-as.data.frame(t(as.data.frame(otu_table(ps1))))
+taxon<-as.data.frame(tax_table(ps))
+dim(df)
+# 726 taxa
+####### aggregate to family level again
+###### just doing family level again to keep it simple
+df$otu<-row.names(df)
+taxon$otu <- row.names(taxon)
+df<-left_join(df, taxon)
+head(df)
+#rm other columns
+df<-select(df, -Phyla, -Domain, -Class, -Order, -Genus, -Species, -otu)
+
+#summarise
+#### change some the names so they match the tree
+df$Family[grepl(" f__Xantho", df$Family)] <- " f__Xanthobacteraceae"  
+df$Family[grepl(" f__Rhizo", df$Family)] <- " f__Rhizobiaceae"  
+df$Family[grepl(" f__Pyrino", df$Family)] <- " f__Pyrinomonadaceae"
+df$Family[grepl(" f__Burkhold", df$Family)] <- " f__Burkholderiaceae"
+df$Family[grepl(" f__Solirub", df$Family)]  <-" f__Solirubrobacteraceae"
+df$Family[grepl(" f__Chitino", df$Family)]  <-" f__Chitinophagaceae"
+df$Family[grepl(" f__Rhodano", df$Family)] <- " f__Rhodanobacteraceae"
 
 head(df)
+#aggregate
+df<-aggregate(cbind(C10E.POS_S60,  C10N.POS_S65, C1E.POS_S31, C1N.POS_S61,  C2E.POS_S32,  C2N.POS_S62,  C5E.POS_S33,  C5N.POS_S63, C10R.POS_S30, C1R.POS_S27, C2R.POS_S28, C5R.POS_S29 ) ~ Family, data = df, FUN = sum, na.rm = TRUE)
+row.names(df) <- df$Family
+
+dim(df) # 140 families
+#### summarize by compartment 
+df$rhizo <-   rowMeans(df %>% dplyr::select(contains("R.POS")))
+df$nodule <-   rowMeans(df %>% dplyr::select(contains("N.POS")))
+df$root <-   rowMeans(df %>% dplyr::select(contains("E.POS")))
+df<-df%>% select(c(nodule, root, rhizo)) %>% mutate(otu= row.names(df))
+head(df)
+# for now rm the unknown family row
+df<-df%>%filter(otu!='') %>% filter(otu!=" f__")  %>%   glimpse()
+summary(df)
+head(df)
+df<-mutate(df, Family=otu) %>% select(., -otu)
+
 dim(df)
-#df<-t(df)
-#df<-as.data.frame(df)
-#dim(df)
-#df
-habitat<-rep(NA, 348)
-habitat[df$nodule==0 & df$roots==0 & df$rhizo>0]="rhizospecailist"
-habitat[df$nodule==0 & df$roots>0 & df$rhizo==0]="rootspecialist"
-habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="nodulespecialist"
-habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="rhizoandrootgeneralist"
-habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="plantgeneralist"
-habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hypergeneralist"
-habitat[df$nodule>0 & df$roots==0 & df$rhizo>0]="rhizoandnodulegeneralist"
+
+
+
+
+
+
+habitat<-rep(NA, 138)
+habitat[df$nodule==0 & df$root==0 & df$rhizo>0]="rhizospecailist"
+habitat[df$nodule==0 & df$root>0 & df$rhizo==0]="rootspecialist"
+habitat[df$nodule>0 & df$root==0 & df$rhizo==0]="nodulespecialist"
+habitat[df$nodule==0 & df$root>0 & df$rhizo>0]="rhizoandrootgeneralist"
+habitat[df$nodule>0 & df$root>0 & df$rhizo==0]="plantgeneralist"
+habitat[df$nodule>0 & df$root>0 & df$rhizo>0]="hypergeneralist"
+habitat[df$nodule>0 & df$root==0 & df$rhizo>0]="rhizoandnodulegeneralist"
 
 habitat
 unique(habitat)
 df$habitat <- habitat
-df_habitat <-df
-head(df_habitat)
+df
 
-
-## recursion function
-traverse <- function(a,i,innerl){
-  if(i < (ncol(df))){
-    alevelinner <- as.character(unique(df[which(as.character(df[,i])==a),i+1]))
-    desc <- NULL
-    if(length(alevelinner) == 1) (newickout <- traverse(alevelinner,i+1,innerl))
-    else {
-      for(b in alevelinner) desc <- c(desc,traverse(b,i+1,innerl))
-      il <- NULL; if(innerl==TRUE) il <- a
-      (newickout <- paste("(",paste(desc,collapse=","),")",il,sep=""))
-    }
-  }
-  else { (newickout <- a) }
-}
-
-## data.frame to newick function
-df2newick <- function(df, innerlabel=FALSE){
-  alevel <- as.character(unique(df[,1]))
-  newick <- NULL
-  for(x in alevel) newick <- c(newick,traverse(x,1,innerlabel))
-  (newick <- paste("(",paste(newick,collapse=","),");",sep=""))
-}
-
-
-# what if we made a little tree with the habitat types
-#head(df)
-df_habitat<-df_habitat[order(df_habitat$rhizo, df$roots),]
-
-df<-df_habitat%>% select(Genus, habitat)
-df<-df[,c(2,1)]
-
-
-colnames(df) <- c("x", "y")
-df<-df[order(df$x),]
-head(df)
-row.names(df)<- NULL
-#unique(df$x)
-
-
-newick<-df2newick(df, innerlabel = TRUE)
-#newick
-tree <- read.tree(text=newick)
-#plot(tree)
-tree
-
-# grab correct order 
-target<-tree$tip.label
-df_habitat<-df_habitat[match(target, df_habitat$Genus),]
-glimpse(df_habitat)
 
 #who are they?
-n<-df_habitat%>% filter(habitat=="rootspecialist") %>% select(Genus) 
+n<-df%>% filter(habitat=="rootspecialist") %>% select(Family) 
 n
-n<-df_habitat%>% filter(habitat=="rhizospecailist") %>% select(Genus) 
-n<-df_habitat%>% filter(habitat=="rhizoandrootgeneralist") %>% select(Genus) 
-n<-df_habitat%>% filter(habitat=="plantgeneralist") %>% select(Genus) 
-n<-df_habitat%>% filter(habitat=="hypergeneralist") %>% select(Genus) 
-
+n<-df%>% filter(habitat=="rhizospecailist") %>% select(Family) 
+n
+n<-df%>% filter(habitat=="rhizoandrootgeneralist") %>% select(Family) 
+n
+n<-df%>% filter(habitat=="plantgeneralist") %>% select(Family) 
+n
+n<-df%>% filter(habitat=="hypergeneralist") %>% select(Family) 
+n
 n
 unique(df_habitat$habitat)
 ############### make matrix
-df<-df_habitat %>% select(rhizo,roots, nodule)
-n<-row.names(df)
-m<-as.matrix(df)
-m<-structure(m)
-
-
-## i think this matrix needs a log transform
+m<-df
+m<-as.matrix(m[,c(3,2,1)])
+dim(m)
+#matrix needs a log transform
+m<-m+1
 m<-log10(m)
-head(m)
-m[m== "-Inf"] <- 0
+#m[m== "-Inf"] <- 0
+#m[m== 0] <-NA
 head(m)
 summary(m)
-# min = 0
-# max = 5.099
-glimpse(m)
-tree
 
-#make a dendrogram              
-col_dendro = as.dendrogram(hclust(dist(t(m))))
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/heatmap2.svg", width = 10, height=10 )
-# And make the plot with phylogeny
-windows(16,12)
-heatmap.phylo(x = m, Rowp = tree, Colp = as.phylo(as.hclust(col_dendro)))+
+heatmap(m)
 
-dev.off()
-# change order
-#tr<-read.tree(text =  "((Nodule1:3,Nodule2:3, Nodule3:3,Nodule4:3):2, (Root1:3,Root2:3,Root3:3,Root4:3):2, (Rhizosphere1:3, Rhizosphere2:3,Rhizosphere3:3, Rhizosphere4:3):2);")
-heatmap.phylo(x = m, Rowp = tree.short, Colp = tr)
-dev.off
-# no phylogeny
-#make a dendrogram              
-row_dendro = as.dendrogram(hclust(dist((m))))
-windows(10,10)
-heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
-  #legend(legend(x="right", legend=c("min", "med", "max"),fill=
+ggplot(df, aes(X, Y, fill= Z)) + 
+  geom_tile() +
+  scale_fill_distiller(palette = "RdPu") +
+  theme_ipsum()
 
-dev.off
-
-
-
-
-
+# heatmap
+# The mtcars dataset:
+data <- as.matrix(mtcars)
+data
+# Default Heatmap
+heatmap(data)
+m
 
 ############## use the package that determined the phylogenic signal
 
@@ -3192,1760 +3376,247 @@ barplot.phylo4d(p4d, bar.col=(carni.lipa$p.value < 0.05) + 1, center = FALSE , s
 
 
 
+#####--------heatmap  family level activity-------########
+## grab taxa that are annotated by greengenes 2 
+## because we are gonna use that tree
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
+### Import Data ###
+taxon <- read.table("asv_level_output/greengenes/taxonomy.txt", sep="\t", header=T, row.names=1)
+asvs.raw <- read.table("asv_level_output/greengenes/feature-table.tsv", sep="\t", header=T, row.names = 1 )
+metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
+## Transpose ASVS table ##
+asvs.t <- t(asvs.raw)
+## order metadata
+metadat<-metadat[order(metadat$SampleID),]
+## order asvs table
+asvs.t<-asvs.t[order(row.names(asvs.t)),]
 
-#####--------heatmap number one just activity famliy level-------########
+###--- recode metadata----- #
+metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
+metadat<-metadat[, c(1,3:6)]
+metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
+#to make coloring things easier I'm gong to added a combined fractionXboncat column 
+metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
 
-## select active taxa
-ps1<- subset_samples(ps, Fraction=="BONCAT_Active" ) 
-ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
-any(taxa_sums(ps1) == 0)
-ps1
-# 1903 taxa from normalizwed by ncells data data
-otu<-as.data.frame(t(as.data.frame(otu_table(ps1))))
-dim(otu)
-# check distrubution
+##---make phyloseq object with rarefied data -------#
+asvs.phyloseq<- (asvs.t)
+taxon<-taxon[,1:7]
+metadat<-as.matrix(metadat)
+y<-colnames(asvs.raw)
+rownames(metadat) <- y
+metadat<-as.data.frame(metadat)
 
+#import it phyloseq
+Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
+Workshop_metadat <- sample_data(metadat)
+Workshop_taxo <- tax_table(as.matrix(taxon))
+ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
+print(ps)
+# 12855 taxa
+
+
+##select active taxa 
+# at least in 2 samples min reads is 50
+ps1<-subset_samples(ps, Fraction=="BONCAT_Active")
+ps1<-ps_prune(ps1, min.samples = 2, min.reads = 50)
+# 852 taxa
+df<-as.data.frame(t(as.data.frame(otu_table(ps1))))
+taxon<-as.data.frame(tax_table(ps))
+
+# 726 taxa
 ####### agregate to the family level
-n<-row.names(otu)
-otu<-mutate(otu, OTU=n)
-n<-row.names(taxon)
-taxon<- mutate(taxon, OTU=n)
-otu<-left_join(otu, taxon)
-otu<-select(otu, -Phyla, -Domain, -Class, -Order, -Genus, -Species, -OTU)
-# aggregate some families that have old nomincalture
-otu$Family <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu$Family)
-otu<-aggregate(cbind(C10E.POS_S60,  C10N.POS_S65, C1E.POS_S31, C1N.POS_S61,  C2E.POS_S32,  C2N.POS_S62,  C5E.POS_S33,  C5N.POS_S63, C10R.POS_S30, C1R.POS_S27, C2R.POS_S28, C5R.POS_S29 ) ~ Family, data = otu, FUN = sum, na.rm = TRUE)
-row.names(otu) <- otu$Family
-# rm family col
-otu<-select(otu, -Family)
-dim(otu)
-colnames(otu)
-rownames(otu)
-n<-c("Root4", "Nodule4", "Root1",  "Nodule1",  "Root2",  "Nodule2", "Root3", "Nodule3", "Rhizosphere4", "Rhizosphere1", "Rhizosphere2", "Rhizosphere3") 
-colnames(otu)<-n
-head(otu)
-## filter for taxa that were not present in the plant.
-otu1<-filter(otu, Root4 > 0 | Nodule4 > 0 | Root1 > 0 | Nodule1 > 0 | Root2 > 0 | Nodule2 > 0 | Root3 > 0 | Nodule3 > 0  )
-dim(otu1)
-head(otu1)
-#add back family column
-n<-row.names(otu1)
-otu1<-mutate(otu1, Family=n)
+df$otu<-row.names(df)
+taxon$otu <- row.names(taxon)
+df<-left_join(df, taxon)
+head(df)
+#rm other columns
+df<-select(df, -Phyla, -Domain, -Class, -Order, -Genus, -Species, -otu)
 
-# grab phylogeny and Read in the tree file 
+#### change some the names so they match the tree
+df$Family[grepl(" f__Xantho", df$Family)] <- " f__Xanthobacteraceae"  
+df$Family[grepl(" f__Rhizo", df$Family)] <- " f__Rhizobiaceae"  
+df$Family[grepl(" f__Pyrino", df$Family)] <- " f__Pyrinomonadaceae"
+df$Family[grepl(" f__Burkhold", df$Family)] <- " f__Burkholderiaceae"
+df$Family[grepl(" f__Solirub", df$Family)]  <-" f__Solirubrobacteraceae"
+df$Family[grepl(" f__Chitino", df$Family)]  <-" f__Chitinophagaceae"
+df$Family[grepl(" f__Rhodano", df$Family)] <- " f__Rhodanobacteraceae"
+
+head(df)
+#aggregate
+df<-aggregate(cbind(C10E.POS_S60,  C10N.POS_S65, C1E.POS_S31, C1N.POS_S61,  C2E.POS_S32,  C2N.POS_S62,  C5E.POS_S33,  C5N.POS_S63, C10R.POS_S30, C1R.POS_S27, C2R.POS_S28, C5R.POS_S29 ) ~ Family, data = df, FUN = sum, na.rm = TRUE)
+row.names(df) <- df$Family
+
+dim(df) # 144 families
+#### summarize by compartment 
+df$rhizo <-   rowMeans(df %>% dplyr::select(contains("R.POS"))) %>%   glimpse()
+df$nodule <-   rowMeans(df %>% dplyr::select(contains("N.POS"))) %>%   glimpse()
+df$root <-   rowMeans(df %>% dplyr::select(contains("E.POS"))) %>%   glimpse()
+df<-df%>% select(c(nodule, root, rhizo)) %>% mutate(otu= row.names(df))
+head(df)
+# for now rm the unknown family row
+df<-df%>%filter(otu!='') %>% filter(otu!=" f__")  %>%   glimpse()
+summary(df)
+head(df)
+df<-mutate(df, Family=otu) %>% select(., -otu)
+
+###Import tree#
+#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/asv_level_output/greengenes")
+#tree <- read.tree("2022.10.phylogeny.asv.nwk")
+#tree <- read.tree("2022.10.phylogeny.id.nwk")
+
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/GTDB")
 tree = read.tree("family.nwk")
+tree
+# 1057 tips
 length(tree$tip.label) # look at the tip labels 
 # modify tip labels
-tree$tip.label <- gsub("\\_1","",tree$tip.label)
-tree$tip.label <- gsub("\\'","",tree$tip.label)
-#lol my taxa asignment all have a space so I'll remove thAT
-otu1$Family <- gsub(" ", "", otu1$Family)
-#modeify tip labls
-otu1$Family <- gsub('\\_()', '' , otu1$Family)
-otu1$Family <- gsub('_\\(*)*', '' , otu1$Family)
-otu1$Family <- gsub('*Subgroup1*', '' , otu1$Family)
-otu1$Family <- gsub('\\(SR1)', '' , otu1$Family)
-otu1$Family <- gsub('*\\(*)*', '' , otu1$Family)
-otu1$Family <- gsub ("Abditibacteriaceae"  , "Actinomycetaceae",  otu1$Family ) #in the same clades
+tree$tip.label <- paste0(" f__", tree$tip.label)
 
-length(intersect(unique(otu1$Family), tree$tip.label)) # Apply setdiff function to see what's missing from the tree
-length(setdiff(unique(otu1$Family), tree$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
-mynames<-(setdiff(unique(otu1$Family), tree$tip.label))
+length(intersect(unique(df$Family), tree$tip.label)) # Apply setdiff function to see what's missing from the tree
+# 69 intersect
+mynames<-(setdiff(unique(df$Family), tree$tip.label))
+length(mynames)
+
 #shorten phylogeny to match what is in our data frame
-asvs_remove<-setdiff(tree$tip.label, otu1$Family) #asvs we don't want
+asvs_remove<-setdiff(tree$tip.label, df$Family) #asvs we don't want
 tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
 plot(tree.short, no.margin=TRUE,  cex = .5)
 # grab correct order 
 target<-tree.short$tip.label
-otu1<-otu1[match(target, otu1$Family),]
-dim(otu1)
+df<-df[match(target, df$Family),]
+head(df)
 # rm family column from df
-n <- otu1$Family
-otu1<-subset(otu1, select = c( -Family))
-row.names(otu1) <- n
-
-
-# make matrix
-m<-as.matrix(otu1)
-row.names(m)
-m<-structure(m)
-# summary stats
-max(m)
-min(m)
-mean(m)
+df<-subset(df, select = c( -Family))
+# place holder
+m <- df
 summary(m)
 # i think this matrix needs a log transform
 m<-log10(m)
 m[m== "-Inf"] <- 0
-m
-summary(m)
-#make a dendrogram              
-col_dendro = as.dendrogram(hclust(dist(t(m))))
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/heatmap1.svg", width = 10, height=10 )
-# And make the plot with phylogeny
-windows(16,12)
-heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
+m[m==0] <- NA
+m<-m[,c(3,2,1)]
+
+# heat map
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s/heatmap")
+svg(file="Family_level_active_heatmap.svg",width = 8, height=8 )
+
+windows(8,8)
+p <- ggtree(tree.short, branch.length = .001) + 
+  geom_tiplab(size=3, align=TRUE, linesize=0, offset = -.2) + 
+  theme_tree2()+
+  xlim_tree(1) 
+
+#geom_cladelab()+
+#geom_nodelab( size=2, color="green", nudge_x = 1)+
+# nodelabels(node=tree.short$edge)
+p
+#p
+gheatmap(p, m, 
+         colnames=FALSE,
+         legend_title="active taxa", offset = .5) +
+  scale_x_ggtree() + 
+  scale_fill_gradient(low="#fffaa2", high = "#bb0000", aesthetics = "fill", na.value = "white",
+                      name="Abundance in Active")+
+  ggtitle("Top 50 ASVS in each compartment")
 dev.off()
-# change order
-tr<-read.tree(text =  "((Nodule1:3,Nodule2:3, Nodule3:3,Nodule4:3):2, (Root1:3,Root2:3,Root3:3,Root4:3):2, (Rhizosphere1:3, Rhizosphere2:3,Rhizosphere3:3, Rhizosphere4:3):2);")
-heatmap.phylo(x = m, Rowp = tree.short, Colp = tr)
-dev.off
-# no phylogeny
-#make a dendrogram              
-row_dendro = as.dendrogram(hclust(dist((m))))
-windows(10,10)
-heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = tr)
-dev.off
-        
-        
-
-
-
-##------- heatmap #2 active plant/ active rhizopshere -------#######
-# compare active rhizosphere to active in plant #
-# shows what microbes are more active in the plant than the soil
-
-## select active taxa
-ps1<- subset_samples(ps, Fraction=="BONCAT_Active" ) 
-ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
+#####--------heatmap family level total-------########
+##select active taxa 
+# at least in 2 samples min reads is 50
+sample_data(ps)
+ps1<-subset_samples(ps, Fraction=="Total_Cells")
+ps1<-ps_prune(ps1, min.samples = 2, min.reads = 50)
 any(taxa_sums(ps1) == 0)
-ps1
-# 1903 taxa from normalizwed by ncells data data
-# select active taxa in plant
-ps.plant<- subset_samples(ps1,Fraction =="BONCAT_Active" & Compartment!="Rhizosphere")
-otu.plant<-as.data.frame(t(as.data.frame(otu_table(ps.plant))))
-head(otu.plant)
-colnames(otu.plant)
-# samples C10E, C10N, C1E, C1N, C2E, C2E, C2N, C5E, C5N, C7E, C7N  
-# drop sample C7 because it doesnt have a pair in the soil
-otu.plant<-subset(otu.plant, select = -c(C7E.POS_S34,C7N.POS_S64))
-
-####### agregate to the family level
-n<-row.names(otu.plant)
-otu.plant<-mutate(otu.plant, OTU=n)
-n<-row.names(taxon)
-taxon<- mutate(taxon, OTU=n)
-otu.plant<-left_join(otu.plant, taxon)
-otu.plant<-select(otu.plant, -Phyla, -Domain, -Class, -Order, -Genus, -Species, -OTU)
-
-# aggregate some families that have old nomincalture
-otu.plant$Family <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu.plant$Family)
-
-otu.plant<-aggregate(cbind(C10E.POS_S60,  C10N.POS_S65, C1E.POS_S31, C1N.POS_S61,  C2E.POS_S32,  C2N.POS_S62,  C5E.POS_S33,  C5N.POS_S63) ~ Family, data = otu.plant, FUN = sum, na.rm = TRUE)
-row.names(otu.plant) <- otu.plant$Family
-
-# rm family col
-otu.plant<-select(otu.plant, -Family)
-dim(otu.plant)
-colnames(otu.plant)
-rownames(otu.plant)
-
-
-## select active taxa in rhizosphere
-ps.soil<- subset_samples(ps1,Fraction =="BONCAT_Active" & Compartment=="Rhizosphere")
-otu.soil<-as.data.frame(t(as.data.frame(otu_table(ps.soil))))
-head(otu.soil)
-colnames(otu.soil)
-
-####### agregate to the family level
-n<-row.names(otu.soil)
-otu.soil<-mutate(otu.soil, OTU=n)
-n<-row.names(taxon)
-taxon<- mutate(taxon, OTU=n)
-otu.soil<-left_join(otu.soil, taxon)
-otu.soil<-select(otu.soil, -Phyla, -Domain, -Class, -Order, -Genus, -Species, -OTU)
-### rm old family name
-otu.soil$Family <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu.soil$Family)
-
-
-otu.soil<-aggregate(cbind(C10R.POS_S30, C1R.POS_S27, C2R.POS_S28, C5R.POS_S29 ) ~ Family, data = otu.soil, FUN = sum, na.rm = TRUE)
-dim(otu.soil)
-row.names(otu.soil) <- otu.soil$Family
-
-# rm family col
-otu.soil<-select(otu.soil, -Family)
-
-# samples C10R, C1R, C2R, C5R
-# make df of active in rhizosphere to divid by
-df<-cbind(otu.soil, otu.soil)
-df<-df[sort(colnames(df))]
-colnames(df)
+df<-as.data.frame(t(as.data.frame(otu_table(ps1))))
+taxon<-as.data.frame(tax_table(ps))
 dim(df)
-dim(otu.plant)
-#hist(df1$C10E.POS_S60, breaks = 20)
-# add 1 to everything (absent in active & absent in total = no change)
-otu_log2<-log2(otu.plant/(df+.1))
+# 971 taxa
 
-dim(otu_log2)
-colnames(otu_log2)
-n<-c("C10E", "C10N","C1E" , "C1N" , "C2E" , "C2N" , "C5E" , "C5N")
-colnames(otu_log2)<-n
-head(otu_log2)
-# check distribution
-otu_log2
-#hist(otu_log2$C10N) # most things didn't change because most taxa not present 
-#hist(otu_log2$C5N)
-hist(otu_log2$C1E, breaks = 20)
-# col dendogram doesn't work because a ton of stuff equals 0 infinit
+####add family column
+df$otu<-row.names(df)
+taxon$otu <- row.names(taxon)
+df<-left_join(df, taxon)
+head(df)
+#rm other columns
+df<-select(df, -Phyla, -Domain, -Class, -Order, -Genus, -Species, -otu)
 
-## filter for taxa that were not present in the plant.
+#### change some the names so they match the tree
+df$Family[grepl(" f__Xantho", df$Family)] <- " f__Xanthobacteraceae"  
+df$Family[grepl(" f__Rhizo", df$Family)] <- " f__Rhizobiaceae"  
+df$Family[grepl(" f__Pyrino", df$Family)] <- " f__Pyrinomonadaceae"
+df$Family[grepl(" f__Burkhold", df$Family)] <- " f__Burkholderiaceae"
+df$Family[grepl(" f__Solirub", df$Family)]  <-" f__Solirubrobacteraceae"
+df$Family[grepl(" f__Chitino", df$Family)]  <-" f__Chitinophagaceae"
+df$Family[grepl(" f__Rhodano", df$Family)] <- " f__Rhodanobacteraceae"
+df$Family[grepl(" f__Bacillaceae_H", df$Family)] <- " Bacillaceae_H"
+df$Family[grepl(" f__Streptomycetaceae", df$Family)] <-  " f__Streptomycetaceae"
 
-otu_log2[otu_log2== "-Inf"] <- -11
+#aggregate
+df<-aggregate(cbind(C10N.SYBR_S26, C10R.SYBR_S20, C1E.SYBR_S21,  C1N.SYBR_S13,  C1R.SYBR_S16,  C2E.SYBR_S22,
+                    C2N.SYBR_S15,  C2R.SYBR_S17 ,  C5E.SYBR_S23,  C5R.SYBR_S18,  C7E.SYBR_S24,  C7N.SYBR_S25,  C7R.SYBR_S19 ) ~ Family, data = df, FUN = sum, na.rm = TRUE)
+row.names(df) <- df$Family
+dim(df) # 145 families
+#### summarize by compartment 
+df$rhizo <-   rowMeans(df %>% dplyr::select(contains("R.SYB"))) %>%   glimpse()
+df$nodule <-   rowMeans(df %>% dplyr::select(contains("N.SYB"))) %>%   glimpse()
+df$root <-   rowMeans(df %>% dplyr::select(contains("E.SYB"))) %>%   glimpse()
 
-otu_log2.1<-filter(otu_log2, C10E > -11 | C10N > -11 | C1E > -11 | C1N > -11 | C2E > -11 | C2N > -11 | C5E > -11 | C5N > -11  )
+df<-df%>% select(c(nodule, root, rhizo)) %>% mutate(otu= row.names(df))
+#rm the unknown family row
+df<-df%>%filter(otu!='') %>% filter(otu!=" f__")  %>%   glimpse()
+df<-mutate(df, Family=otu) %>% select(., -otu)
+head(df)
 
-dim(otu_log2.1)
-otu_log2.1
-
-# we re code -inf as -99
-# this means a taxa wasn't present in the location sampled
-
-# build your data your trying to pu tin the tree
-n<-row.names(otu_log2.1)
-otu_log2.1<-mutate(otu_log2.1, Family=n)
-
-############## make heatmap #2-------#################
-
-# grab phylogeny and Read in the tree file 
+# grab phylogeny and Read in the tree file
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/GTDB")
 tree = read.tree("family.nwk")
+tree
+# modify tip labels
+tree$tip.label <- paste0(" f__", tree$tip.label)
+length(intersect(unique(df$Family), tree$tip.label)) # Apply setdiff function to see what's missing from the tree
+# 67 intersect
+mynames<-(setdiff(unique(df$Family), tree$tip.label))
+length(mynames)
+mynames
 
-
-length(tree$tip.label) # look at the tip labels 
-
-#this is how to modify tip labels
-tree$tip.label <- gsub("\\_1","",tree$tip.label)
-tree$tip.label <- gsub("\\'","",tree$tip.label)
-#lol my taxa asignment all have a space so I'll remove thAT
-otu_log2.1$Family <- gsub(" ", "", otu_log2.1$Family)
-#modeify tip labls
-otu_log2.1$Family <- gsub('\\_()', '' , otu_log2.1$Family)
-otu_log2.1$Family <- gsub('_\\(*)*', '' , otu_log2.1$Family)
-otu_log2.1$Family <- gsub('*Subgroup1*', '' , otu_log2.1$Family)
-otu_log2.1$Family <- gsub('\\(SR1)', '' , otu_log2.1$Family)
-otu_log2.1$Family <- gsub('*\\(*)*', '' , otu_log2.1$Family)
-otu_log2.1$Family <- gsub ("Abditibacteriaceae"  , "Actinomycetaceae",  otu_log2.1$Family ) #in the same clades
-
-
-length(intersect(unique(otu_log2.1$Family), tree$tip.label)) # Apply setdiff function to see what's missing from the tree
-length(setdiff(unique(otu_log2.1$Family), tree$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
-mynames<-(setdiff(unique(otu_log2.1$Family), tree$tip.label))
-
-# CHECK NAMES IN BIG TREE
-#spnames = tree$tip.label
-#spnames<-sort(spnames)
-#spnames[grep("^[P][r].*", spnames)]
-
-# CHECK NAEMS OF TAXA THAT ARE MISSIG
-#mynames<-sort(mynames)
-#mynames
-#mynames[grep("^[B].*", mynames)]
-#out_log2.1$Family[grep("^[A].*", out_log2.1$Family)]
-##### MAKE TREE SMALLER
-
-# shorten phylogeny to match what is in our log 2 file
-#families we want
-asvs_remove<-setdiff(tree$tip.label, otu_log2.1$Family) #asvs we don't want
+#shorten phylogeny to match what is in our data frame
+asvs_remove<-setdiff(tree$tip.label, df$Family) #asvs we don't want
 tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-
 plot(tree.short, no.margin=TRUE,  cex = .5)
-#nodelabels()
-#### add tip "Blastocatellaceae"  to "Acidobacteriaceae" 
-#tree.short<-AddTip(tree.short, where = 118, "Blastocatellaceae")
-### phylum Latescibacterota 
-### Prevotellaceae family in order Bacteriodales
-
-
-# order the table so it matches the 
-# make otu column 
 # grab correct order 
 target<-tree.short$tip.label
-head(otu_log2.1)
-dim(otu_log2.1)
-otu_log2.1<-otu_log2.1[match(target, otu_log2.1$Family),]
-dim(otu_log2.1)
-# rm out column
-# makes sure no space in col names
-n <- otu_log2.1$Family
-otu_log2.1<-subset(otu_log2.1, select = c( -Family))
-row.names(otu_log2.1) <- n
-                 
-colnames(otu_log2.1)
-head(otu_log2.1)
-dim(otu_log2.1)
-tree.short
-#row.names(out_log2.1) <-f
+df<-df[match(target, df$Family),]
+head(df)
+# rm family column from df
+df<-subset(df, select = c( -Family))
+# place holder
+m <- df
 
-# make matrix
-     m<-as.matrix(otu_log2.1)
-      row.names(m)
-      #row.names(m)<-f # make row names family names
-      # Create the matrix and get the column dendrogram for the heatmap from it.
-      m<-structure(m)
-      #make a dendrogram              
-      col_dendro = as.dendrogram(hclust(dist(t(m))))
-      # 
-      n <- colnames(m) 
-      
- # And make the plot with phylogeny
-         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
-         windows(14,10)
-         heatmap.phylo(x = m, Rowp = tree.short, Colp =as.phylo(as.hclust(col_dendro)))
-         #dev.off()
-         
-         Rowp = tree.short
-         Colp = as.phylo(as.hclust(col_dendro))
-         #heatmap.phylo <- function(x, Rowp, Colp, ...) {
-          # l = length(seq(-4.9, 5, 0.1))
-          # pal = colorRampPalette(c('#2166ac', '#f7f7f7', '#b2182b'))(l)
-          
-  #make a plot without phylogeny 
-        #make a dendrogram              
-         row_dendro = as.dendrogram(hclust(dist((m))))
-         
-         ############  make the heatmap  plot #################33
-         windows(12,10)
-         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
-         
+summary(m)
+# i think this matrix needs a log transform
+m<-log10(m)
+m[m== "-Inf"] <- 0
+m[m==0] <- NA
+m<-m[,c(3,2,1)]
 
-#____________________________________________#
-################# active location X /totallocation X  heatmap #3############
-#### value in active compared to total for that respective location
+# heat map
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s/heatmap")
+svg(file="Family_level_total_heatmap.svg",width = 8, height=8 )
 
-  ## remove taxa from bulk soil
-  ps1<- subset_samples(ps,Fraction !="Total_DNA"& Fraction!="beads" & Fraction !="ctl" ) 
-  ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
-  any(taxa_sums(ps1) == 0)
-  ps1
-  # 3173 taxa from non rareified data
-         
-# subset total cells fraction
-    ps.Total<- subset_samples(ps1,Fraction =="Total_Cells" )
-    otu.total<-as.data.frame(t(as.data.frame(otu_table(ps.Total))))
-    colnames(otu.total)
-    # samples in otu.total C10N, C10R, C1E, C1N, C1R, C2E, C2N, C2R, 
-                          # C5E, C5R, C7E, C7N, C7R
-                          #mising: C10E, C5N
-                          # remove sample thats missing in active
-   otu.total <- subset(otu.total, select = -C7R.SYBR_S19)
-   dim(otu.total)
-   colnames(otu.total)  
-   
-  ####### agregate to the family level
-  n<-row.names(otu.total)
-  otu.total<-mutate(otu.total, OTU=n)
-  n<-row.names(taxon)
-  taxon<- mutate(taxon, OTU=n)
-  otu.total<-left_join(otu.total, taxon)
-  otu.total<-select(otu.total, -Phyla, -Domain, -Class, -Order, -Genus, -Species, -OTU)
-  
-  # aggregate some families that have old nomincalture
-  otu.total$Family <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu.total$Family)
-  
-  otu.total<-aggregate(cbind(C10N.SYBR_S26, C10R.SYBR_S20, C1E.SYBR_S21,  C1N.SYBR_S13  ,C1R.SYBR_S16,  C2E.SYBR_S22 ,
-                             C2N.SYBR_S15,  C2R.SYBR_S17,  C5E.SYBR_S23,  C5R.SYBR_S18,  C7E.SYBR_S24 , C7N.SYBR_S25 ) ~ Family, data = otu.total, FUN = sum, na.rm = TRUE)
-  row.names(otu.total) <- otu.total$Family
-  
-  # rm family col
-  otu.total<-select(otu.total, -Family)
-  dim(otu.total)
-  colnames(otu.total)
-  rownames(otu.total)
-  
+windows(8,8)
+p <- ggtree(tree.short, branch.length = .001) + 
+  geom_tiplab(size=3, align=TRUE, linesize=0, offset = -.2) + 
+  theme_tree2()+
+  xlim_tree(1) 
+p
 
-# subset for active cells fraction    
-    ps.Active<- subset_samples(ps1,Fraction =="BONCAT_Active" )
-    otu.active<-as.data.frame(t(as.data.frame(otu_table(ps.Active))))
-         dim(otu.active)
-         colnames(otu.active)
-    # missing : C7R
-    # remove samples that you don't have a pair
-    otu.active<-subset(otu.active, select = -c(C10E.POS_S60, C5N.POS_S63))
-    dim(otu.active)
-    colnames(otu.active)
-    
-    ####### agregate to the family level
-    n<-row.names(otu.active)
-    otu.active<-mutate(otu.active, OTU=n)
-    n<-row.names(taxon)
-    taxon<- mutate(taxon, OTU=n)
-    otu.active<-left_join(otu.active, taxon)
-    otu.active<-select(otu.active, -Phyla, -Domain, -Class, -Order, -Genus, -Species, -OTU)
-    
-    # aggregate some families that have old nomincalture
-    otu.active$Family <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu.active$Family)
-    
-    otu.active<-aggregate(cbind(C10N.POS_S65, C10R.POS_S30, C1E.POS_S31,  C1N.POS_S61,  C1R.POS_S27,  C2E.POS_S32, 
-                                 C2N.POS_S62,  C2R.POS_S28, C5E.POS_S33,  C5R.POS_S29,  C7E.POS_S34,  C7N.POS_S64  ) ~ Family, data = otu.active, FUN = sum, na.rm = TRUE)
-    row.names(otu.active) <- otu.active$Family
-    
-    # rm family col
-    otu.active<-select(otu.active, -Family)
-    dim(otu.active)
-    colnames(otu.active)
-    rownames(otu.active)    
-   
- # log fold change from active to inactive 
- # add 1 to everything absent in total = no change)
-         
-         otu_log2<-log2(otu.active/(otu.total+.1))
-         
-         dim(otu_log2)
-         colnames(otu_log2)
-         n<-c("C10N", "C10R" ,"C1E" , "C1N" , "C1R" , "C2E" , "C2N" , "C2R" , "C5E" , "C5R" , "C7E" , "C7N" )
-         colnames(otu_log2)<-n
-         head(otu_log2)
-         # check distribution
-         #otu_log2
-         hist(otu_log2$C10N) # most things didn't change because most taxa not present 
-         hist(otu_log2$C10R)
-         hist(otu_log2$C1E, breaks = 20)
-         # this means a taxa wasn't present in the location sampled
-         # col dendogram doesn't work because a ton of stuff equals 0 infinit
-         # we re code -inf as -11
-         # this means a taxa wasn't present in the location sampled
-         otu_log2[otu_log2== "-Inf"] <- -11
-           ### remove taxa not present in plant
-          colnames(otu_log2)
-         #otu_log2<- filter(otu_log2, C10N > -11 | C1E > -11 | C1N > -11 | C2E > -11 | C2N > -11 | C5E > -11 | C7E > -11 | C7N > -11  )
-          # add back family column
-         f<-row.names(otu_log2)
-         otu_log2<-mutate(otu_log2, Family = f)
-         # remove columns that are not rhizo for heat map #4
-         #otu_log2.r<-otu_log2 %>% select(-C10N  , -C1E  , -C1N  , -C2E  , -C2N  , -C5E  , -C7E  , -C7N)
-         
-########### heatmap #3 make the tree -------#################
-         # grab phylogeny and Read in the tree file 
-         setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/GTDB")
-         tree = read.tree("family.nwk")
-         
-         # chec if the ncbi one is better
-         #setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/NCBI")
-         #tree = read.tree("genus.nwk")
-         # it is not 
-         length(tree$tip.label) # look at the tip labels 
-         
-         #this is how to modify tip labels
-         tree$tip.label <- gsub("\\_1","",tree$tip.label)
-         tree$tip.label <- gsub("\\'","",tree$tip.label)
-         #lol my taxa asignment all have a space so I'll remove thAT
-         otu_log2$Family <- gsub(" ", "", otu_log2$Family)
-         #modeify tip labls
-         otu_log2$Family <- gsub('\\_()', '' , otu_log2$Family)
-         otu_log2$Family <- gsub('_\\(*)*', '' , otu_log2$Family)
-         otu_log2$Family <- gsub('*Subgroup1*', '' , otu_log2$Family)
-         otu_log2$Family <- gsub('\\(SR1)', '' , otu_log2$Family)
-         otu_log2$Family <- gsub('*\\(*)*', '' , otu_log2$Family)
-         otu_log2$Family <- gsub ("Abditibacteriaceae"  , "Actinomycetaceae",  otu_log2$Family ) #in the same clades
-         
-         
-         length(intersect(unique(otu_log2$Family), tree$tip.label)) # Apply setdiff function to see what's missing from the tree
-         length(setdiff(unique(otu_log2$Family), tree$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
-         mynames<-(setdiff(unique(otu_log2$Family), tree$tip.label))
-         
-         # CHECK NAMES IN BIG TREE
-         #spnames = tree$tip.label
-         #spnames<-sort(spnames)
-         #spnames[grep("^[P][r].*", spnames)]
-         
-         # CHECK NAEMS OF TAXA THAT ARE MISSIG
-         mynames<-sort(mynames)
-         mynames
-         mynames[grep("^[Aa].*", mynames)]
-         otu_log2$Family[grep("^[T].*", otu_log2$Family)]
-         ##### MAKE TREE SMALLER
-         
-         # shorten phylogeny to match what is in our log 2 file
-         #families we want
-         asvs_remove<-setdiff(tree$tip.label, otu_log2$Family) #asvs we don't want
-         tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-        # windows(14,14)
-         #plot(tree.short, no.margin=TRUE,  cex = .5)
-         #nodelabels()
-         #ape::nodelabels( 253, 253, bg="green")
-         #ape::nodelabels(31, 31, bg="green")
-         
-         ### rename node labels
-         tree.short[["node.label"]] <- c(1:138)
-         
-         # add branches    
-         #which(tree.short$tip.label=="Acidobacteriaceae")
-         #which(tree.short$tip.label== "Blastocatellia"  )
-         
-         #88
-        # tree.short$node.label[88]
-         #tree.short<-AddTip(tree.short, where = 88, "Blastocatellia"  )
-         #ree.short<-AddTip(tree.short, where = 146,  "Blastocatellaceae" )
-         # 146
-         #### add branches
-         #which(tree.short$tip.label=="Acidobacteriaceae")
-         ##
-         # add up higher
-         #tree.short<-AddTip(tree.short, where = 234,  "Acidobacteriales") # order
-         #tree.short<-AddTip(tree.short, where = 234, "Acidobacteriae" )  #class?
-         
-         # add branches    
-         #which(tree.short$tip.label== "Rhizobiaceae")
-         # 122
-         ## branch at node 251
-         #tree.short<-AddTip(tree.short, where = 253,  "Alphaproteobacteria")
-         #which(tree.short$tip.label== "Alphaproteobacteria" )
-         #### add branch "Actinobacteria" )
-         #which(tree.short$tip.label=="Actinomycetaceae" )
-         # MAYBE 158
-         #tree.short<-AddTip(tree.short, where = 158, "Actinobacteria"   )
-         
-         
-         #match with short tree
-         length(intersect(unique(otu_log2$Family), tree.short$tip.label)) # Apply setdiff function to see what's missing from the tree
-         length(setdiff(unique(otu_log2$Family), tree.short$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
-         mynames<-(setdiff(unique(otu_log2$Family), tree.short$tip.label))
-         
-         
-         
-         ### phylum Latescibacterota 
-         ### Prevotellaceae family in order Bacteriodales
-         
-         
-         
-         # order the table so it matches the 
-         # make otu column 
-         # grab correct order 
-         target<-tree.short$tip.label
-         head(otu_log2)
-         dim(otu_log2)
-         otu_log2<-otu_log2[match(target, otu_log2$Family),]
-         dim(otu_log2)
-         # rm out column
-         # makes sure no space in col names
-         n <- otu_log2$Family
-         otu_log2<-subset(otu_log2, select = c( -Family))
-         row.names(otu_log2) <- n
-         
-         colnames(otu_log2)
-         head(otu_log2)
-         dim(otu_log2)
-         tree.short
-         #row.names(out_log2.1) <-f
-         
-        
-         # make matrix
-         m<-as.matrix(otu_log2)
-         row.names(m)
-         #row.names(m)<-f # make row names family names
-         # Create the matrix and get the column dendrogram for the heatmap from it.
-         m<-structure(m)
-         #make a dendrogram              
-         col_dendro = as.dendrogram(hclust(dist(t(m))))
-         
-         
-         # And make the plot with phylogeny
-         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
-         windows(12,10)
-         heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
-         #dev.off()
-         
-         #make a plot without phylogeny 
-         #make a dendrogram              
-         row_dendro = as.dendrogram(hclust(dist((m))))
-         
-         ############  make the heatmap  plot #################33
-         windows(8,10)
-         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
-
-         
-         
-         ######### change order of samples in tree
-        as.phylo(colnames(m))
-        Colp<-read.tree(text =  "((C10N:3,C1N:3):2, (C1E:3,C1N:3,C1R:3):2,   (C2E:3,C2N:3,C2R:3):2, (C5E:3,C5R:3):2, (C7E:3  ,C7N:3):2);")
-
-        
-
-        # And make the plot with phylogeny
-        #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
-        windows(12,10)
-        heatmap.phylo(x = m, Rowp = tree.short, Colp = Colp)
-        #dev.off()
-         
-###### subset taxa present in plant and change order #############
-        
-        otu_log2
-        otu_log2<-subset(otu_log2, otu_log2$C1E != -11 | otu_log2$C2E != -11  | otu_log2$C5E != -11 | otu_log2$C7E != -11 )
-        f<-row.names(otu_log2)
-        otu_log2<-mutate(otu_log2, Family = f)
-        
-        
-########### heatmap #3 make the tree -------#################
-        # grab phylogeny and Read in the tree file 
-        #setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/GTDB")
-        tree = read.tree("family.nwk")
-        
-        
-        # chec if the ncbi one is better
-        #setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/NCBI")
-        #tree = read.tree("genus.nwk")
-        # it is not 
-        length(tree$tip.label) # look at the tip labels 
-        
-        #this is how to modify tip labels
-        tree$tip.label <- gsub("\\_1","",tree$tip.label)
-        tree$tip.label <- gsub("\\'","",tree$tip.label)
-        #lol my taxa asignment all have a space so I'll remove thAT
-        otu_log2$Family <- gsub(" ", "", otu_log2$Family)
-        #modeify tip labls
-        otu_log2$Family <- gsub('\\_()', '' , otu_log2$Family)
-        otu_log2$Family <- gsub('_\\(*)*', '' , otu_log2$Family)
-        otu_log2$Family <- gsub('*Subgroup1*', '' , otu_log2$Family)
-        otu_log2$Family <- gsub('\\(SR1)', '' , otu_log2$Family)
-        otu_log2$Family <- gsub('*\\(*)*', '' , otu_log2$Family)
-        otu_log2$Family <- gsub ("Abditibacteriaceae"  , "Actinomycetaceae",  otu_log2$Family ) #in the same clades
-        
-        
-        length(intersect(unique(otu_log2$Family), tree$tip.label)) # Apply setdiff function to see what's missing from the tree
-        length(setdiff(unique(otu_log2$Family), tree$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
-        mynames<-(setdiff(unique(otu_log2$Family), tree$tip.label))
-        
-    
-        
-        # CHECK NAEMS OF TAXA THAT ARE MISSIG
-        mynames<-sort(mynames)
-        mynames
-        mynames[grep("^[Aa].*", mynames)]
-        otu_log2$Family[grep("^[T].*", otu_log2$Family)]
-        ##### MAKE TREE SMALLER
-        
-        # shorten phylogeny to match what is in our log 2 file
-        #families we want
-        asvs_remove<-setdiff(tree$tip.label, otu_log2$Family) #asvs we don't want
-        tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-        # windows(14,14)
-      
-        ### rename node labels
-        tree.short[["node.label"]] <- c(1:138)
-        
-        #match with short tree
-        length(intersect(unique(otu_log2$Family), tree.short$tip.label)) # Apply setdiff function to see what's missing from the tree
-        length(setdiff(unique(otu_log2$Family), tree.short$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
-        mynames<-(setdiff(unique(otu_log2$Family), tree.short$tip.label))
-        
-               # order the table so it matches the 
-        # make otu column 
-        # grab correct order 
-        target<-tree.short$tip.label
-        head(otu_log2)
-        dim(otu_log2)
-        otu_log2<-otu_log2[match(target, otu_log2$Family),]
-        dim(otu_log2)
-        # rm out column
-        # makes sure no space in col names
-        n <- otu_log2$Family
-        otu_log2<-subset(otu_log2, select = c( -Family))
-        row.names(otu_log2) <- n
-        
-        colnames(otu_log2)
-        head(otu_log2)
-        dim(otu_log2)
-        tree.short
-        #row.names(out_log2.1) <-f
-        
-        
-        # make matrix
-        m<-as.matrix(otu_log2)
-        row.names(m)
-        #row.names(m)<-f # make row names family names
-        # Create the matrix and get the column dendrogram for the heatmap from it.
-        m<-structure(m)
-        #make a dendrogram              
-        col_dendro = as.dendrogram(hclust(dist(t(m))))
-        
-        
-        setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-        
-        # And make the plot with phylogeny
-        svg(file="figures/16s/heatmap3.svg",width = 10, height=7 )
-        
-        windows(16,10)
-        #heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
-        #dev.off()
-        
-        tr<-read.tree(text =  "((C1N:3,C2N:3,C7N:3,C10N:3):2, (C1E:3,C2E:3,C5E:3,C7E:3):2,   (C1R:3, C2R:3,C5R:3, C10R:3):2);")
-       
-        heatmap.phylo(x = m, Rowp = tree.short, Colp = tr)
-        
-        dev.off
-        
-          heatmap.phylo(x = m, Rowp = tree.short, Colp = tr)
-        
-        # no phylogeny
-        
-        #make a plot without phylogeny 
-        #make a dendrogram              
-        row_dendro = as.dendrogram(hclust(dist((m))))
-        tr<-read.tree(text =  "((C1N:3,C2N:3,C7N:3,C10N:3):2, (C1E:3,C2E:3,C5E:3,C7E:3):2,   (C1R:3, C2R:3,C5R:3, C10R:3):2);")
-
-        ############  make the heatmap  plot #################33
-        windows(16,10)
-        heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = tr)
-        
-        
-        dev.off
-        
-        
-        
-        
-###subset by just rhizosphere
-         colnames(otu_log2)
-         df<-subset(otu_log2, select = c(C10R, C1R, C2R, C5R ))
-         df<-subset(df, df$C10R != -99 | df$C1R != -99  | df$C2R != -99 | df$C5R != -99 )
-         dim(df)
-         n<-row.names(df)
-         df<-df%>% mutate( Family = n)
-         # grab tree
-         setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/GTDB")
-         tree = read.tree("family.nwk")
-         length(tree$tip.label) # look at the tip labels
-         #modify tip labels
-         tree$tip.label <- gsub("\\_1","",tree$tip.label)
-         tree$tip.label <- gsub("\\'","",tree$tip.label)
-         # shorten tree
-         asvs_remove<-setdiff(tree$tip.label, df$Family) #asvs we don't want
-         tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-         # grab correct order 
-         target<-tree.short$tip.label
-         head(df)
-         df<-df[match(target, df$Family),]
-         dim(df)
-         # rm out column
-         # makes sure no space in col names
-         n <- df$Family
-         df<-subset(df, select = c( -Family))
-         row.names(df) <- n
-
-         #make matrix      
-         m<-as.matrix(df)
-         row.names(m)
-         #row.names(m)<-f # make row names family names
-         # Create the matrix and get the column dendrogram for the heatmap from it.
-         m<-structure(m)
-         #make a dendrogram              
-         col_dendro = as.dendrogram(hclust(dist(t(m))))
-         # And make the plot with phylogeny
-         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
-         windows(8,10)
-         heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
-         #dev.off()
-  ### no phylogeny
-         #make a plot without phylogeny 
-         #make a dendrogram              
-         row_dendro = as.dendrogram(hclust(dist((m))))
-         
-         ############  make the heatmap  plot #################33
-         windows(8,10)
-         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
-         
-         
-         
-### just endophyte
-         colnames(otu_log2)
-         df<-subset(otu_log2, select = c(C1E, C2E, C5E,  C7E))
-         df<-subset(df, df$C1E != -99 | df$C2E != -99  | df$C5E != -99 | df$C7E != -99 )
-         #make tree smaller
-         # shorten phylogeny to match what is in our log 2 file
-         otus<-row.names(otu.raw) # all the otus
-         #otus we want
-         otus_r<-row.names(df) 
-         asvs_remove<-setdiff(otus, otus_r) #asvs we don't want
-         tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-         tree.short
-         
-         # order the table so it matches the 
-         # make otu column 
-         df$otus <- otus_r
-         
-         # grab correct order 
-         target<-tree.short$tip.label
-         df<-df[match(target, df$otus),]
-         # rm out column
-         df<-subset(df, select = -otus)
-         colnames(df)
-         head(df)
-         tree.short
-         
-         
-         #make matrix      
-         m<-as.matrix(df)
-         row.names(m)
-         #row.names(m)<-f # make row names family names
-         # Create the matrix and get the column dendrogram for the heatmap from it.
-         m<-structure(m)
-         #make a dendrogram              
-         col_dendro = as.dendrogram(hclust(dist(t(m))))
-         # And make the plot with phylogeny
-         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
-         windows(8,10)
-         heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
-         #dev.off()
-         ### no phylogeny
-         #make a plot without phylogeny 
-         #make a dendrogram              
-         row_dendro = as.dendrogram(hclust(dist((m))))
-         
-         ############  make the heatmap  plot #################33
-         windows(8,10)
-         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
-         
-  ### just nodule
-         colnames(otu_log2)
-         df<-subset(otu_log2, select = c(C10N, C1N, C2N,  C7N))
-         df<-subset(df, df$C10N != -99 | df$C1N != -99  | df$C2N != -99 | df$C7N != -99 )
-         #make tree smaller
-         # shorten phylogeny to match what is in our log 2 file
-         otus<-row.names(otu.raw) # all the otus
-         #otus we want
-         otus_r<-row.names(df) 
-         asvs_remove<-setdiff(otus, otus_r) #asvs we don't want
-         tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-         tree.short
-         
-         # order the table so it matches the 
-         # make otu column 
-         df$otus <- otus_r
-         
-         # grab correct order 
-         target<-tree.short$tip.label
-         df<-df[match(target, df$otus),]
-         # rm out column
-         df<-subset(df, select = -otus)
-         colnames(df)
-         head(df)
-         tree.short
-         
-         
-         #make matrix      
-         m<-as.matrix(df)
-         row.names(m)
-         #row.names(m)<-f # make row names family names
-         # Create the matrix and get the column dendrogram for the heatmap from it.
-         m<-structure(m)
-         #make a dendrogram              
-         col_dendro = as.dendrogram(hclust(dist(t(m))))
-         # And make the plot with phylogeny
-         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
-         windows(8,10)
-         heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
-         #dev.off()
-         ### no phylogeny
-         #make a plot without phylogeny 
-         #make a dendrogram              
-         row_dendro = as.dendrogram(hclust(dist((m))))
-         
-         ############  make the heatmap  plot #################33
-         windows(8,10)
-         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
-         
-#######heat map #3 just taxa in the plant #######
-#Are the taxa present in the plant also active in the soil?
-         #active / total
-         # filter for taxa that are present in the soil
-         
-    ### just nodule
-         colnames(otu_log2)
-         df<-subset(otu_log2, otu_log2$C1E != -99 | otu_log2$C2E != -99  | otu_log2$C5E != -99 | otu_log2$C7E != -99 )
-         #make tree smaller
-         dim(df)
-         # shorten phylogeny to match what is in our log 2 file
-         otus<-row.names(otu.raw) # all the otus
-         #otus we want
-         otus_r<-row.names(df) 
-         asvs_remove<-setdiff(otus, otus_r) #asvs we don't want
-         tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-         tree.short
-         
-         # order the table so it matches the 
-         # make otu column 
-         df$otus <- otus_r
-         
-         # grab correct order 
-         target<-tree.short$tip.label
-         df<-df[match(target, df$otus),]
-         # rm out column
-         df<-subset(df, select = -otus)
-         colnames(df)
-         head(df)
-         tree.short
-         
-         
-         #make matrix      
-         m<-as.matrix(df)
-         row.names(m)
-         #row.names(m)<-f # make row names family names
-         # Create the matrix and get the column dendrogram for the heatmap from it.
-         m<-structure(m)
-         #make a dendrogram              
-         col_dendro = as.dendrogram(hclust(dist(t(m))))
-         
-         Colp<-read.tree(text =  "((C10N:3,C1N:3):2, (C1E:3,C1N:3,C1R:3):2,   (C2E:3,C2N:3,C2R:3):2, (C5E:3,C5R:3):2, (C7E:3  ,C7N:3):2);")
-         
-         # And make the plot with phylogeny
-         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
-         
-         windows(8,10)
-         heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
-         #dev.off()
-         ### no phylogeny
-         #make a plot without phylogeny 
-         #make a dendrogram              
-         row_dendro = as.dendrogram(hclust(dist((m))))
-         
-         ############  make the heatmap  plot #################33
-         windows(8,10)
-         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
-         
-########## heatmaps # 3 active/ total at order level ####################
-         ## remove taxa from bulk soil
-         ps1<- subset_samples(ps,Fraction !="Total_DNA"& Fraction!="beads" & Fraction !="ctl" ) 
-         ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
-         any(taxa_sums(ps1) == 0)
-         ps1
-         # 3173 taxa from non rareified data
-         # subset total cells fraction
-         ps.Total<- subset_samples(ps1,Fraction =="Total_Cells" )
-         otu.total<-as.data.frame(t(as.data.frame(otu_table(ps.Total))))
-         colnames(otu.total)
-         # samples in otu.total C10N, C10R, C1E, C1N, C1R, C2E, C2N, C2R, 
-         # C5E, C5R, C7E, C7N, C7R
-         #mising: C10E, C5N
-         # remove sample thats missing in active
-         otu.total <- subset(otu.total, select = -C7R.SYBR_S19)
-         dim(otu.total)
-         colnames(otu.total)  
-         ####### agregate to the family level
-         n<-row.names(otu.total)
-         otu.total<-mutate(otu.total, OTU=n)
-         n<-row.names(taxon)
-         taxon<- mutate(taxon, OTU=n)
-         otu.total<-left_join(otu.total, taxon)
-         otu.total<-select(otu.total, -Phyla, -Domain, -Class, -Family, -Genus, -Species, -OTU)
-         
-         # aggregate some families that have old nomincalture
-         otu.total$Order <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu.total$Order)
-         
-         otu.total<-aggregate(cbind(C10N.SYBR_S26, C10R.SYBR_S20, C1E.SYBR_S21,  C1N.SYBR_S13  ,C1R.SYBR_S16,  C2E.SYBR_S22 ,
-                                    C2N.SYBR_S15,  C2R.SYBR_S17,  C5E.SYBR_S23,  C5R.SYBR_S18,  C7E.SYBR_S24 , C7N.SYBR_S25 ) ~ Order, data = otu.total, FUN = sum, na.rm = TRUE)
-         row.names(otu.total) <- otu.total$Order
-         
-         # rm order col
-         otu.total<-select(otu.total, -Order)
-         dim(otu.total)
-         colnames(otu.total)
-         rownames(otu.total)
-         
-         
-         # subset for active cells fraction    
-         ps.Active<- subset_samples(ps1,Fraction =="BONCAT_Active" )
-         otu.active<-as.data.frame(t(as.data.frame(otu_table(ps.Active))))
-         dim(otu.active)
-         colnames(otu.active)
-         # missing : C7R
-         # remove samples that you don't have a pair
-         otu.active<-subset(otu.active, select = -c(C10E.POS_S60, C5N.POS_S63))
-         dim(otu.active)
-         colnames(otu.active)
-         
-         ####### agregate to the order level
-         n<-row.names(otu.active)
-         otu.active<-mutate(otu.active, OTU=n)
-         n<-row.names(taxon)
-         taxon<- mutate(taxon, OTU=n)
-         otu.active<-left_join(otu.active, taxon)
-         otu.active<-select(otu.active, -Phyla, -Domain, -Class, -Family, -Genus, -Species, -OTU)
-         
-         # aggregate some families that have old nomincalture
-         otu.active$Order <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu.active$Order)
-         
-         otu.active<-aggregate(cbind(C10N.POS_S65, C10R.POS_S30, C1E.POS_S31,  C1N.POS_S61,  C1R.POS_S27,  C2E.POS_S32, 
-                                     C2N.POS_S62,  C2R.POS_S28, C5E.POS_S33,  C5R.POS_S29,  C7E.POS_S34,  C7N.POS_S64  ) ~ Order, data = otu.active, FUN = sum, na.rm = TRUE)
-         row.names(otu.active) <- otu.active$Order
-         
-         # rm Order col
-         otu.active<-select(otu.active, -Order)
-         dim(otu.active)
-         colnames(otu.active)
-         rownames(otu.active)    
-         
-         # log fold change from active to inactive 
-         # add 1 to everything absent in total = no change)
-         
-         otu_log2<-log2(otu.active/(otu.total+.1))
-         
-         dim(otu_log2)
-         colnames(otu_log2)
-         n<-c("C10N", "C10R" ,"C1E" , "C1N" , "C1R" , "C2E" , "C2N" , "C2R" , "C5E" , "C5R" , "C7E" , "C7N" )
-         colnames(otu_log2)<-n
-         head(otu_log2)
-         # check distribution
-         #otu_log2
-         hist(otu_log2$C10N) # most things didn't change because most taxa not present 
-         hist(otu_log2$C10R)
-         hist(otu_log2$C1E, breaks = 20)
-         # this means a taxa wasn't present in the location sampled
-         # col dendogram doesn't work because a ton of stuff equals 0 infinit
-         # we re code -inf as -11
-         # this means a taxa wasn't present in the location sampled
-         otu_log2[otu_log2== "-Inf"] <- -11
-         ### remove taxa not present in plant
-         colnames(otu_log2)
-         #otu_log2<- filter(otu_log2, C10N > -11 | C1E > -11 | C1N > -11 | C2E > -11 | C2N > -11 | C5E > -11 | C7E > -11 | C7N > -11  )
-         # add back family column
-         f<-row.names(otu_log2)
-         otu_log2<-mutate(otu_log2, Order = f)
-         # remove columns that are not rhizo for heat map #4
-
-         ########### heatmap #3 make the tree -------#################
-         # grab phylogeny and Read in the tree file 
-         setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/GTDB")
-         tree = read.tree("Order.nwk")
-         
-         # chec if the ncbi one is better
-         #setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/NCBI")
-         #tree = read.tree("genus.nwk")
-         # it is not 
-         length(tree$tip.label) # look at the tip labels 
-         
-         #this is how to modify tip labels
-         #lol my taxa asignment all have a space so I'll remove thAT
-         otu_log2$Order <- gsub(" ", "", otu_log2$Order)
-         #modeify tip labls
-         length(intersect(unique(otu_log2$Order), tree$tip.label)) # Apply setdiff function to see what's missing from the tree
-         length(setdiff(unique(otu_log2$Order), tree$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
-         mynames<-(setdiff(unique(otu_log2$Order), tree$tip.label))
-         
-         # CHECK NAMES IN BIG TREE
-         #spnames = tree$tip.label
-         #spnames<-sort(spnames)
-         #spnames[grep("^[P][r].*", spnames)]
-         
-         # CHECK NAEMS OF TAXA THAT ARE MISSIG
-         mynames<-sort(mynames)
-         mynames
-         mynames[grep("^[Aa].*", mynames)]
-         tree$tip.label[grep("^[Aa].*", tree$tip.label)]
-         otu_log2$Order[grep("^[T].*", otu_log2$Order)]
-         ##### MAKE TREE SMALLER
-         
-         # shorten phylogeny to match what is in our log 2 file
-         #families we want
-         asvs_remove<-setdiff(tree$tip.label, otu_log2$Order) #asvs we don't want
-         tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-         windows(14,14)
-         plot(tree.short, no.margin=TRUE,  cex = .5)
-         nodelabels()
-         ape::nodelabels( 253, 253, bg="green")
-         ape::nodelabels(31, 31, bg="green")
-         
-         ### rename node labels
-         #tree.short[["node.label"]] <- c(1:138)
-         
-         # add branches    
-         #which(tree.short$tip.label=="Acidobacteriaceae")
-         #which(tree.short$tip.label== "Blastocatellia"  )
-         
-         #88
-         # tree.short$node.label[88]
-         #tree.short<-AddTip(tree.short, where = 88, "Blastocatellia"  )
-         #ree.short<-AddTip(tree.short, where = 146,  "Blastocatellaceae" )
-         # 146
-         #### add branches
-         #which(tree.short$tip.label=="Acidobacteriaceae")
-         ##
-         # add up higher
-         #tree.short<-AddTip(tree.short, where = 234,  "Acidobacteriales") # order
-         #tree.short<-AddTip(tree.short, where = 234, "Acidobacteriae" )  #class?
-         
-         # add branches    
-         #which(tree.short$tip.label== "Rhizobiaceae")
-         # 122
-         ## branch at node 251
-         #tree.short<-AddTip(tree.short, where = 253,  "Alphaproteobacteria")
-         #which(tree.short$tip.label== "Alphaproteobacteria" )
-         #### add branch "Actinobacteria" )
-         #which(tree.short$tip.label=="Actinomycetaceae" )
-         # MAYBE 158
-         #tree.short<-AddTip(tree.short, where = 158, "Actinobacteria"   )
-         
-         
-         #match with short tree
-         length(intersect(unique(otu_log2$Order), tree.short$tip.label)) # Apply setdiff function to see what's missing from the tree
-         length(setdiff(unique(otu_log2$Order), tree.short$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
-         mynames<-(setdiff(unique(otu_log2$Order), tree.short$tip.label))
-         
-         
-         
-         ### phylum Latescibacterota 
-         ### Prevotellaceae family in order Bacteriodales
-         
-         
-         
-         # order the table so it matches the 
-         # make otu column 
-         # grab correct order 
-         target<-tree.short$tip.label
-         head(otu_log2)
-         dim(otu_log2)
-         otu_log2<-otu_log2[match(target, otu_log2$Order),]
-         dim(otu_log2)
-         # rm out column
-         # makes sure no space in col names
-         n <- otu_log2$Order
-         otu_log2<-subset(otu_log2, select = c( -Order))
-         row.names(otu_log2) <- n
-         
-         colnames(otu_log2)
-         head(otu_log2)
-         dim(otu_log2)
-         tree.short
-         #row.names(out_log2.1) <-f
-         
-         
-         # make matrix
-         m<-as.matrix(otu_log2)
-         row.names(m)
-         #row.names(m)<-f # make row names family names
-         # Create the matrix and get the column dendrogram for the heatmap from it.
-         m<-structure(m)
-         #make a dendrogram              
-         col_dendro = as.dendrogram(hclust(dist(t(m))))
-         
-         
-         # And make the plot with phylogeny
-         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
-         windows(12,10)
-         heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
-         #dev.off()
-         
-         #make a plot without phylogeny 
-         #make a dendrogram              
-         row_dendro = as.dendrogram(hclust(dist((m))))
-         
-         ############  make the heatmap  plot #################33
-         windows(8,10)
-         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
-         
-         
-         
-         ######### change order of samples in tree
-         as.phylo(colnames(m))
-         Colp<-read.tree(text =  "((C10N:3,C10R:3):2, (C1E:3,C1N:3,C1R:3):2,   (C2E:3,C2N:3,C2R:3):2, (C5E:3,C5R:3):2, (C7E:3  ,C7N:3):2);")
-         
-         # And make the plot with phylogeny
-         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
-         windows(12,10)
-         heatmap.phylo(x = m, Rowp = tree.short, Colp = Colp)
-         #dev.off()
-         
-         
-         
-         
-         ###subset by just rhizosphere
-         colnames(otu_log2)
-         df<-subset(otu_log2, select = c(C10R, C1R, C2R, C5R ))
-         df<-subset(df, df$C10R != -99 | df$C1R != -99  | df$C2R != -99 | df$C5R != -99 )
-         dim(df)
-         n<-row.names(df)
-         df<-df%>% mutate( Family = n)
-         # grab tree
-         setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/GTDB")
-         tree = read.tree("family.nwk")
-         length(tree$tip.label) # look at the tip labels
-         #modify tip labels
-         tree$tip.label <- gsub("\\_1","",tree$tip.label)
-         tree$tip.label <- gsub("\\'","",tree$tip.label)
-         # shorten tree
-         asvs_remove<-setdiff(tree$tip.label, df$Family) #asvs we don't want
-         tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-         # grab correct order 
-         target<-tree.short$tip.label
-         head(df)
-         df<-df[match(target, df$Family),]
-         dim(df)
-         # rm out column
-         # makes sure no space in col names
-         n <- df$Family
-         df<-subset(df, select = c( -Family))
-         row.names(df) <- n
-         
-         #make matrix      
-         m<-as.matrix(df)
-         row.names(m)
-         #row.names(m)<-f # make row names family names
-         # Create the matrix and get the column dendrogram for the heatmap from it.
-         m<-structure(m)
-         #make a dendrogram              
-         col_dendro = as.dendrogram(hclust(dist(t(m))))
-         # And make the plot with phylogeny
-         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
-         windows(8,10)
-         heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
-         #dev.off()
-         ### no phylogeny
-         #make a plot without phylogeny 
-         #make a dendrogram              
-         row_dendro = as.dendrogram(hclust(dist((m))))
-         
-         ############  make the heatmap  plot #################33
-         windows(8,10)
-         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
-         
-         
-         
-         
-         
-         
-         
-         
-         
-         
-         
-         
-         
-         
-         
-         
-         
-         
-         
-                  
-#####heat map # 1  total/total ######
-# what is the selectivity of the plant?
-# total viable in fraction X / total viable in rhizosphere
-         
-## select total taxa
-         ps1<- subset_samples(ps, Fraction=="Total_Cells" ) 
-         sample_data(ps)
-         ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
-         any(taxa_sums(ps1) == 0)
-         
-         
-         ps1
-         # 2473 taxa from non rareified data
-         #filter for taxa that have at least 10 cells
-         ps1<-prune_taxa(taxa_sums(ps1) > 10, ps1)
-         ps1
-         # 2269 taxa
-         
-# select total viable cells in plant
-         ps.plant<- subset_samples(ps1,Fraction =="Total_Cells" & Compartment!="Rhizosphere")
-         otu.plant<-as.data.frame(t(as.data.frame(otu_table(ps.plant))))
-         head(otu.plant)
-         colnames(otu.plant)
-         dim(otu.plant)
-         
-         
-         
-         # 8 columns
-    
-        ####### agregate to the family level
-         n<-row.names(otu.plant)
-         otu.plant<-mutate(otu.plant, OTU=n)
-         n<-row.names(taxon)
-         taxon<- mutate(taxon, OTU=n)
-         otu.plant<-left_join(otu.plant, taxon)
-         
-         # if out plant family col in blank then sub for order
-         #For each row in data file
-         #if otu.plant$Family == "",
-         #then value = otu$order
-         otu.plant[is.na(otu.plant)] <- ""
-
-         otu.plant <- otu.plant %>% 
-           mutate(Family = ifelse(Family == "", Order,Family))
-         otu.plant <- otu.plant %>% 
-           mutate(Family = ifelse(Family == "", Class,Family))
-         
-         
-        otu.plant<-select(otu.plant, -Phyla, -Domain, -Class, -Order, -Genus, -Species, -OTU)
-         
-         # aggregate some families that have old nomincalture
-         otu.plant$Family <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu.plant$Family)
-         
-         colnames(otu.plant)
-         otu.plant<-aggregate(cbind(C10N.SYBR_S26, C1E.SYBR_S21,  C1N.SYBR_S13,  C2E.SYBR_S22, C2N.SYBR_S15,  C5E.SYBR_S23,  C7E.SYBR_S24 
-                                     , C7N.SYBR_S25 ) ~ Family, data = otu.plant, FUN = sum, na.rm = TRUE)
-         row.names(otu.plant) <- otu.plant$Family
-         
-         # rm family col
-         otu.plant<-select(otu.plant, -Family)
-         dim(otu.plant)
-         # 308 x 8
-         colnames(otu.plant)
-         rownames(otu.plant)
-                  
-  
- 
-## select total taxa in rhizosphere
-         ps.soil<- subset_samples(ps1,  Compartment=="Rhizosphere" & Fraction=="Total_Cells" )
-         otu.soil<-as.data.frame(t(as.data.frame(otu_table(ps.soil))))
-         head(otu.soil)
-         colnames(otu.soil)
-         dim(otu.soil)
-         # samples C10R, C1R, C2R, C5R, C7R
-         
-         ####### agregate to the family level
-         n<-row.names(otu.soil)
-         otu.soil<-mutate(otu.soil, OTU=n)
-         n<-row.names(taxon)
-         taxon<- mutate(taxon, OTU=n)
-         otu.soil<-left_join(otu.soil, taxon)
-         
-         otu.soil[is.na(otu.soil)] <- ""
-         
-         otu.soil <- otu.soil %>% 
-           mutate(Family = ifelse(Family == "", Order,Family))
-         otu.soil <- otu.soil %>% 
-           mutate(Family = ifelse(Family == "", Class,Family))
-         
-         otu.soil<-select(otu.soil, -Phyla, -Domain, -Class, -Order, -Genus, -Species, -OTU)
-         
-         # aggregate some families that have old nomincalture
-         otu.soil$Family <- gsub("*Rhizobiales_Incertae_Sedis*", "Rhizobiaceae" , otu.soil$Family)
-         
-         colnames(otu.soil)
-         otu.soil<-aggregate(cbind(C10R.SYBR_S20, C1R.SYBR_S16, C2R.SYBR_S17, C5R.SYBR_S18, C7R.SYBR_S19) ~ Family, data = otu.soil, FUN = sum, na.rm = TRUE)
-         row.names(otu.soil) <- otu.soil$Family
-         
-         # rm family col
-         otu.soil<-select(otu.soil, -Family)
-         dim(otu.soil)
-         # 299 x 5
-         colnames(otu.soil)
-         rownames(otu.soil)
-         
-        
-         # make otu soil df the roght size to make with the plant df
-         df<-cbind(otu.soil, otu.soil)
-         colnames(df)
-         dim(df)
-         # remove 2 columns
-         df<-df[, order(colnames(df))]
-         df<-subset(df, select= c(-C10R.SYBR_S20.1, -C5R.SYBR_S18.1))
-        dim(df)
-         
-# calculate log fold change         
-# add 1 to everything (absent in active & absent in total = no change)
-         
-         otu_log2<-log2(otu.plant/(df+.1))
-         
-         dim(otu_log2)
-         colnames(otu_log2)
-         n<-c("C10N", "C1E","C1N", "C2E" , "C2N" , "C5E" , "C7E", "C7N")
-         colnames(otu_log2)<-n
-         head(otu_log2)
-         # check distribution
-         otu_log2
-         hist(otu_log2$C10N) # most things didn't change because most taxa not present 
-         hist(otu_log2$C7N)
-         hist(otu_log2$C1E, breaks = 20)
-         # col dendogram doesn't work because a ton of stuff equals 0 infinit
-         # we re code -inf as -99
-         # this means a taxa wasn't present in the location sampled
-         
-         
-         otu_log2[otu_log2== "-Inf"] <- -15
-         ## add family column
-         f<-row.names(otu_log2)
-         otu_log2<-mutate(otu_log2, Family = f)
-         
-         #what are the values for these missing taxa
-         
-         otu_log2<- filter(otu_log2, C10N > -15 | C1E > -15 | C1N > -15 | C2E > -15 | C2N > -15 | C5E > -15 | C7E > -15 | C7N > -15  )
-         
-
-         
-####### make heatmap # 1 ############
-         # grab phylogeny and Read in the tree file 
-         
-         # grab phylogeny and Read in the tree file 
-         setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/GTDB")
-         tree = read.tree("family.nwk")
-         
-         # chec if the ncbi one is better
-         #setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s/trees/NCBI")
-         #tree = read.tree("genus.nwk")
-         # it is not 
-         length(tree$tip.label) # look at the tip labels 
-         
-         #this is how to modify tip labels
-         tree$tip.label <- gsub("\\_1","",tree$tip.label)
-         tree$tip.label <- gsub("\\'","",tree$tip.label)
-         #lol my taxa asignment all have a space so I'll remove thAT
-         otu_log2$Family <- gsub(" ", "", otu_log2$Family)
-         #modeify tip labls
-         otu_log2$Family <- gsub('\\_()', '' , otu_log2$Family)
-         otu_log2$Family <- gsub('_\\(*)*', '' , otu_log2$Family)
-         otu_log2$Family <- gsub('*Subgroup1*', '' , otu_log2$Family)
-         otu_log2$Family <- gsub('\\(SR1)', '' , otu_log2$Family)
-         otu_log2$Family <- gsub('*\\(*)*', '' , otu_log2$Family)
-         otu_log2$Family <- gsub ("Abditibacteriaceae"  , "Actinomycetaceae",  otu_log2$Family ) #in the same clades
-         
-         
-         length(intersect(unique(otu_log2$Family), tree$tip.label)) # Apply setdiff function to see what's missing from the tree
-         length(setdiff(unique(otu_log2$Family), tree$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
-         mynames<-(setdiff(unique(otu_log2$Family), tree$tip.label))
-         
-         # CHECK NAMES IN BIG TREE
-         #spnames = tree$tip.label
-         #spnames<-sort(spnames)
-         #spnames[grep("^[P][r].*", spnames)]
-         
-         # CHECK NAEMS OF TAXA THAT ARE MISSIG
-         mynames<-sort(mynames)
-         mynames
-         mynames[grep("^[Aa].*", mynames)]
-         otu_log2$Family[grep("^[T].*", otu_log2$Family)]
-         ##### MAKE TREE SMALLER
-         #what are the values for these missing taxa 
-         df1<-otu_log2[otu_log2$Family %in% mynames,] %>%
-          filter( C10N > -11 | C1E > -11 | C1N > -11 | C2E > -11 | C2N > -11 | C5E > -11 | C7E > -11 | C7N > -11  )
-         
-         mynames<-df1$Family
-         
-       # shorten phylogeny to match what is in our log 2 file
-         #families we want
-         asvs_remove<-setdiff(tree$tip.label, otu_log2$Family) #asvs we don't want
-         tree.short<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-         windows(14,14)
-         plot(tree.short, no.margin=TRUE,  cex = .5)
-          nodelabels()
-          ape::nodelabels( 253, 253, bg="green")
-          ape::nodelabels(31, 31, bg="green")
-          
-        ### rename node labels
-        tree.short[["node.label"]] <- c(1:138)
-
-      # add branches    
-        which(tree.short$tip.label=="Acidobacteriaceae")
-        which(tree.short$tip.label== "Blastocatellia"  )
-        
-        #88
-        tree.short$node.label[88]
-        tree.short<-AddTip(tree.short, where = 88, "Blastocatellia"  )
-        tree.short<-AddTip(tree.short, where = 146,  "Blastocatellaceae" )
-        # 146
-        #### add branches
-        which(tree.short$tip.label=="Acidobacteriaceae")
-        ##
-        # add up higher
-        tree.short<-AddTip(tree.short, where = 234,  "Acidobacteriales") # order
-        tree.short<-AddTip(tree.short, where = 234, "Acidobacteriae" )  #class?
-
-        # add branches    
-        which(tree.short$tip.label== "Rhizobiaceae")
-        # 122
-        ## branch at node 251
-        tree.short<-AddTip(tree.short, where = 253,  "Alphaproteobacteria")
-        which(tree.short$tip.label== "Alphaproteobacteria" )
-        #### add branch "Actinobacteria" )
-        which(tree.short$tip.label=="Actinomycetaceae" )
-        # MAYBE 158
-        tree.short<-AddTip(tree.short, where = 158, "Actinobacteria"   )
-        
-
-        #match with short tree
-        length(intersect(unique(otu_log2$Family), tree.short$tip.label)) # Apply setdiff function to see what's missing from the tree
-        length(setdiff(unique(otu_log2$Family), tree.short$tip.label))# Apply setdiff function to see what's missing from tree in but in my df
-        mynames<-(setdiff(unique(otu_log2$Family), tree.short$tip.label))
-        
-        
-
-         ### phylum Latescibacterota 
-         ### Prevotellaceae family in order Bacteriodales
-
-         
-         
-         # order the table so it matches the 
-         # make otu column 
-         # grab correct order 
-         target<-tree.short$tip.label
-         head(otu_log2)
-         dim(otu_log2)
-         otu_log2<-otu_log2[match(target, otu_log2$Family),]
-         dim(otu_log2)
-         # rm out column
-         # makes sure no space in col names
-         n <- otu_log2$Family
-         otu_log2<-subset(otu_log2, select = c( -Family))
-         row.names(otu_log2) <- n
-         
-         colnames(otu_log2)
-         head(otu_log2)
-         dim(otu_log2)
-         tree.short
-         #row.names(out_log2.1) <-f
-       
-# make matrix
-         m<-as.matrix(otu_log2)
-         row.names(m)
-         #row.names(m)<-f # make row names family names
-         # Create the matrix and get the column dendrogram for the heatmap from it.
-         m<-structure(m)
-         #make a dendrogram              
-         col_dendro = as.dendrogram(hclust(dist(t(m))))
-         
-         # And make the plot with phylogeny
-         #pdf(file="../figures/heatmap.pdf",width = 9,height=10, useDingbats=FALSE)
-         windows(10,10)
-         heatmap.phylo(x = m, Rowp = tree.short, Colp = as.phylo(as.hclust(col_dendro)))
-         #dev.off()
-         
-         #make a plot without phylogeny 
-         #make a dendrogram              
-         row_dendro = as.dendrogram(hclust(dist((m))))
-         
-         ############  make the heatmap  plot #################33
-         windows(10,10)
-         heatmap.phylo(x = m, Rowp = as.phylo(as.hclust(row_dendro)), Colp = as.phylo(as.hclust(col_dendro)))
-         
-         
-         
-         
-
-         
-         
-#____________________________________________#
-
-
-###############-----heatmap with averageing across samples ###################
-
-#subst by treament
-n<-c("C10N","C1N","C2N", "C7N") 
-e<- c("C1E","C2E","C5E","C7E")
-r<- c("C10R", "C1R",  "C2R",  "C5R")  
-# average log fold change in each treatment
-nod<- otu_log2%>% select(all_of(n))
-nod<-rowSums(nod)/4
-endo<- otu_log2%>% select(all_of(e))
-endo<- rowSums(endo)/4
-rhiz<- otu_log2%>% select(all_of(r))
-rhiz<-rowSums(rhiz)/4
-#combine
-avg_log2<-cbind(nod, endo)%>% cbind(rhiz)
-
-# now turn to df
-avg_log2<-as.data.frame(avg_log2)
-
-
-##top 100 by the biggest log change 
-s<-rowSums(abs(avg_log2))
-s<-sort(s, decreasing = TRUE)
-top100<-names(s)[1:100]
-
-
-# tree is so big. filter and make it smaller
-otus<-row.names(otu.raw) # all the asvs
-asvs_remove<-setdiff(otus, top100) #asvs we don't want
-length(otus)
-length(r)
-tree.endo<-drop.tip(tree, asvs_remove) # remove asvs we don't need
-target<-tree.endo$tip.label
-
-# subest dataframe to be on the top 100 taxa
-# add otu col
-otus<-row.names(avg_log2)
-avg_log2<-cbind(avg_log2, otus)
-
-otu_100<-subset(avg_log2, otus %in% top100)
-#grab names
-n<-colnames(otu_100)
-r<-row.names(otu_100)
-# order row to match  tree
-otu_100<-otu_100[match(target, otu_100$otus),]
-otu_100<-otu_100[-4] # remove otu column
-
-# make a matrix
-m<-matrix(as.numeric(unlist(otu_100)),nrow=nrow(otu_100))
-row.names(m)<-r
-colnames(m)<-n[-4]
-#otu_log2_100
-
-# get names of taxa
-#taxon
-otus<-row.names(taxon)
-tax<-cbind(taxon, otus)
-#subset taxa table
-taxa_100<-subset(tax, otus %in% top100)
-# order by otu
-taxa_100<-taxa_100[match(target, taxa_100$otus),]
-g<-taxa_100$Family
-
-# rename rows
-row.names(m)<-g
-# rename tree tips
-tree.endo$tip.label <- g
-
-# Create the matrix and get the column dendrogram for the heatmap from it.
-m<-structure(m)
-#make a dendrogram              
-col_dendro = as.dendrogram(hclust(dist(t(m))))
-# And make the plot....
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s")
-svg(file="heatmap.svg",width = 8 ,height=8)
-#windows(15,10)
-heatmap.phylo(x = m, Rowp = tree.endo, Colp = as.phylo(as.hclust(col_dendro)))
+gheatmap(p, m, 
+         colnames=FALSE,
+         legend_title="active taxa", offset = .5) +
+  scale_x_ggtree() + 
+  scale_fill_gradient(low= "#8fcafd", high = "#0c328a", aesthetics = "fill", na.value = "white",
+                      name="Abundance in TOTAL")+
+    ggtitle("Families in Total Community")
 dev.off()
-
-
-
-#---- calculating inactive fraction-------
-#Inactive<- total- active
-otu_inactive<-otu_total-otu_active
-# all the taxa that are higher in the active fraction than the inactive fraction (negative )are == to zero 
-otu_inactive[otu_inactive<0]<-0
-otu_inactive
-#length 7185
-#       C10N.SYBR_S26 C10R.SYBR_S20 C1E.SYBR_S21 C1N.SYBR_S13 
-# taxa1  0              47          0            0  
-# taxa2  0              0           0            0
-# taxa3  0              22          0            0
-# change colnames
-n<-c("C10N.inactive", "C10R.inactive", "C1E.inactive"  ,"C1N.inactive" , "C1R.inactive", "C2E.inactive" , "C2N.inactive"  ,"C2R.inactive" , "C5E.inactive", 
-"C5R.inactive",  "C7E.inactive",  "C7N.inactive" )
-colnames(otu_inactive)<- n
-# append the original dataset by adding the inactive taxa
-#make an asvs col to join by
-y<-row.names(otus)
-otus<-mutate(otus, asvs= y)
-
-y<-row.names(otu_inactive)
-otu_inactive<-mutate(otu_inactive, asvs= y)
-
-# join data frames
-otus<-full_join(otu_inactive, otus)
-# as row names from the asvs bit
-y<-otus$asvs
-row.names(otus) <- y
-otus<-select(otus, -asvs)
-otus
-# make all the asvs that are NA in the inactive fraction zeros
-otus[is.na(otus)] <- 0
-
-
-# append metadata
-setwd("C:/Users/Jenn/OneDrive - The Pennsylvania State University/Documents/Github/BONCAT_gradients/data")
-metadat <- read.delim("16s/metadata_w_inactive.txt", sep="\t", header = T, check.names=FALSE)
-metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule', 'ctl'='ctl'))
-metadat<-metadat[, c(1,3:6)]
-metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
-
-#to make coloring things easier I'm gong to added a combined fractionXboncat column no sure if i need this
-metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
-metadat<-select(metadat, -BONCAT)
-
-## order metadata
-metadat<-metadat[order(metadat$SampleID),]
-metadat
-## order otu table
-otus<-otus[, order(colnames(otus))]
-
-## Convert OTU numbers to percentages ##
-otus.perc<-otus/rowSums(otus)*100
-
-
-##### Phyloseq and exploring  taxonomy ####
-
-#check n taxa
-rank_names(ps)
-
-#what phyla are here?
-rank_names(ps)
-get_taxa_unique(ps, "Phyla")
-#how many of each taxa?
-taxa_sums(ps)
-
-# Are some taxa rare?
-OTUabundance = as.numeric(taxa_sums(ps))
-ASV = taxa_names(ps)
-d1<-as.data.frame(OTUabundance)
-d1<-cbind(d1, ASV)
-windows()
-ggplot(d1, aes(OTUabundance)) + 
-  geom_histogram() +
-  ggtitle("Histogram of Total Counts") + 
-  xlim(0, 20000) + ylim (0,50) + theme_bw()
-# most taxa are rare, but some are really abundant
-
-# who are the abundant taxa?
-topN = 50
-most_abundant_taxa = sort(taxa_sums(ps), TRUE)[1:topN]
-print(most_abundant_taxa)
-GP20 = prune_taxa(names(most_abundant_taxa), ps)
-length(get_taxa_unique(GP20, "Class"))
-print(get_taxa_unique(GP20, "Phyla"))
-print(get_taxa_unique(GP20, "Family"))
-abundant_tax<-tax_table(GP20)
-
-# who is in the negative PCR ctl?
-#subset
-ctl<-subset_samples(ps, SampleID=="CTL_S66")
-sample_variables(ps)
-# rm taxa that aren't there
-any(taxa_sums(ctl) == 0)
-ctl<-prune_taxa(taxa_sums(ctl) > 0, ctl)
-any(taxa_sums(ctl) == 0)
-ntaxa(ctl)
-#who are the most abundant taxa?
-topN = 20
-most_abundant_taxa = sort(taxa_sums(ctl), TRUE)[1:topN]
-print(most_abundant_taxa)
-ctl20 = prune_taxa(names(most_abundant_taxa), ctl)
-length(get_taxa_unique(ctl20, "Family"))
-print(get_taxa_unique(ctl20, "Phyla"))
-get_taxa_unique(ctl20, "Genus")
-get_taxa_unique(ctl20, "Family")
-
-#who is in the flow cytometer ctl?
-#subset
-ctl<-subset_samples(ps, SampleID=="BEADS_S67")
-sample_variables(ps)
-# rm taxa that aren't there
-any(taxa_sums(ctl) == 0)
-ctl<-prune_taxa(taxa_sums(ctl) > 0, ctl)
-any(taxa_sums(ctl) == 0)
-ntaxa(ctl)
-#who are the most abundant taxa?
-
-topN = 20
-most_abundant_taxa = sort(taxa_sums(ctl), TRUE)[1:topN]
-print(most_abundant_taxa)
-ctl20 = prune_taxa(names(most_abundant_taxa), ctl)
-length(get_taxa_unique(ctl20, "Family"))
-print(get_taxa_unique(ctl20, "Phyla"))
-get_taxa_unique(ctl20, "Genus")
-get_taxa_unique(ctl20, "Family")
-
-#who is in the nodule?
-#subset
-nod<-subset_samples(ps, Compartment=="Nodule")
-
-# rm taxa that aren't there
-any(taxa_sums(nod) == 0)
-nod<-prune_taxa(taxa_sums(nod) > 0, nod)
-any(taxa_sums(nod) == 0)
-ntaxa(nod)
-
-#who are most abundant taxa
-topN = 20
-most_abundant_taxa = sort(taxa_sums(nod), TRUE)[1:topN]
-print(most_abundant_taxa)
-nod20 = prune_taxa(names(most_abundant_taxa), nod)
-length(get_taxa_unique(nod20, "Class"))
-print(get_taxa_unique(nod20, "Phyla"))
-get_taxa_unique(nod20, "Genus")
-get_taxa_unique(nod20, "Family")
-get_taxa_unique(nod20, "Class")
-tax_table(nod20)
-
 
 ######------  import percent abundance into phyloseq for figure ----- #####
 
