@@ -110,6 +110,9 @@ names(NatParksPalettes)
 
 natparks.pals(name="Arches",n=8,type="discrete")
 natparks.pals(name="Arches2",n=4,type="discrete")
+natparks.pals(name="Banff",n=7,type="discrete")
+natparks.pals(name="Cuyahoga",n=6,type="discrete")
+
 
 #get colors from national park pal
 #DNA bulk soil
@@ -3905,71 +3908,120 @@ dev.off
 
 
 
-######------  import percent abundance into phyloseq for figure ----- #####
+######------  import percent abundance figure ----- #####
+## Set the working directory; ###
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
 
-otus.phyloseq<- t(otus.perc)
+### Import Data ###
+taxon <- read.table("asv_level_output/greengenes/taxonomy.txt", sep="\t", header=T, row.names=1)
+asvs.raw <- read.table("asv_level_output/greengenes/feature-table.tsv", sep="\t", header=T, row.names = 1 )
+metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
+
+## Transpose ASVS table ##
+asvs.t <- t(asvs.raw)
+## order metadata
+metadat<-metadat[order(metadat$SampleID),]
+## order asvs table
+asvs.t<-asvs.t[order(row.names(asvs.t)),]
+# make it percent
+asvs.perc<-((asvs.t/rowSums(asvs.t))*100)
+
+###--- recode metadata----- #
+metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
+metadat<-metadat[, c(1,3:6)]
+metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
+#to make coloring things easier I'm gong to added a combined fractionXboncat column 
+metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
+
+##------make phyloseq object with percent data -------#
+asvs.phyloseq<- (asvs.perc)
+taxon<-taxon[,1:7]
+metadat<-as.matrix(metadat)
+y<-colnames(asvs.raw)
+rownames(metadat) <- y
+metadat<-as.data.frame(metadat)
+
 
 #import it phyloseq
-Workshop_OTU <- otu_table(as.matrix(otus.phyloseq), taxa_are_rows = FALSE)
+Workshop_OTU <- otu_table(as.matrix(asvs.phyloseq), taxa_are_rows = FALSE)
 Workshop_metadat <- sample_data(metadat)
 Workshop_taxo <- tax_table(as.matrix(taxon)) # this taxon file is from the prev phyloseq object length = 14833
 ps_perc <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
 
-t(otu_table(ps_perc))
-
+#t(otu_table(ps_perc))
 #test it worked
 sample_names(ps_perc)
 print(ps_perc)
 # 14593 taxa
 
-topN = 50
+topN = 500
 most_abundant_taxa = sort(taxa_sums(ps_perc), TRUE)[1:topN]
 print(most_abundant_taxa)
 ps_20 = prune_taxa(names(most_abundant_taxa), ps_perc)
 length(get_taxa_unique(ps_perc, "Class"))
 print(get_taxa_unique(ps_20, "Phyla"))
-get_taxa_unique(ps_perc, "Genus")
+get_taxa_unique(ps_20, "Genus")
 get_taxa_unique(ps_perc, "Family")
 get_taxa_unique(ps_perc, "Class")
 tax_table(ps_20)
 
 # top phyla
-
-#" Cyanobacteria"     " Acidobacteriota"   " Armatimonadota"    " Nitrospirota"      " Proteobacteria"    " Gemmatimonadota"   " Chloroflexi"      
-#" Bacteroidota"      " Actinobacteriota"  " Planctomycetota"   " Verrucomicrobiota" " Myxococcota"       " Bdellovibrionota" 
+#" p__Proteobacteria"    ""                      " p__Bacteroidota"      " p__Actinobacteriota"  " p__Thermoproteota"    " p__Acidobacteriota"  
+#[7] " p__Verrucomicrobiota" " p__Chloroflexota"     " p__Patescibacteria"   " p__Gemmatimonadota"   " p__Firmicutes_D"      " p__Methylomirabilota"
+#[13] " p__Armatimonadota"   
 
 #### 100% plots
 
-Cyanobacteria <- subset_taxa(ps, Phyla ==  " Cyanobacteria"  )
-cyano.sum<-rowSums(otu_table(Cyanobacteria))
-Acidobacteriota <- subset_taxa(ps, Phyla  == " Acidobacteriota" )
-Acido.sum<-rowSums(otu_table(Acidobacteriota))
-Armatimonadota <- subset_taxa(ps, Phyla  == " Armatimonadota"  )
-Arma.sum<-rowSums(otu_table(Armatimonadota))
-Nitrospirota <- subset_taxa(ps, Phyla  == " Nitrospirota"   )
-Nitro.sum<-rowSums(otu_table(Nitrospirota))
-Proteobacteria  <- subset_taxa(ps, Phyla == " Proteobacteria"  )
-Proteo.sum<-rowSums(otu_table(Proteobacteria))
-Gemmatimonadota <- subset_taxa(ps, Phyla  ==  " Gemmatimonadota"  )
-Gemma.sum<-rowSums(otu_table(Gemmatimonadota))
-Chloroflexi <- subset_taxa(ps, Phyla  ==    " Chloroflexi" )
-Chloro.sum<-rowSums(otu_table(Chloroflexi))
-Bacteroidota  <- subset_taxa(ps, Phyla  ==    " Bacteroidota"  )
-Bactero.sum<-rowSums(otu_table(Bacteroidota))
-Actinobacteriota  <- subset_taxa(ps, Phyla  ==     " Actinobacteriota"   )
-Actino.sum<-rowSums(otu_table(Actinobacteriota ))
-Planctomycetota <- subset_taxa(ps, Phyla  ==     " Planctomycetota" )
-Planctomycetota.sum<-rowSums(otu_table(Planctomycetota ))
-Verrucomicrobiota  <- subset_taxa(ps, Phyla  ==     " Verrucomicrobiota"   )
-Verrucomicrobiota.sum<-rowSums(otu_table(Verrucomicrobiota ))
-Myxococcota <- subset_taxa(ps, Phyla  ==     " Myxococcota"   )
-Myxococcota.sum<-rowSums(otu_table(Myxococcota ))
-Bdellovibrionota <- subset_taxa(ps, Phyla  ==      " Bdellovibrionota"   )
-Bdellovibrionota.sum<-rowSums(otu_table(Bdellovibrionota ))
+Proteobacteria <- subset_taxa(ps, Phyla ==  " p__Proteobacteria"  )
+Proteobacteria.sum<-rowSums(otu_table(Proteobacteria ))
+
+Bacteroidota <- subset_taxa(ps, Phyla  == " p__Bacteroidota" )
+Bacteroidota.sum<-rowSums(otu_table(Bacteroidota))
+
+Actinobacteriota <- subset_taxa(ps, Phyla  == " p__Actinobacteriota"  )
+Actinobacteriota.sum<-rowSums(otu_table(Actinobacteriota))
+
+Thermoproteota <- subset_taxa(ps, Phyla  == " p__Thermoproteota" )
+Thermoproteota.sum<-rowSums(otu_table(Thermoproteota))
+
+Acidobacteriota <- subset_taxa(ps, Phyla ==  " p__Acidobacteriota" )
+Acidobacteriota.sum<-rowSums(otu_table(Acidobacteriota))
+
+Verrucomicrobiota <- subset_taxa(ps, Phyla  ==   " p__Verrucomicrobiota"   )
+Verrucomicrobiota.sum<-rowSums(otu_table(Verrucomicrobiota))
+
+Chloroflexi <- subset_taxa(ps, Phyla  ==     " p__Chloroflexota"  )
+Chloroflexi.sum<-rowSums(otu_table(Chloroflexi))
+
+Patescibacteria  <- subset_taxa(ps, Phyla  ==   " p__Patescibacteria"   )
+Patescibacteria.sum<-rowSums(otu_table(Patescibacteria))
+
+Gemmatimonadota  <- subset_taxa(ps, Phyla  ==      " p__Gemmatimonadota"  )
+Gemmatimonadota.sum<-rowSums(otu_table(Gemmatimonadota ))
+
+Firmicutes_D <- subset_taxa(ps, Phyla  ==     " p__Firmicutes_D" )
+Firmicutes_D.sum<-rowSums(otu_table(Firmicutes_D ))
+
+Methylomirabilota <- subset_taxa(ps, Phyla  ==     " p__Methylomirabilota"   )
+Methylomirabilot.sum<-rowSums(otu_table(Methylomirabilot ))
+
+Armatimonadota <- subset_taxa(ps, Phyla  ==    " p__Armatimonadota"   )
+Armatimonadota.sum<-rowSums(otu_table(Armatimonadota ))
+#Bdellovibrionota <- subset_taxa(ps, Phyla  ==      " Bdellovibrionota"   )
+#Bdellovibrionota.sum<-rowSums(otu_table(Bdellovibrionota ))
 
 
 #other<-100-(Bdellovibrionota.sum+ Myxococcota.sum+ Verrucomicrobiota.sum + Planctomycetota.sum+ Actino.sum + Bactero.sum +
 #            cyano.sum + Acido.sum + Arma.sum + Nitro.sum + Proteo.sum + Gemma.sum + Chloro.sum)
+
+Bacteroidota
+Actinobacteriota.sum, 
+Thermoproteota.sum,
+
+Acidobacteriota.sum
+Verrucomicrobiota.sum,
+Chloroflexi.sum
+Armatimonadota.sum
 
 
 phyl.mat<-cbind(Bdellovibrionota.sum, Myxococcota.sum, Verrucomicrobiota.sum , Planctomycetota.sum, Actino.sum , Bactero.sum ,
@@ -4026,12 +4078,7 @@ dev.off()
 
 
 
-######------- 100% plot for just active taxa---------
-
-#maybe try subsetting by sample?
-ps_active<-subset_samples(ps, Fraction !=  "Total_Cells")
-
-
+#------- 100% plot for just active taxa
 metadat_act<-subset(metadat, Fraction!="Total_Cells")
 
 # 100% plots 
