@@ -142,7 +142,196 @@ diamond <- 23
 triangle <- 24
 circle <- 21
 
-  
+######------ percent abundance figure #####
+## Set the working directory; ###
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
+
+### Import Data ###
+taxon <- read.table("asv_level_output/greengenes/taxonomy.txt", sep="\t", header=T, row.names=1)
+asvs.raw <- read.table("asv_level_output/greengenes/feature-table.tsv", sep="\t", header=T, row.names = 1 )
+metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
+
+## Transpose ASVS table ##
+asvs.t <- t(asvs.raw)
+## order metadata
+metadat<-metadat[order(metadat$SampleID),]
+## order asvs table
+asvs.t<-asvs.t[order(row.names(asvs.t)),]
+# make it percent
+#asvs.perc<-((asvs.t/rowSums(asvs.t))*100)
+
+reads<-rowSums(asvs.t) 
+samples <- rownames(asvs.t)
+
+reads<-as.data.frame(cbind(samples, reads))
+row.names(reads) <-NULL
+reads
+###--- recode metadata----- #
+metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
+metadat<-metadat[, c(1,3:6)]
+metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
+metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
+
+##------make phyloseq object with percent data -------#
+asvs.phyloseq<- (asvs.t)
+taxon<-taxon[,1:7]
+metadat<-as.matrix(metadat)
+y<-colnames(asvs.raw)
+rownames(metadat) <- y
+metadat<-as.data.frame(metadat)
+
+
+#import it phyloseq
+Workshop_OTU <- otu_table(as.matrix(asvs.phyloseq), taxa_are_rows = FALSE)
+Workshop_metadat <- sample_data(metadat)
+Workshop_taxo <- tax_table(as.matrix(taxon)) # this taxon file is from the prev phyloseq object length = 14833
+ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
+ps
+# 12855 taxa
+
+# grab data
+taxon<- as.data.frame(tax_table(ps))
+df<-as.data.frame(otu_table(ps))
+# make it percent
+df<-(df/rowSums(df))*100
+df<-as.data.frame(t(df))
+df<-cbind(df, taxon)
+
+
+# summarize by phyla
+df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
+                    C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
+                    C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
+                    C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
+                    C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
+                    C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
+) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
+
+
+df$Phyla[c(1)] <- "other"
+
+# again so there is only 1 other
+df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
+                    C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
+                    C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
+                    C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
+                    C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
+                    C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
+) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
+
+
+# ?? look at how we plot the other one?
+df<-gather(df, "sample", value, 2:43 )
+
+#remove zeros
+# anything that is less than 1% equals other
+df<-df[df$value!=0,]
+df
+df1<-df # place holder
+df1$Phyla[df1$value<1] <- "other"
+
+df1<-aggregate(cbind(value) ~ sample+Phyla, data = df1, FUN = sum, na.rm =TRUE)
+
+windows(10,10)
+df1%>% 
+  ggplot(aes(fill=Phyla, y=value, x=sample)) + 
+  geom_bar(position="fill", stat= "identity")+
+  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Top phyla") +
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
+dev.off()
+
+
+#same thing without aggregating the low abunace taxa
+
+df %>% 
+  ggplot(aes(fill=Phyla, y=value, x=sample)) + 
+  geom_bar(position="fill", stat= "identity")+
+  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Top phyla") +
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
+dev.off()
+
+
+#### mystery of the endosphyte ########
+# okay for not in soil, who esn't have a ohyla
+remove<-subset_taxa(ps, Phyla=="")
+remove
+# 1017 taxa
+
+########## remove these guys
+badtaxa<-taxa_names(remove)
+alltaxa<-taxa_names(ps)
+mytaxa <- alltaxa[!(alltaxa %in% badtaxa)]
+ps<-prune_taxa(mytaxa, ps )
+ps
+# 11838 taxa
+
+###### remake figure
+
+
+# grab data
+taxon<- as.data.frame(tax_table(ps))
+df<-t(otu_table(ps))
+df<-cbind(df, taxon)
+
+# summarize by phyla
+df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
+                    C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
+                    C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
+                    C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
+                    C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
+                    C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
+) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
+
+head(df)
+df$Phyla[1] <- "other"
+
+# again so there is only 1 other
+df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
+                    C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
+                    C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
+                    C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
+                    C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
+                    C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
+) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
+
+
+# ?? look at how we plot the other one?
+df<-gather(df, "sample", value, 2:43 )
+
+#remove zeros
+# anything that is less than 1% equals other
+df<-df[df$value!=0,]
+df
+#df1<-df # place holder
+#df1$Phyla[df1$value<1] <- "other"
+
+## who are the other?
+#<-df[grep("E.", df$sample),]
+
+df1<-aggregate(cbind(value) ~ sample+Phyla, data = df1, FUN = sum, na.rm =TRUE)
+
+windows(10,10)
+df%>% 
+  ggplot(aes(fill=Phyla, y=value, x=sample)) + 
+  geom_bar(position="fill", stat= "identity")+
+  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Top phyla") +
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
+dev.off()
+
+
+
 
 ######-------------import Asvs data -----------------##############
 ## Set the working directory; ###
@@ -3908,7 +4097,7 @@ dev.off
 
 
 
-######------  import percent abundance figure ----- #####
+######------ percent abundance figure #####
 ## Set the working directory; ###
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
 
@@ -3926,11 +4115,16 @@ asvs.t<-asvs.t[order(row.names(asvs.t)),]
 # make it percent
 asvs.perc<-((asvs.t/rowSums(asvs.t))*100)
 
+reads<-rowSums(asvs.t) 
+samples <- rownames(asvs.t)
+
+reads<-as.data.frame(cbind(samples, reads))
+row.names(reads) <-NULL
+reads
 ###--- recode metadata----- #
 metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
 metadat<-metadat[, c(1,3:6)]
 metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
-#to make coloring things easier I'm gong to added a combined fractionXboncat column 
 metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
 
 ##------make phyloseq object with percent data -------#
@@ -3946,190 +4140,166 @@ metadat<-as.data.frame(metadat)
 Workshop_OTU <- otu_table(as.matrix(asvs.phyloseq), taxa_are_rows = FALSE)
 Workshop_metadat <- sample_data(metadat)
 Workshop_taxo <- tax_table(as.matrix(taxon)) # this taxon file is from the prev phyloseq object length = 14833
-ps_perc <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
+ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
+ps
+# 12855 taxa
 
-#t(otu_table(ps_perc))
-#test it worked
-sample_names(ps_perc)
-print(ps_perc)
-# 14593 taxa
+# grab data
+taxon<- as.data.frame(tax_table(ps))
+df<-t(otu_table(ps))
+df<-cbind(df, taxon)
 
-topN = 500
-most_abundant_taxa = sort(taxa_sums(ps_perc), TRUE)[1:topN]
-print(most_abundant_taxa)
-ps_20 = prune_taxa(names(most_abundant_taxa), ps_perc)
-length(get_taxa_unique(ps_perc, "Class"))
-print(get_taxa_unique(ps_20, "Phyla"))
-get_taxa_unique(ps_20, "Genus")
-get_taxa_unique(ps_perc, "Family")
-get_taxa_unique(ps_perc, "Class")
-tax_table(ps_20)
-
-# top phyla
-#" p__Proteobacteria"    ""                      " p__Bacteroidota"      " p__Actinobacteriota"  " p__Thermoproteota"    " p__Acidobacteriota"  
-#[7] " p__Verrucomicrobiota" " p__Chloroflexota"     " p__Patescibacteria"   " p__Gemmatimonadota"   " p__Firmicutes_D"      " p__Methylomirabilota"
-#[13] " p__Armatimonadota"   
-
-#### 100% plots
-
-Proteobacteria <- subset_taxa(ps, Phyla ==  " p__Proteobacteria"  )
-Proteobacteria.sum<-rowSums(otu_table(Proteobacteria ))
-
-Bacteroidota <- subset_taxa(ps, Phyla  == " p__Bacteroidota" )
-Bacteroidota.sum<-rowSums(otu_table(Bacteroidota))
-
-Actinobacteriota <- subset_taxa(ps, Phyla  == " p__Actinobacteriota"  )
-Actinobacteriota.sum<-rowSums(otu_table(Actinobacteriota))
-
-Thermoproteota <- subset_taxa(ps, Phyla  == " p__Thermoproteota" )
-Thermoproteota.sum<-rowSums(otu_table(Thermoproteota))
-
-Acidobacteriota <- subset_taxa(ps, Phyla ==  " p__Acidobacteriota" )
-Acidobacteriota.sum<-rowSums(otu_table(Acidobacteriota))
-
-Verrucomicrobiota <- subset_taxa(ps, Phyla  ==   " p__Verrucomicrobiota"   )
-Verrucomicrobiota.sum<-rowSums(otu_table(Verrucomicrobiota))
-
-Chloroflexi <- subset_taxa(ps, Phyla  ==     " p__Chloroflexota"  )
-Chloroflexi.sum<-rowSums(otu_table(Chloroflexi))
-
-Patescibacteria  <- subset_taxa(ps, Phyla  ==   " p__Patescibacteria"   )
-Patescibacteria.sum<-rowSums(otu_table(Patescibacteria))
-
-Gemmatimonadota  <- subset_taxa(ps, Phyla  ==      " p__Gemmatimonadota"  )
-Gemmatimonadota.sum<-rowSums(otu_table(Gemmatimonadota ))
-
-Firmicutes_D <- subset_taxa(ps, Phyla  ==     " p__Firmicutes_D" )
-Firmicutes_D.sum<-rowSums(otu_table(Firmicutes_D ))
-
-Methylomirabilota <- subset_taxa(ps, Phyla  ==     " p__Methylomirabilota"   )
-Methylomirabilot.sum<-rowSums(otu_table(Methylomirabilot ))
-
-Armatimonadota <- subset_taxa(ps, Phyla  ==    " p__Armatimonadota"   )
-Armatimonadota.sum<-rowSums(otu_table(Armatimonadota ))
-#Bdellovibrionota <- subset_taxa(ps, Phyla  ==      " Bdellovibrionota"   )
-#Bdellovibrionota.sum<-rowSums(otu_table(Bdellovibrionota ))
+# summarize by phyla
+df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
+               C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
+               C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
+               C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
+               C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
+                C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
+                ) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
 
 
-#other<-100-(Bdellovibrionota.sum+ Myxococcota.sum+ Verrucomicrobiota.sum + Planctomycetota.sum+ Actino.sum + Bactero.sum +
-#            cyano.sum + Acido.sum + Arma.sum + Nitro.sum + Proteo.sum + Gemma.sum + Chloro.sum)
+df$Phyla[c(1,2)] <- "other"
 
-Bacteroidota
-Actinobacteriota.sum, 
-Thermoproteota.sum,
-
-Acidobacteriota.sum
-Verrucomicrobiota.sum,
-Chloroflexi.sum
-Armatimonadota.sum
-
-
-phyl.mat<-cbind(Bdellovibrionota.sum, Myxococcota.sum, Verrucomicrobiota.sum , Planctomycetota.sum, Actino.sum , Bactero.sum ,
-                  cyano.sum , Acido.sum , Arma.sum , Nitro.sum , Proteo.sum , Gemma.sum , Chloro.sum) 
-  
-phyl.perc<-(phyl.mat/41610)*100  
-print(phyl.perc)
-other <- 100-rowSums(phyl.perc)
-phyl.perc<- cbind(phyl.perc, other)
-phyl.perc<-as.data.frame(phyl.perc)
-phyl.perc<-cbind(metadat, phyl.perc)
+# again so there is only 1 other
+df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
+                    C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
+                    C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
+                    C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
+                    C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
+                    C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
+                          ) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
 
 
-# data wrangling  
-phy.df<-gather(phyl.perc, "taxa", value, 7:20 )
+# ?? look at how we plot the other one?
+df<-gather(df, "sample", value, 2:43 )
 
-head(phy.df)
+#remove zeros
+# anything that is less than 1% equals other
+df<-df[df$value!=0,]
+df
+df1<-df # place holder
+df1$Phyla[df1$value<1] <- "other"
 
-df<-phy.df %>% filter(Fraction!="Inactive")
+## who are the other?
+#<-df[grep("E.", df$sample),]
 
-df<-df%>%
-  group_by(taxa, compartment_BCAT) %>%
-  summarise(mean = mean(value))
+df1<-aggregate(cbind(value) ~ sample+Phyla, data = df1, FUN = sum, na.rm =TRUE)
 
-unique(df$compartment_BCAT)
-
-df$compartment_BCAT<-factor(df$compartment_BCAT, levels = c("beadsbeads", 
-                    "ctlctl", "Bulk_SoilTotal_DNA",  "RhizosphereTotal_DNA",
-                    "RhizosphereTotal_Cells", "RhizosphereBONCAT_Active" ,"RootsTotal_Cells"  
-                    , "RootsBONCAT_Active", "NoduleTotal_Cells"  ,  "NoduleBONCAT_Active"   ))
-
-df<-filter(df, compartment_BCAT!="beadsbeads" & compartment_BCAT!="ctlctl")
-# Stacked + percent
-svg(file="top_taxa.svg",width = 6, height=5 )
-install.packages("viridis")  # Install
-library("viridis")
-windows()
-
-df%>% 
-ggplot(aes(fill=taxa, y=mean, x=compartment_BCAT)) + 
+windows(10,10)
+df1%>% 
+  ggplot(aes(fill=Phyla, y=value, x=sample)) + 
   geom_bar(position="fill", stat= "identity")+
   #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
   scale_fill_viridis(discrete = TRUE) +
   ggtitle("Top phyla") +
   theme_bw()+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  xlab("Compartment")+
-  ylab("relative abundance %")
-  
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
 dev.off()
 
 
+#same thing without aggregating the low abunace taxa
 
-
-
-
-#------- 100% plot for just active taxa
-metadat_act<-subset(metadat, Fraction!="Total_Cells")
-
-# 100% plots 
-
-rhizobiaceae <- subset_taxa(ps_active, Family ==  " Rhizobiaceae"  )
-Rhizobiaceae<-rowSums(otu_table(rhizobiaceae))
-psuedo <- subset_taxa(ps_active, Family == " Pseudomonadaceae" )
-Pseudomonadaceae<-rowSums(otu_table(psuedo))
-staph <- subset_taxa(ps_active, Family == " Staphylococcaceae")
-Staphylococcaceae<-rowSums(otu_table(staph))
-burk <- subset_taxa(ps_active, Family == " Burkholderiaceae"  )
-Burkholderiaceae<-rowSums(otu_table(burk))
-sphing <- subset_taxa(ps_active, Family== " Sphingomonadaceae" )
-Sphingomonadaceae<-rowSums(otu_table(sphing))
-micro <- subset_taxa(ps_active, Family ==  " Micrococcaceae"   )
-Micrococcaceae<-rowSums(otu_table(micro))
-
-other<-100-(Rhizobiaceae+Pseudomonadaceae +Staphylococcaceae +Burkholderiaceae + Sphingomonadaceae + Micrococcaceae)
-
-
-
-
-phyl.mat<-cbind(Rhizobiaceae, Pseudomonadaceae, Staphylococcaceae, Burkholderiaceae,  Sphingomonadaceae , Micrococcaceae, other)
-print(phyl.mat)
-plyl.mat<-as.data.frame(phyl.mat)
-phyl.mat<-aggregate(phyl.mat~metadat_act$compartment_BCAT,FUN=mean)
-
-# data wrangling  
-phy.mat<-gather(phyl.mat, "taxa", value, 2:8)
-colnames(phy.mat)[1]<-"compartment_BCAT"
-
-phy.df<-phy.mat %>% group_by(compartment_BCAT, taxa) %>%
-  summarise(mean = mean(value), n = n())
-
-phy.df$compartment_BCAT<-factor(phy.df$compartment_BCAT, levels = c("NActl", "Bulk_SoilTotal_DNA",  "RhizosphereTotal_DNA","RhizosphereBONCAT_Active" ,"RootsBONCAT_Active",  "NoduleBONCAT_Active"   ))
-
-
-
-# Stacked + percent
-
-svg(file="figures/16s/top_active_taxa.svg",width = 8, height=6 )
-
-#windows()
-ggplot(phy.df, aes(fill=taxa, y=mean, x=compartment_BCAT)) + 
+df %>% 
+  ggplot(aes(fill=Phyla, y=value, x=sample)) + 
   geom_bar(position="fill", stat= "identity")+
-  scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
-  ggtitle("Top Families") +
-  theme_bw(base_size = 14) +
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  xlab("Compartment")+
-  ylab("relative abundance %")
+  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Top phyla") +
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
+dev.off()
+
+
+#### mystery of the endosphyte ########
+
+# remove taxa that do not have a phyla and are not in the soil
+soil <- subset_samples( ps, Compartment=="Rhizosphere" | Compartment=="Bulk_soil" | Compartment="ctl")
+soil
+# which taxa are zero in the soil?
+notinsoil<-prune_taxa(taxa_sums(soil) ==0, soil)
+notinsoil
+# 5168 taxa not in soil
+# okay for not in soil, who is is not bacteria?
+#<_subset_taxa(notinsoil, Domain!="d__Bacteria" )
+# 34 taxa
+####### remove taxa with no phyla
+
+# okay for not in soil, who esn't have a ohyla
+remove<-subset_taxa(ps, Phyla=="")
+remove
+# 482 taxa
+#tax_table(remove)
+
+########## remove these guys
+
+#remove<-otu_table(remove)
+badtaxa<-taxa_names(remove)
+
+alltaxa<-taxa_names(ps)
+mytaxa <- alltaxa[!(alltaxa %in% badtaxa)]
+
+ps<-prune_taxa(mytaxa, ps )
+ps
+# 12373 taxa if we just remove the ones that are not in soil
+# 11838 taxa
+
+###### remake figure
+
+
+# grab data
+taxon<- as.data.frame(tax_table(ps))
+df<-t(otu_table(ps))
+df<-cbind(df, taxon)
+
+# summarize by phyla
+df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
+                    C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
+                    C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
+                    C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
+                    C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
+                    C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
+) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
+
+head(df)
+df$Phyla[c(1,2)] <- "other"
+
+# again so there is only 1 other
+df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
+                    C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
+                    C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
+                    C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
+                    C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
+                    C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
+) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
+
+
+# ?? look at how we plot the other one?
+df<-gather(df, "sample", value, 2:43 )
+
+#remove zeros
+# anything that is less than 1% equals other
+df<-df[df$value!=0,]
+df
+#df1<-df # place holder
+#df1$Phyla[df1$value<1] <- "other"
+
+## who are the other?
+#<-df[grep("E.", df$sample),]
+
+df1<-aggregate(cbind(value) ~ sample+Phyla, data = df1, FUN = sum, na.rm =TRUE)
+
+windows(10,10)
+df%>% 
+  ggplot(aes(fill=Phyla, y=value, x=sample)) + 
+  geom_bar(position="fill", stat= "identity")+
+  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Top phyla") +
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
 
 dev.off()
 
