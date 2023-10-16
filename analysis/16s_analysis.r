@@ -105,13 +105,13 @@ heatmap.phylo <- function(x, Rowp, Colp, ...) {
 ### load colors 
 # colors :)
 
-library(NatParksPalettes)
-names(NatParksPalettes)
+#library(NatParksPalettes)
+#names(NatParksPalettes)
 
 natparks.pals(name="Arches",n=8,type="discrete")
-natparks.pals(name="Arches2",n=4,type="discrete")
-natparks.pals(name="Banff",n=7,type="discrete")
-natparks.pals(name="Cuyahoga",n=6,type="discrete")
+#natparks.pals(name="Arches2",n=4,type="discrete")
+#natparks.pals(name="Banff",n=7,type="discrete")
+#natparks.pals(name="Cuyahoga",n=6,type="discrete")
 
 
 #get colors from national park pal
@@ -136,13 +136,13 @@ natparks.pals(name="Cuyahoga",n=6,type="discrete")
 
 mycols6<-c("#8fcafd",  "#4499f5" ,  "#0c62af" ,   "#f0ac7d", "#cd622e" , "#993203")
 
-mycols8 <- c("#b46db3", "#3a1f46", "#8fcafd",  "#4499f5" ,  "#0c62af" ,   "#f0ac7d", "#cd622e" , "#993203")
+mycols8 <- c( "#8fcafd",  "#4499f5" ,  "#0c62af" ,   "#f0ac7d", "#cd622e" , "#993203", "#b46db3", "#3a1f46")
 square <- 22
 diamond <- 23
 triangle <- 24
 circle <- 21
 
-######------ percent abundance figure #####
+#####Import data ##########
 ## Set the working directory; ###
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
 
@@ -160,12 +160,12 @@ asvs.t<-asvs.t[order(row.names(asvs.t)),]
 # make it percent
 #asvs.perc<-((asvs.t/rowSums(asvs.t))*100)
 
-reads<-rowSums(asvs.t) 
-samples <- rownames(asvs.t)
+#reads<-rowSums(asvs.t) 
+#samples <- rownames(asvs.t)
 
-reads<-as.data.frame(cbind(samples, reads))
-row.names(reads) <-NULL
-reads
+#reads<-as.data.frame(cbind(samples, reads))
+#row.names(reads) <-NULL
+#reads
 ###--- recode metadata----- #
 metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
 metadat<-metadat[, c(1,3:6)]
@@ -189,6 +189,18 @@ ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
 ps
 # 12855 taxa
 
+
+# remove chloroplast DNA
+ps<-subset_taxa(ps, Class!=" c__Chloroplast")
+ps<-subset_taxa(ps, Genus!=" c__Mitochondria")
+ps<-subset_taxa(ps, Genus!=" g__Chloroplast")
+# get rid of taxa that arent in any samples
+ps<-prune_taxa(taxa_sums(ps) > 0, ps)
+ps
+# 12855 taxa
+
+######------ percent abundance figure #####
+
 # grab data
 taxon<- as.data.frame(tax_table(ps))
 df<-as.data.frame(otu_table(ps))
@@ -207,100 +219,17 @@ df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , 
                     C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
 ) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
 
-
-df$Phyla[c(1)] <- "other"
-
-# again so there is only 1 other
-df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
-                    C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
-                    C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
-                    C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
-                    C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
-                    C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
-) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
-
-
-# ?? look at how we plot the other one?
-df<-gather(df, "sample", value, 2:43 )
-
-#remove zeros
-# anything that is less than 1% equals other
-df<-df[df$value!=0,]
-df
-df1<-df # place holder
-df1$Phyla[df1$value<1] <- "other"
-
-df1<-aggregate(cbind(value) ~ sample+Phyla, data = df1, FUN = sum, na.rm =TRUE)
-
-windows(10,10)
-df1%>% 
-  ggplot(aes(fill=Phyla, y=value, x=sample)) + 
-  geom_bar(position="fill", stat= "identity")+
-  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
-  scale_fill_viridis(discrete = TRUE) +
-  ggtitle("Top phyla") +
-  theme_bw()+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-
-dev.off()
-
-
-#same thing without aggregating the low abunace taxa
-
-df %>% 
-  ggplot(aes(fill=Phyla, y=value, x=sample)) + 
-  geom_bar(position="fill", stat= "identity")+
-  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
-  scale_fill_viridis(discrete = TRUE) +
-  ggtitle("Top phyla") +
-  theme_bw()+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-
-dev.off()
-
-
-#### mystery of the endosphyte ########
-# okay for not in soil, who esn't have a ohyla
-remove<-subset_taxa(ps, Phyla=="")
-remove
-# 1017 taxa
-
-########## remove these guys
-badtaxa<-taxa_names(remove)
-alltaxa<-taxa_names(ps)
-mytaxa <- alltaxa[!(alltaxa %in% badtaxa)]
-ps<-prune_taxa(mytaxa, ps )
-ps
-# 11838 taxa
-
-###### remake figure
-
-
-# grab data
-taxon<- as.data.frame(tax_table(ps))
-df<-t(otu_table(ps))
-df<-cbind(df, taxon)
-
-# summarize by phyla
-df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
-                    C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
-                    C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
-                    C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
-                    C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
-                    C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
-) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
-
 head(df)
-df$Phyla[1] <- "other"
+df$Phyla[c(1,2)] <- "other"
 
 # again so there is only 1 other
-df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
-                    C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
-                    C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
-                    C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
-                    C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
-                    C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
-) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
+#df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
+ #                   C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
+  #                  C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
+   #                 C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
+    #                C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
+     #               C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
+#) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
 
 
 # ?? look at how we plot the other one?
@@ -312,11 +241,7 @@ df<-df[df$value!=0,]
 df
 #df1<-df # place holder
 #df1$Phyla[df1$value<1] <- "other"
-
-## who are the other?
-#<-df[grep("E.", df$sample),]
-
-df1<-aggregate(cbind(value) ~ sample+Phyla, data = df1, FUN = sum, na.rm =TRUE)
+#df1<-aggregate(cbind(value) ~ sample+Phyla, data = df1, FUN = sum, na.rm =TRUE)
 
 windows(10,10)
 df%>% 
@@ -332,24 +257,134 @@ dev.off()
 
 
 
+#### remove unassigned taxa ########
+# okay for not in soil, who esn't have a ohylp
+ps
+remove<-subset_taxa(ps, Phyla=="" | Phyla==" p__" | Domain=="Unassigned" )
+remove
+# 1019 taxa
+unique(taxon$Domain)
+########## remove these guys
+badtaxa<-taxa_names(remove)
+alltaxa<-taxa_names(ps)
+mytaxa <- alltaxa[!(alltaxa %in% badtaxa)]
+ps<-prune_taxa(mytaxa, ps )
+ps<-prune_taxa(taxa_sums(ps) > 0, ps)
+ps
+# 11836 taxa
 
-######-------------import Asvs data -----------------##############
+#unique(taxon$Class)
+
+
+###### percent abundance figure No. 2#######
+###### remake figure
+# grab data
+taxon<- as.data.frame(tax_table(ps))
+df<- as.data.frame(otu_table(ps))
+# make it percent
+df<-(df/rowSums(df))*100
+df<-as.data.frame(t(df))
+df<-cbind(df, taxon)
+df
+
+# summarize by phyla
+df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
+                    C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
+                    C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
+                    C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
+                    C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
+                    C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
+) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
+
+head(df)
+#df$Phyla[1] <- "other"
+
+#gather
+df<-gather(df, "sample", value, 2:43 )
+df
+#remove zeros
+# anything that is less than 1% equals other
+df<-df[df$value!=0,]
+df
+#df1<-df # place holder
+#df1$Phyla[df1$value<1] <- "other"
+
+## who are the other?
+#<-df[grep("E.", df$sample),]
+
+#df1<-aggregate(cbind(value) ~ sample+Phyla, data = df1, FUN = sum, na.rm =TRUE)
+
+windows(10,10)
+df%>% 
+  ggplot(aes(fill=Phyla, y=value, x=sample)) + 
+  geom_bar(position="fill", stat= "identity")+
+  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Top phyla") +
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+dev.off()
+
+# use this ps!
+ps
+
+########barplot of endophyte taxa
+
+endo<-subset_samples(ps, Compartment == "Roots")
+endo<-prune_taxa(taxa_sums(endo) > 0, endo)
+endo
+# 648 taxa
+
+# grab data
+taxon<- as.data.frame(tax_table(endo))
+df<- as.data.frame(otu_table(endo))
+# make it percent
+df<-(df/rowSums(df))*100
+df<-as.data.frame(t(df))
+df<-cbind(df, taxon)
+
+# summarize by phyla
+df<-aggregate(cbind(C10E.POS_S60  , C1E.POS_S31,   C1E.SYBR_S21,  C2E.POS_S32,   C2E.SYBR_S22,  C5E.POS_S33,
+                    C5E.SYBR_S23, C7E.POS_S34,   C7E.SYBR_S24) ~ Genus, data = df, FUN = sum, na.rm = TRUE)
+head(df)
+df$Genus[c(1,2)] <- "other"
+
+#gather
+df<-gather(df, "sample", value, 2:10 )
+#remove zeros
+df<-df[df$value!=0,]
+
+
+windows(10,10)
+df%>% 
+  ggplot(aes(fill=Genus, y=value, x=sample)) + 
+  geom_bar(position="fill", stat= "identity")+
+  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Genus") +
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  theme(legend.position="none")
+dev.off()
+
+df
+
+
+##old import Asvs data ##
 ## Set the working directory; ###
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
+#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
 
 ### Import Data ###
-taxon <- read.table("asv_level_output/greengenes/taxonomy.txt", sep="\t", header=T, row.names=1)
-asvs.raw <- read.table("asv_level_output/greengenes/feature-table.tsv", sep="\t", header=T, row.names = 1 )
-metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
+#taxon <- read.table("asv_level_output/greengenes/taxonomy.txt", sep="\t", header=T, row.names=1)
+#asvs.raw <- read.table("asv_level_output/greengenes/feature-table.tsv", sep="\t", header=T, row.names = 1 )
+#metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
 
 ## Transpose ASVS table ##
-asvs.t <- t(asvs.raw)
+#asvs.t <- t(asvs.raw)
 ## order metadata
-metadat<-metadat[order(metadat$SampleID),]
+#metadat<-metadat[order(metadat$SampleID),]
 ## order asvs table
-asvs.t<-asvs.t[order(row.names(asvs.t)),]
-
-
+#asvs.t<-asvs.t[order(row.names(asvs.t)),]
 
 #import it phyloseq
 #Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
@@ -395,47 +430,47 @@ asvs.t<-asvs.t[order(row.names(asvs.t)),]
 
 
 ###--- recode metadata----- #
-metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
-metadat<-metadat[, c(1,3:6)]
-metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
+#metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
+#metadat<-metadat[, c(1,3:6)]
+#metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
 #to make coloring things easier I'm gong to added a combined fractionXboncat column 
-metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
+#metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
 
 ##------make phyloseq object with rarefied data -------#
 
-row.names(df) <- df$column1
+#row.names(df) <- df$column1
 
 
-asvs.phyloseq<- (asvs.t)
-taxon<-taxon[,1:7]
-metadat<-as.matrix(metadat)
-y<-colnames(asvs.raw)
-rownames(metadat) <- y
-metadat<-as.data.frame(metadat)
+#asvs.phyloseq<- (asvs.t)
+#taxon<-taxon[,1:7]
+#metadat<-as.matrix(metadat)
+#y<-colnames(asvs.raw)
+#rownames(metadat) <- y
+#metadat<-as.data.frame(metadat)
 
 #import it phyloseq
-Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
-Workshop_metadat <- sample_data(metadat)
-Workshop_taxo <- tax_table(as.matrix(taxon))
-ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
+#Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
+#Workshop_metadat <- sample_data(metadat)
+#Workshop_taxo <- tax_table(as.matrix(taxon))
+#ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
 
 #test it worked
 #sample_names(ps)
-print(ps)
+#print(ps)
 # 12855 taxa
 
 # remove chloroplast DNA
-ps<-subset_taxa(ps, Class!=" Chloroplast")
-ps<-subset_taxa(ps, Genus!=" Mitochondria")
-ps<-subset_taxa(ps, Genus!=" Chloroplast")
+#ps<-subset_taxa(ps, Class!=" Chloroplast")
+#ps<-subset_taxa(ps, Genus!=" Mitochondria")
+#ps<-subset_taxa(ps, Genus!=" Chloroplast")
 # get rid of taxa that aren; in any samples
-ps<-prune_taxa(taxa_sums(ps) > 0, ps)
-any(taxa_sums(ps) == 0)
-ps
+#ps<-prune_taxa(taxa_sums(ps) > 0, ps)
+#any(taxa_sums(ps) == 0)
+#ps
 # 12855 taxa
 
 #asvs.clean<-as.data.frame(t(as.data.frame(otu_table(ps))))
-taxon<-as.data.frame(tax_table(ps))
+#taxon<-as.data.frame(tax_table(ps))
 
 
 
@@ -520,7 +555,7 @@ taxon<-as.data.frame(tax_table(ps))
 # get rid of taxa that arent in any samples
 #ps<-prune_taxa(taxa_sums(ps) > 0, ps)
 #any(taxa_sums(ps) == 0)
-#ps
+
 
 # 3173 taxa
 # output df 
@@ -529,12 +564,13 @@ taxon<-as.data.frame(tax_table(ps))
 
 
 
-########------DIVERSITY  figure---------########
+#####DIVERSITY  figure#####
 # set wd for figures
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 
 # diversity 
 rich<-estimate_richness(ps, measures = c("Observed", "Shannon", "Simpson", "InvSimpson" ))
+
 
 #svg(file="figures/16s/diversity.svg",width = 10, height=4 )
 #windows()
@@ -553,20 +589,18 @@ arrange( -Observed)
 rich<- rich %>%  filter(Plant!="NOPLANT", Fraction!="Inactive")
 rich$compartment_BCAT <-factor(rich$compartment_BCAT, levels = c("Bulk_SoilTotal_DNA", "RhizosphereTotal_DNA", "RhizosphereTotal_Cells", "RhizosphereBONCAT_Active",
                                                                  "RootsTotal_Cells"   ,  "RootsBONCAT_Active" , "NoduleTotal_Cells" ,  "NoduleBONCAT_Active" ))          
-
 rich$Fraction <-factor(rich$Fraction, levels = c("Total_DNA", "Total_Cells", "BONCAT_Active"))
 
-
-
+rich
 
 
 # total + active number otus
-svg(file="figures/16s/shannon_divserity.svg",width = 10, height=6 )
-windows(width = 6, height=7)
+svg(file="figures/16s/observed_divserity.svg",width = 10, height=6 )
+windows(width = 8, height=5)
 rich %>%
-  ggplot(aes(x=Compartment, y=Shannon,  col= Fraction))+
+  ggplot(aes(x=Compartment, y=Observed,  col= Fraction))+
   geom_boxplot() +
-  scale_color_manual(values=mycols8[c(4,7,1)]) +
+  scale_color_manual(values=mycols8[c(7,1,5)]) +
   geom_jitter(width = .1, size=1 )+
   theme_classic(base_size = 18)+
   theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
@@ -575,46 +609,26 @@ rich %>%
         legend.position = "none")+
   facet_wrap(~Fraction, scales = "free_x")+
   scale_x_discrete(drop = TRUE) +
-  ylab("Shannon Diversity")+
+  ylab("N asvs")+
   xlab("Compartment")
 dev.off()
 
-## just active alpha
-svg(file="figures/16s/observed_divserity_act.svg",width = 6, height=7 )
-windows(width = 6, height=7)
+# total + active number otus
+svg(file="figures/16s/shannon_divserity.svg",width = 8, height=5 )
+windows(width = 8, height=5)
 rich %>%
-  filter(Plant!="NOPLANT", Fraction!="Inactive", Fraction=="BONCAT_Active")%>%
-  ggplot(aes(x=compartment_BCAT, y=Observed, fill = Compartment, col= Compartment))+
+  ggplot(aes(x=Compartment, y=Shannon,  col= Fraction))+
   geom_boxplot() +
-  scale_colour_manual(values = c( "black", gold, pink))+
-  scale_fill_manual( values = c( purple, lightgold, lightpink))+
+  scale_color_manual(values=mycols8[c(7,1,5)]) +
   geom_jitter(width = .1, size=1 )+
   theme_classic(base_size = 18)+
   theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
-        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14),
-        legend.position =  c(0.8, 0.8))+
-  ylab("Number of ASVS")+
-  xlab("Compartment")
-dev.off()
-
-
-
-
-# total + active shannon
-svg(file="figures/16s/shannon_diversity.svg",width = 6, height=7 )
-windows(width = 6, height=7)
-rich %>%
-  filter(Plant!="NOPLANT", Fraction!="Inactive")%>%
-  ggplot(aes(x=compartment_BCAT, y=Shannon, fill = Compartment, col= Compartment))+
-  geom_boxplot() +
-  scale_colour_manual(values = c( blue,  purple, gold, pink))+
-  scale_fill_manual( values = c(blue, lightpurple, lightgold, lightpink))+
-  geom_jitter(width = .1, size=1 )+
-  theme_classic(base_size = 18)+
-  theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
-        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14), axis.text.y = element_text(size = 14),
-        legend.position =  c(0.8, 0.8))+
-  ylab("Shannon Diversity")+
+        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14),
+        axis.text.y = element_text(size = 14),
+        legend.position = "none")+
+  facet_wrap(~Fraction, scales = "free_x")+
+  scale_x_discrete(drop = TRUE) +
+  ylab("Shannon")+
   xlab("Compartment")
 dev.off()
 
@@ -775,7 +789,7 @@ summary(m1)
 
 
 
-#####DIVERSITY Stats #########
+######DIVERSITY Stats######
 ### t test
 df<-rich %>%
   filter(Plant!="NOPLANT", Fraction!="Inactive") %>%
@@ -952,31 +966,27 @@ summary(m1)
 
 
 
-
-
-
-
 ############ taxa exploration  ######################
 
 ######### remove rare taxa, is the endosphyte diversity still higher in active??
 
-root_total<-subset_samples(ps, Compartment=="Roots")
-sample_names(root_total)
-root_total<-prune_taxa(taxa_sums(root_total) > 0, root_total)
-any(taxa_sums(root_total) == 0)
-root_total
-#603 taxa
+root<-subset_samples(ps, Compartment=="Roots")
+root<-prune_taxa(taxa_sums(root) > 0, root)
+tax_table(root)
+root
+
+
 
 ## fitler for taxa that are rare
-root_total<-prune_taxa(taxa_sums(root_total) > 15, root_total)
+root_total<-prune_taxa(taxa_sums(root_total) < 10, root_total)
 any(taxa_sums(root_total) == 0)
 root_total
-# 186 taxa
+# 231 taxa
 
 x<-otu_table(root_total)
-
+x
 #calc richness
-rich<-estimate_richness(root_total, measures = c("Observed", "Shannon", "Simpson", "InvSimpson" ))
+rich<-estimate_richness(root, measures = c("Observed", "Shannon", "Simpson", "InvSimpson" ))
 
 # make little metadata
 metadat2<-metadat %>% filter(Compartment == "Roots")
@@ -1118,7 +1128,7 @@ window("total")
 hist(nod_active$sum)
 
 
-################################# BARPLOT of active verse total abundance #####################
+#####BARPLOT of active verse total abundance for top otus######
 # plan
 #phyla level
 # phyla level %>% sum by phyla level %>% average replicates %>% rhizo 
@@ -1456,116 +1466,21 @@ tse = tse[, ! tse$region %in% c("EE", "unknown")]
 print(tse)
 
 
-#########################VENN DIAGRAM are most taxa generalists or specialists#################################
-### don't include taxa that are only in 1 samples and less than 50 reads total
-sample_data(ps)
-# at least in 2 samples min reads is 10
-df<-subset_samples(ps, Fraction=="BONCAT_Active")
-df<-ps_prune(df, min.samples = 2, min.reads = 10)
-df
-# 852 taxa
 
-df<-prune_taxa(taxa_sums(df) > 0, df)
-# subset for active
-#df<-prune_taxa(taxa_sums(df) > 5, df)
-any(taxa_sums(df) == 0)
-
-taxon<-tax_table(df)
-df<-as.data.frame((otu_table(df)))
-
-dim(df)
-df
-n<-row.names.data.frame(df)
-n[grepl("R" , n)]="rhizo"
-n[grepl("E" , n)]="roots"
-n[grepl("N" , n)]="nodule"
-
-# summ by group
-df<-rowsum(df, n)
-
-df<-t(df)
-df<-as.data.frame(df)
-dim(df)
-head(df)
-habitat<-rep(NA, 2621)
-habitat[df$nodule==0 & df$roots==0 & df$rhizo>1]="rhizo specailist"
-habitat[df$nodule==0 & df$roots>1 & df$rhizo==0]="root specialist"
-habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="nodule specialist"
-habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="rhizo and root generalist"
-habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="plant generalist"
-habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hyper generalist"
-#habitat
-unique(habitat)
-
-# rhizo   root    nod
-# 1       0         0     -> rhizo specialist
-# 0       1         0     -> root specialist
-# 0       0         1     -> nod specialist
-# 1       1         0     -> rhizo and root generalist
-# 0       1         1     -> plant generalist
-# 1       1         1     -> hyper generalist
-
-df_habitat<-cbind(df, habitat)
-df_habitat
-############### calucating sums by hand
-df_sums<-rowsum(df, habitat)
-df_sums$rhizo
-value <- df_sums$rhizo
-value[c(2,3)]<-df_sums$nodule[c(2,3)]
-value[c(6,7)]<-df_sums$roots[c(6,7)]
-value
-df_sums<-mutate(df_sums, value = value)
-
-################ df wrangling for venndriagram
-df[df>1] <- 1
-head(df)
-nodule<-rownames(df[df$nodule==1,])
-roots<-rownames(df[df$roots==1,])
-rhizo<-rownames(df[df$rhizo==1,])
-df
-x <- list(
-  nodule = nodule, 
-  roots = roots, 
-  rhizo = rhizo
-)
-x
-
-################################## venn diagram #
-#if (!require(devtools)) install.packages("devtools")
-#devtools::install_github("yanlinlin82/ggvenn")
-library(ggvenn)
-# otu level
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s/venndiagram")
-svg(file="OTU_level_active_venn.svg",width = 6, height=6 )
-
-
-ggvenn(
-  x, 
-  fill_color = mycols6[c(4,5,6)],
-  stroke_size = 2, set_name_size = 9, text_size = 6, digits = 1, fill_alpha=.8
-  #auto_scale = TRUE
- ) +
-  ggtitle("Active Otus")
-dev.off()
-####genus level??
-
-
-
-
-###########-------- total cells 
+#####VENN DIAGRAM are most taxa generalists or specialists total#####
 df<-subset_samples(ps, Fraction=="Total_Cells")
 # at least in 2 samples min reads is 10
 df<-ps_prune(df, min.samples = 2, min.reads = 10)
-df
-# 1342 taxa
 df<-prune_taxa(taxa_sums(df) > 0, df)
-# subset for active
-#df<-prune_taxa(taxa_sums(df) > 5, df)
-any(taxa_sums(df) == 0)
+df
+dim(df)
+# 1293 taxa
+
 
 # don't include taxa that are super rare less then 5 reads
 taxon<-tax_table(df)
 df<-as.data.frame((otu_table(df)))
+#df<-df[-which(row.names(df)=="Others"),]
 
 dim(df)
 head(df)
@@ -1578,39 +1493,34 @@ n
 # summ by group
 df<-rowsum(df, n)
 dim(df)
-df<-t(df)
-df<-as.data.frame(df)
+df<-as.data.frame(t(df))
+
+df<-df[-which(row.names(df)=="Others"),]
+
+
+
 dim(df)
-head(df)
-#habitat<-rep(NA, 2621)
+habitat<-rep(NA, length(df$nodule))
+habitat[df$nodule==0 & df$roots==0 & df$rhizo>0]="rhizo specailist"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo==0]="root specialist"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="nodule specialist"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="rhizo and root generalist"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo>0]="rhizo and nodule generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="plant generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hyper generalist"
+unique(habitat)
 
-#habitat[df$nodule==0 & df$roots==0 & df$rhizo>1]="rhizo specailist"
-#habitat[df$nodule==0 & df$roots>1 & df$rhizo==0]="root specialist"
-#habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="nodule specialist"
-#habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="rhizo and root generalist"
-#habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="plant generalist"
-#habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hyper generalist"
-#habitat
-#unique(habitat)
+### alternative labeling
+habitat<-rep(NA, length(df$nodule))
+habitat[df$nodule==0 & df$roots==0 & df$rhizo>0]="specialist"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo==0]="specialist"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="specialist"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="generalist"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo>0]="generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hyper generalist"
+unique(habitat)
 
-# rhizo   root    nod
-# 1       0         0     -> rhizo specialist
-# 0       1         0     -> root specialist
-# 0       0         1     -> nod specialist
-# 1       1         0     -> rhizo and root generalist
-# 0       1         1     -> plant generalist
-# 1       1         1     -> hyper generalist
-
-#df_habitat<-cbind(df, habitat)
-#df_habitat
-############### calucating sums by hand
-#df_sums<-rowsum(df, habitat)
-#df_sums$rhizo
-#value <- df_sums$rhizo
-#value[c(2,3)]<-df_sums$nodule[c(2,3)]
-#value[c(6,7)]<-df_sums$roots[c(6,7)]
-#value
-#df_sums<-mutate(df_sums, value = value)
 
 ################ df wrangling for venndriagram
 df[df>1] <- 1
@@ -1624,120 +1534,375 @@ x <- list(
   roots = roots, 
   rhizo = rhizo
 )
-x
+#x
 
 ################################## venn diagram #
-#if (!require(devtools)) install.packages("devtools")
-#devtools::install_github("yanlinlin82/ggvenn")
-library(ggvenn)
+#library(ggvenn)
 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s/venndiagram")
 svg(file="OTU_level_total_venn.svg",width = 6, height=6 )
+windows(4,4)
 ggvenn(
   x, 
   fill_color = mycols6[c(1,2,3)],
-  stroke_size = 2, set_name_size = 9, text_size = 6, digits = 1, fill_alpha=.8
+  stroke_size = 2, set_name_size = 6, text_size = 3, digits = 1, fill_alpha=.8
   #auto_scale = TRUE
 ) +
   ggtitle("Total Viable Otus")
 dev.off()
-
-####Bar chart - are taxa that are generalist realy abundant?
-
+#####VENN DIAGRAM are most taxa generalists or specialists active######
+### don't include taxa that are only in 1 samples and less than 50 reads total
+sample_data(ps)
+# at least in 2 samples min reads is 10
 df<-subset_samples(ps, Fraction=="BONCAT_Active")
+df<-ps_prune(df, min.samples = 2, min.reads = 10)
 df<-prune_taxa(taxa_sums(df) > 0, df)
-# subset for active
-df<-prune_taxa(taxa_sums(df) > 5, df)
-any(taxa_sums(df) == 0)
-
-# don't include taxa that are super rare less then 5 reads
+df
+# 806 taxa
+# rm others
 taxon<-tax_table(df)
 df<-as.data.frame((otu_table(df)))
+df
+n<-row.names(df)
+n[grepl("R" , n)]="rhizo"
+n[grepl("E" , n)]="roots"
+n[grepl("N" , n)]="nodule"
+df
+n
+# summ by group
+df<-rowsum(df, n)
+df<-as.data.frame(t(df))
+df
+
+df<-df[-which(row.names(df)=="Others"),]
 
 dim(df)
+head(df)
+habitat<-rep(NA, 805)
+habitat[df$nodule==0 & df$roots==0 & df$rhizo>1]="rhizo specailist"
+habitat[df$nodule==0 & df$roots>1 & df$rhizo==0]="root specialist"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="nodule specialist"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="rhizo and root generalist"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo>0]="rhizo and nodule generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="plant generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hyper generalist"
+#habitat
+unique(habitat)
+
+
+### alternative labeling
+habitat<-rep(NA, 805)
+habitat[df$nodule==0 & df$roots==0 & df$rhizo>0]="specialist"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo==0]="specialist"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="specialist"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="generalist"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo>0]="generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="generalist"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hyper generalist"
+unique(habitat)
+
+############### calucating sums by hand
+df_sums<-rowsum(df, habitat)
+df_sums$rhizo
+value <- df_sums$rhizo
+value[c(2,3)]<-df_sums$nodule[c(2,3)]
+value[c(6,7)]<-df_sums$roots[c(6,7)]
+value
+df_sums<-mutate(df_sums, value = value)
+
+########df wrangling for venndriagram
+df[df>1] <- 1
+head(df)
+nodule<-rownames(df[df$nodule==1,])
+roots<-rownames(df[df$roots==1,])
+rhizo<-rownames(df[df$rhizo==1,])
 df
-n<-row.names.data.frame(df)
+x <- list(
+  nodule = nodule, 
+  roots = roots, 
+  rhizo = rhizo
+)
+x
+
+#######venn diagram #
+#if (!require(devtools)) install.packages("devtools")
+#devtools::install_github("yanlinlin82/ggvenn")
+library(ggvenn)
+# otu level
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s/venndiagram")
+svg(file="OTU_level_active_venn.svg",width = 6, height=6 )
+
+windows(6,6)
+ggvenn(
+  x, 
+  fill_color = mycols6[c(4,5,6)],
+  stroke_size = 2, set_name_size = 9, text_size = 6, digits = 1, fill_alpha=.8
+  #auto_scale = TRUE
+ ) +
+  ggtitle("Active Otus")
+dev.off()
+
+
+###########BARPLOT Abundance of habitat types ############
+##make df for active ###
+### don't include taxa that are only in 1 samples and less than 50 reads total
+sample_data(ps)
+# at least in 2 samples min reads is 10
+df<-subset_samples(ps, Fraction=="BONCAT_Active")
+df<-ps_prune(df, min.samples = 2, min.reads = 10)
+df<-prune_taxa(taxa_sums(df) > 0, df)
+df
+# 806 taxa
+# rm others
+taxon<-tax_table(df)
+df<-as.data.frame((otu_table(df)))
+df
+n<-row.names(df)
 n[grepl("R" , n)]="rhizo"
 n[grepl("E" , n)]="roots"
 n[grepl("N" , n)]="nodule"
 
 # summ by group
 df<-rowsum(df, n)
+df<-as.data.frame(t(df))
 
-df<-t(df)
-df<-as.data.frame(df)
-dim(df)
-df
-habitat<-rep(NA, 2621)
-habitat[df$nodule==0 & df$roots==0 & df$rhizo>1]="rhizo specailist"
-habitat[df$nodule==0 & df$roots>1 & df$rhizo==0]="root specialist"
-habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="nodule specialist"
-habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="rhizo and root generalist"
-habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="plant generalist"
-habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hyper generalist"
-habitat[df$nodule>0 & df$roots==0 & df$rhizo>0]="nodule and rhizo generalist"
+df<-df[-which(row.names(df)=="Others"),]
 
+#habitat<-rep(NA, 805)
+#habitat[df$nodule==0 & df$roots==0 & df$rhizo>1]="rhizo specailist"
+#habitat[df$nodule==0 & df$roots>1 & df$rhizo==0]="root specialist"
+#habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="nodule specialist"
+#habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="rhizo and root generalist"
+#habitat[df$nodule>0 & df$roots==0 & df$rhizo>0]="rhizo and nodule generalist"
+#habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="plant generalist"
+#habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hyper generalist"
+#unique(habitat)
 
-habitat
+### alternative labeling
+habitat<-rep(NA, 805)
+habitat[df$nodule==0 & df$roots==0 & df$rhizo>0]="1 habitat"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo==0]="1 habitat"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="1 habitat"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="2 habitats"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo>0]="2 habitats"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="2 habitats"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="all habitats"
 unique(habitat)
 
-# rhizo   root    nod
-# 1       0         0     -> rhizo specialist
-# 0       1         0     -> root specialist
-# 0       0         1     -> nod specialist
-# 1       1         0     -> rhizo and root generalist
-# 0       1         1     -> plant generalist
-# 1       1         1     -> hyper generalist
-
-
-
 df_habitat<-cbind(df, habitat)
-dim(df_habitat)
-unique(df_habitat$habitat)
+df_habitat<-gather(df_habitat, "Compartment", value, 1:3 )
+active<-filter(df_habitat, value>0)
+active$Fraction <- "Active"
+active
+unique(active$habitat)
+######make df for total###########
 
-df_habitat$abundace<- rowSums(df_habitat %>% 
-            dplyr::select(contains("O"))) %>% 
-  glimpse()
+df<-subset_samples(ps, Fraction=="Total_Cells")
+# at least in 2 samples min reads is 10
+df<-ps_prune(df, min.samples = 2, min.reads = 10)
+df<-prune_taxa(taxa_sums(df) > 0, df)
+# 1293 taxa
+taxon<-tax_table(df)
+df<-as.data.frame((otu_table(df)))
+n<-row.names.data.frame(df)
+n[grepl("N" , n)]="nodule"
+n[grepl("E" , n)]="roots"
+n[grepl("R" , n)]="rhizo"
 
-df_habitat$mean_abundance<- rowMeans(df_habitat %>% 
-             dplyr::select(contains("O"))) %>% 
-  glimpse()
+# summ by group
+df<-rowsum(df, n)
+dim(df)
+df<-as.data.frame(t(df))
 
-head(df_habitat)
-windows(6,6)
-df_habitat%>% filter(rhizo>1)%>%
+df<-df[-which(row.names(df)=="Others"),]
+
+#habitat<-rep(NA, length(df$nodule))
+#habitat[df$nodule==0 & df$roots==0 & df$rhizo>0]="rhizo specailist"
+#habitat[df$nodule==0 & df$roots>0 & df$rhizo==0]="root specialist"
+#habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="nodule specialist"
+#habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="rhizo and root generalist"
+#habitat[df$nodule>0 & df$roots==0 & df$rhizo>0]="rhizo and nodule generalist"
+#habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="plant generalist"
+#habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="hyper generalist"
+#unique(habitat)
+
+### alternative labeling
+habitat<-rep(NA, length(df$nodule))
+habitat[df$nodule==0 & df$roots==0 & df$rhizo>0]="1 habitat"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo==0]="1 habitat"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo==0]="1 habitat"
+habitat[df$nodule==0 & df$roots>0 & df$rhizo>0]="2 habitats"
+habitat[df$nodule>0 & df$roots==0 & df$rhizo>0]="2 habitats"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo==0]="2 habitats"
+habitat[df$nodule>0 & df$roots>0 & df$rhizo>0]="all habitats"
+unique(habitat)
+
+#df wrangling for barplot ##
+df_habitat<-cbind(df, habitat)
+df_habitat<-gather(df_habitat, "Compartment", value, 1:3 )
+total<-filter(df_habitat, value>0)
+total$Fraction <- "Total"
+# rm zeros???
+total
+# put dfs together and set factors 
+total
+active
+df1<-rbind(active, total)
+df1
+
+#df1$habitat<-factor(df1$habitat, levels = c( "specialist",  "generalist" , "hyper generalist" ))
+unique(levels(as.factor(df1$habitat)))
+df1$habitat<- as.factor((df1$habitat))
+df1$Compartment<-factor(df1$Compartment, levels = c( "rhizo",  "roots", "nodule" ))
+unique(df1$Compartment)
+df1$value <- df1$value +1 
+
+
+windows(6,8)
+df1%>% 
   ggplot()+
-  geom_boxplot(mapping=aes(x = reorder(habitat, +rhizo), y = log10(rhizo)))+
+  geom_boxplot(mapping=aes(x = habitat, y = log10(value), fill=Fraction))+
   #geom_jitter(mapping=aes(x = reorder(habitat, +rhizo), y = log10(rhizo)))+
+  scale_fill_manual(values= mycols6[c(1,4)])+
+  facet_wrap(~Compartment, nrow = 3,
+             ncol = 1)+
   theme_bw()+
   theme(axis.text.x=element_text(angle=45, hjust=0.9))+
-  ylab("log 10 relative abundance in rhizosphere")
+  ylab("relative abundance")+
+  xlab("presence across multiple habitats")
+
 
 df_habitat%>% filter(roots>1)%>%
   ggplot()+
-  geom_boxplot(mapping=aes(x = reorder(habitat, +roots), y = log10(roots)))+
-  geom_jitter(mapping=aes(x = reorder(habitat, +roots), y = log10(roots)))+
+  geom_boxplot(mapping=aes(x = reorder(habitat, +roots), y = log10(roots)), fill=mycols6[5])+
+  #geom_jitter(mapping=aes(x = reorder(habitat, +roots), y = log10(roots)))+
   theme_bw()+
   theme(axis.text.x=element_text(angle=45, hjust=0.9))+
-  ylab("log 10 relative abundance in root")
+  ylab("log 10 relative abundance in root")+
+  xlab("habitat use group")+
+  ggtitle("Roots - Active")
 
 
 df_habitat%>% filter(nodule>1)%>%
   ggplot()+
-  geom_boxplot(mapping=aes(x = reorder(habitat, +nodule), y = log10(nodule)))+
+  geom_boxplot(mapping=aes(x = reorder(habitat, +nodule), y = log10(nodule)), fill=mycols6[6], alpha=.7)+
   geom_jitter(mapping=aes(x = reorder(habitat, +nodule), y = log10(nodule)))+
+  
   theme_bw()+
   theme(axis.text.x=element_text(angle=45, hjust=0.9))+
   ylab("log 10 relative abundance in root")
 
+######venn diagram of endo total vs active####
+### don't include taxa that are only in 1 samples and less than 50 reads total
+sample_data(ps)
+# at least in 2 samples min reads is 10
+df<-subset_samples(ps, Compartment=="Roots")
+df<-ps_prune(df, min.samples = 2, min.reads = 10)
+df<-prune_taxa(taxa_sums(df) > 0, df)
+df
+endo<- df # place holder
+# prune to in at least 2 samples, and at least 10 reads
+# 121 taxa
+
+taxon<-tax_table(df)
+df<-as.data.frame((otu_table(df)))
+
+dim(df)
+df
+n<-row.names.data.frame(df)
+n[grep("POS" , n)]="Active"
+n[grep("SYBR" , n)]="Total"
+# summ by group
+df<-rowsum(df, n)
+
+df<-t(df)
+df<-as.data.frame(df)
+dim(df)
+head(df)
+
+################ df wrangling for venndriagram
+df[df>1] <- 1
+head(df)
+Active<-rownames(df[df$Active==1,])
+Total<-rownames(df[df$Total==1,])
+#rhizo<-rownames(df[df$rhizo==1,])
+df
+x <- list(
+  Active = Active, 
+  Total = Total
+)
+x
+
+################################## venn diagram #
+#if (!require(devtools)) install.packages("devtools")
+#devtools::install_github("yanlinlin82/ggvenn")
+library(ggvenn)
+# otu level
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s/venndiagram")
+svg(file="OTU_level_active_venn.svg",width = 6, height=6 )
+
+windows(6,6)
+ggvenn(
+  x, 
+  fill_color = c("#cd622e","#4499f5"),
+  stroke_size = 2, set_name_size = 5, text_size = 6, digits = 1, fill_alpha=.8
+  #auto_scale = TRUE
+) +
+  ggtitle("Otus with at least 10 reads")
+dev.off()
+
+####who are they?
+total_only<-rownames(df[df$Active==0 & df$Total==1,])
+Active_only<-rownames(df[df$Active==1 & df$Total==0,])
+Active_only<-as.data.frame(taxon[match(Active_only, row.names(taxon)),])
+Active_only$Genus[which(Active_only$Genus==" g__"  )] <- Active_only$Family[which(Active_only$Genus==" g__" )]
+Active_only$Genus[which(Active_only$Genus==""  )] <- Active_only$Family[which(Active_only$Genus=="" )]
+Active_only$Genus[which(Active_only$Genus==" f__"  )] <- Active_only$Order[which(Active_only$Genus==" f__" )]
+Active_only$Genus[which(Active_only$Genus==""  )] <- Active_only$Order[which(Active_only$Genus=="" )]
+Active_only$Genus[which(Active_only$Genus==""  )] <- Active_only$Class[which(Active_only$Genus=="" )]
+Active_only$Genus
+# what is the abundance of these otus?
+taxon<-tax_table(endo)
+df<-as.data.frame((otu_table(endo)))
+
+n<-row.names.data.frame(df)
+n[grep("POS" , n)]="Active"
+n[grep("SYBR" , n)]="Total"
+# summ by group
+df<-rowsum(df, n)
+rowSums(df)
+df<-t(df)
+df<-as.data.frame(df)
+
+df1<-as.data.frame(df[match(row.names(Active_only), row.names(taxon)),])
+df<-cbind(df1, Active_only)
+df<-df[order(df$Active, decreasing = TRUE),]
+df%>% select(Genus, Active)
+
+# what is the abundance of these otus only in total?
+taxon<-tax_table(endo)
+df<-as.data.frame((otu_table(endo)))
+
+n<-row.names.data.frame(df)
+n[grep("POS" , n)]="Active"
+n[grep("SYBR" , n)]="Total"
+# summ by group
+df<-rowsum(df, n)
+
+rowSums(df)
+df<-t(df)
+df<-as.data.frame(df)
+
+
+df1<-as.data.frame(taxon[match(total_only, row.names(taxon)),])
+df1
+#df<-cbind(df1, _only)
+#df<-df[order(df$Active, decreasing = TRUE),]
+df%>% select(Genus, Active)
 
 
 
-
-
-
-
-############################PCOA plots  ########################
+#####PCOA plots######
 ## Set the working directory; ###
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
 
@@ -1790,6 +1955,21 @@ ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
 print(ps)
 # 12855 taxa
 
+######remove unassigned taxa ########
+# okay for not in soil, who esn't have a ohylp
+ps
+remove<-subset_taxa(ps, Phyla=="" | Phyla==" p__" | Domain=="Unassigned" )
+remove
+# 1019 taxa
+unique(taxon$Domain)
+########## remove these guys
+badtaxa<-taxa_names(remove)
+alltaxa<-taxa_names(ps)
+mytaxa <- alltaxa[!(alltaxa %in% badtaxa)]
+ps<-prune_taxa(mytaxa, ps )
+ps<-prune_taxa(taxa_sums(ps) > 0, ps)
+ps
+# 11706 taxa
 
 #Pcoa on rarefied asvs Data
 # rm ctl
@@ -1832,22 +2012,34 @@ unique(levels(as.factor(metadat$Fraction)))
 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/figures/16s/pcoa")
 
-svg(file="Pcoa_plantvsoil_raw.svg",width = 8, height=8 )
+svg(file="Pcoa_plantvsoil_raw.svg",width = 5, height=5 )
 
 windows(title="PCoA on plant asvs- Bray Curtis", width = 5, height = 5)
-ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis dissimilarities",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="All Compartments",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 points(otus.p, col=c("black"),
        pch=c(25, circle, diamond, triangle)[as.factor(metadat$Compartment)],
        lwd=1,cex=2,
        bg=c( "#cd622e", "#4499f5", "#b46db3" )[as.factor(metadat$Fraction)])
 
+legend("topleft", legend=c( "Active"   ,   "Total_Cells", "TotalDNA"  ),
+         #pch=c(circle, diamond, triangle, circle, diamond, triangle, 25, diamond),
+         fill= c("#cd622e", "#4499f5", "#b46db3" ),
+          title = "Fraction",
+         bty = "n")
+
+legend("top", legend=c("Nodule", "Root", "Rhizosphere", "Bulk soil"  ),
+       pch=c(1,  2, 5, 6),
+       #fill= c("#cd622e", "#4499f5", "#b46db3" ) ,
+       title = "Compartment",       bty = "n")
+dev.off()
+#change pch values so they are nicer
 
 windows(4,4)
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis dissimilarities",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 legend("top", inset=c(-2,0), legend=c( "Active"   ,   "Total_Cells", "TotalDNA"  ),
-        pch=c(circle, diamond, triangle, circle, diamond, triangle, 25, diamond),
+      #pch=c(circle, diamond, triangle, circle, diamond, triangle, 25, diamond),
        fill= c("#cd622e", "#4499f5", "#b46db3" ) ,
        bty = "n")
 
@@ -1865,7 +2057,7 @@ ordiellipse(otus.pcoa, metadat$Compartment,
 #
 bg=c("#f0ac7d", "#cd622e", "#993203","#8fcafd" ,"#4499f5", "#0c62af","#b46db3", "#b46db3" )
 dev.off()
-bulk soil = upside down tri 25
+#bulk soil = upside down tri 25
 nodule = circle
 root = tri
 rhizo = diamond
@@ -1873,7 +2065,7 @@ levels(as.factor(metadat$compartment_BCAT))
 as.factor(metadat$Compartment)
 dev.off()
 
-##########-------run a new pcoa on just soil <3
+######soil####
 ps
 metadat
 ps2<-subset_samples(ps, Compartment !=  "Nodule" & Compartment != "Roots" & Compartment !="ctl" & Fraction != "Total_DNA")
@@ -1899,23 +2091,13 @@ pe1<-perc.exp[1]
 pe2<-perc.exp[2]
 
 # subset metadata1
-metadat2<-metadat%>% filter(Compartment !=  "Nodule" & Compartment != "Roots" & Compartment!="ctl" & Fraction != "Total_DNA")
-
-as.factor(metadat2$Compartment)
-as.factor(metadat2$Fraction)
-as.factor(metadat2$compartment_BCAT)
-levels(as.factor(metadat2$compartment_BCAT))
-levels(as.factor(metadat2$Fraction))
-
-square <- 22
-diamond <- 23
-triangle <- 24
-circle <- 21
+metadat2<-as.data.frame(sample_data(ps2))
+#metadat2<-metadat%>% filter(Compartment !=  "Nodule" & Compartment != "Roots" & Compartment!="ctl" & Fraction != "Total_DNA")
 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 svg(file="figures/16s/pcoa/soil_raw.svg",width = 4, height=4 )
-windows(title="PCoA on asvs- Bray Curtis", width = 5, height = 5)
-ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA Bray Curtis Rhizosphere",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
+windows(title="PCoA on asvs- Bray Curtis", width = 4, height = 4)
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="Rhizosphere",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 points(otus.p[,1:2],
        pch=(diamond),
@@ -1929,7 +2111,7 @@ ordiellipse(otus.pcoa, metadat2$Fraction,
             #lwd=.1,
             col= c("#cd622e", "#4499f5"),
             alpha = 50)
-
+dev.off()
 #ordiellipse(otus.pcoa, metadat2$Fraction,  
  #           kind = "ehull", conf=0.9, label=T, 
   #          #draw = "polygon",
@@ -1953,20 +2135,21 @@ dev.off()
 
 
 
-##### plant#######
+######nodule#####
 ps
-ps2<-subset_samples(ps, Compartment !=  "Bulk_Soil" & Compartment != "Rhizosphere" & Compartment != "ctl")
+ps2<-subset_samples(ps, Compartment == "Nodule")
 ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
 any(taxa_sums(ps2) == 0)
 ps2
 sample_names(ps2)
 df<-as.data.frame(otu_table(ps2))
-# 446 taXA
+sample_data(ps2)
+#  146 taXA
 # Calculate Bray-Curtis distance between samples
 otus.bray<-vegdist(otu_table(ps2), method = "bray")
 
 # Perform PCoA analysis of BC distances #
-otus.pcoa <- cmdscale(otus.bray, k=(15-1), eig=TRUE)
+otus.pcoa <- cmdscale(otus.bray, k=(8-1), eig=TRUE)
 
 # Store coordinates for first two axes in new variable #
 otus.p <- otus.pcoa$points[,1:2]
@@ -1978,26 +2161,15 @@ pe1<-perc.exp[1]
 pe2<-perc.exp[2]
 
 # subset metadata
-metadat2<-metadat%>% filter(Compartment !=  "Bulk_Soil" & Compartment != "Rhizosphere" & Compartment != "ctl") 
-
-as.factor(metadat2$Compartment)
-as.factor(metadat2$Fraction)
-as.factor(metadat2$compartment_BCAT)
-levels(as.factor(metadat2$compartment_BCAT))
-levels(as.factor(metadat2$Fraction))
-
-square <- 22
-diamond <- 23
-triangle <- 24
-circle <- 21
+metadat2<- as.data.frame(sample_data(ps2))
 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-svg(file="figures/16s/pcoa/plant_raw.svg",width = 4, height=4 )
-windows(title="PCoA on asvs- Bray Curtis", width = 5, height = 5)
-ordiplot(otus.pcoa,choices=c(1,2), type="none", main="PCoA of Bray Curtis Plant",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
+svg(file="figures/16s/pcoa/nodule.svg",width = 4, height=4 )
+windows(title="PCoA on asvs- Bray Curtis", width = 4, height = 4)
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="Nodule",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 points(otus.p[,1:2],
-       pch=c(circle, triangle)[as.factor(metadat2$Compartment)],
+       pch=c(circle),
        lwd=1,cex=2,
        bg=c(fill= c("#cd622e", "#4499f5" ) )[as.factor(metadat2$Fraction)])
 
@@ -2012,11 +2184,59 @@ ordiellipse(otus.pcoa, metadat2$Fraction,
 
 dev.off()
 
-#legend("topleft",legend=c("Flow cyto control", "Bulk soil total DNA", " PCR control",  "Rhizosphere BONCAT_Active" , "Rhizosphere Inactive",  "Rhizosphere Total DNA"), 
-#       pch=c(15,5, 0, 1,2,5),
-#       cex=1.1, 
-#       col=c("black", "#739AFF",  "black", "#785EF0", "#785EF0",  "#785EF0"),
-#       bty = "n")
+####### rooots #######
+ps
+ps2<-subset_samples(ps, Compartment == "Roots")
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+ps2
+sample_names(ps2)
+df<-as.data.frame(otu_table(ps2))
+#  618  taXA
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+
+# Perform PCoA analysis of BC distances #
+otus.pcoa <- cmdscale(otus.bray, k=(9-1), eig=TRUE)
+
+# Store coordinates for first two axes in new variable #
+otus.p <- otus.pcoa$points[,1:2]
+
+# Calculate % variance explained by each axis #
+otus.eig<-otus.pcoa$eig
+perc.exp<-otus.eig/(sum(otus.eig))*100
+pe1<-perc.exp[1]
+pe2<-perc.exp[2]
+
+# subset metadata
+metadat2<- sample_data(ps2)
+
+levels(as.factor(metadat2$compartment_BCAT))
+levels(as.factor(metadat2$Fraction))
+
+square <- 22
+diamond <- 23
+triangle <- 24
+circle <- 21
+
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+svg(file="figures/16s/pcoa/roots.svg",width = 4, height=4 )
+windows(title="PCoA on asvs- Bray Curtis", width = 4, height = 4)
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="Roots",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+points(otus.p[,1:2],
+       pch=triangle,
+       lwd=1,cex=2,
+       bg=c(fill= c("#cd622e", "#4499f5" ) )[as.factor(metadat2$Fraction)])
+
+ordiellipse(otus.pcoa, metadat2$Fraction,  
+            kind = "ehull", conf=0.95, label=T, 
+            draw = "polygon",
+            border = 0,
+            #lwd=.1,
+            col= c("#cd622e", "#4499f5"),
+            alpha = 50)
+
 
 dev.off()
 

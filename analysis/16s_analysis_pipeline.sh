@@ -227,11 +227,20 @@ qiime greengenes2 taxonomy-from-table \
 wget http://ftp.microbio.me/greengenes_release/current/2022.10.phylogeny.asv.nwk.qza
 
 # green genes2 has a tree I can probably use
+
+
+######## using the pre trained classifier #######
+
+qiime feature-classifier classify-sklearn \
+ --i-classifier 2022.10.backbone.v4.nb.qza \
+  --i-reads demux.trimmed.dada2.qza \
+  --o-classification taxonomy.qza
+
 ####### assign phylogeny ##########
 
-qiime alignment mafft \
---i-sequences rep.seqs.dada2.qza \
---o-alignment aligned-rep-seq.qza
+#qiime alignment mafft \
+#--i-sequences rep.seqs.dada2.qza \
+#--o-alignment aligned-rep-seq.qza
 
 
 
