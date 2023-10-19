@@ -4526,3 +4526,246 @@ dev.off()
 
 
 
+###########binomial model #########
+
+
+############make data frame##########
+#presence in plant ~ abundance in rhizosphere
+# at least in 2 samples min reads is 10
+#df<-ps_prune(df, min.samples = 2, min.reads = 10)
+#df<-prune_taxa(taxa_sums(df) > 0, df)
+#dim(df)
+# 1293 taxa
+# don't include taxa that are super rare less then 5 read
+#ps
+#sample_data(ps)
+ps1<-subset_samples(ps, Compartment != "ctl"& Fraction != "Total_DNA")
+#ps1
+taxon<- as.data.frame(tax_table(ps1))
+df<-as.data.frame(otu_table(ps1))
+
+#### seperate out ecach rep
+#               abundance_active  abundance_total present_in_plant
+#otu #1 rep 1
+#otu #1 rep 2
+n<-row.names.data.frame(df)
+n[grepl("C10" , n)]="5"
+n[grepl("C1" , n)]="1"
+n[grepl("C2" , n)]="2"
+n[grepl("C5" , n)]="3"
+n[grepl("C7" , n)]="4"
+df$rep <- n
+
+#rep 1
+df1<-filter(df, rep=="1")
+#find out if somehting is in plant
+n<-row.names.data.frame(df1)
+n[grepl("N." , n)]="nodule"
+n[grepl("E." , n)]="roots"
+#remove rep
+df1<-select(df1, -rep)
+# sum by group and make vector
+df1<-rowsum(df1, n)
+df1<-as.data.frame(t(df1))
+# insert column
+inplant<-rep(NA, length(df1$nodule))
+inplant[df1$nodule>0 | df1$roots>0 ]<-"1"
+inplant[df1$nodule==0 & df1$roots==0 ]<-"0"
+df1$inplant <- inplant
+df1<-df1 %>% select(c(-nodule, -roots))
+row.names(df1)<-paste0(row.names(df1), "Rep1")
+colnames(df1) <- c("Active", "Total", "inplant")
+rep1<-df1
+rep1
+
+##rep 2
+df1<-filter(df, rep=="2")
+#find out if somehting is in plant
+n<-row.names.data.frame(df1)
+n[grepl("N." , n)]="nodule"
+n[grepl("E." , n)]="roots"
+#remove rep
+df1<-select(df1, -rep)
+# sum by group and make vector
+df1<-rowsum(df1, n)
+df1<-as.data.frame(t(df1))
+# insert column
+inplant<-rep(NA, length(df1$nodule))
+inplant[df1$nodule>0 | df1$roots>0 ]<-"1"
+inplant[df1$nodule==0 & df1$roots==0 ]<-"0"
+df1$inplant <- inplant
+df1<-df1 %>% select(c(-nodule, -roots))
+row.names(df1)<-paste0(row.names(df1), "Rep2")
+colnames(df1) <- c("Active", "Total", "inplant")
+df1
+rep2<-df1
+
+##rep 3
+df1<-filter(df, rep=="3")
+#find out if somehting is in plant
+n<-row.names.data.frame(df1)
+n[grepl("N." , n)]="nodule"
+n[grepl("E." , n)]="roots"
+#remove rep
+df1<-select(df1, -rep)
+# sum by group and make vector
+df1<-rowsum(df1, n)
+df1<-as.data.frame(t(df1))
+# insert column
+inplant<-rep(NA, length(df1$nodule))
+inplant[df1$nodule>0 | df1$roots>0 ]<-"1"
+inplant[df1$nodule==0 & df1$roots==0 ]<-"0"
+df1$inplant <- inplant
+df1<-df1 %>% select(c(-nodule, -roots))
+row.names(df1)<-paste0(row.names(df1), "Rep3")
+colnames(df1) <- c("Active", "Total", "inplant")
+df1
+rep3<-df1
+
+##rep 4 only has sybr
+df1<-filter(df, rep=="4")
+#find out if somehting is in plant
+n<-row.names.data.frame(df1)
+n[grepl("N." , n)]="nodule"
+n[grepl("E." , n)]="roots"
+#remove rep
+df1<-select(df1, -rep)
+# sum by group and make vector
+df1<-rowsum(df1, n)
+df1<-as.data.frame(t(df1))
+# insert column
+inplant<-rep(NA, length(df1$nodule))
+inplant[df1$nodule>0 | df1$roots>0 ]<-"1"
+inplant[df1$nodule==0 & df1$roots==0 ]<-"0"
+df1$inplant <- inplant
+df1<-df1 %>% select(c(-nodule, -roots))
+row.names(df1)<-paste0(row.names(df1), "Rep4")
+colnames(df1) <- c("Total", "inplant")
+df1
+rep4<-df1
+
+##rep 5
+df1<-filter(df, rep=="5")
+#find out if somehting is in plant
+n<-row.names.data.frame(df1)
+n[grepl("N." , n)]="nodule"
+n[grepl("E." , n)]="roots"
+#remove rep
+df1<-select(df1, -rep)
+# sum by group and make vector
+df1<-rowsum(df1, n)
+df1<-as.data.frame(t(df1))
+# insert column
+inplant<-rep(NA, length(df1$nodule))
+inplant[df1$nodule>0 | df1$roots>0 ]<-"1"
+inplant[df1$nodule==0 & df1$roots==0 ]<-"0"
+df1$inplant <- inplant
+df1<-df1 %>% select(c(-nodule, -roots))
+row.names(df1)<-paste0(row.names(df1), "Rep5")
+#change column names
+colnames(df1) <- c("Active", "Total", "inplant")
+rep5<-df1
+
+### put them together
+df1<-rbind(rep1, rep2) %>% rbind(., rep3) %>% rbind(., rep5)
+df1$inplant <- as.numeric(df1$inplant)
+colnames(df1)
+dim(df1)
+
+p<-ggplot(df1, aes(y=inplant, x=Active))
+p + geom_point()
+
+##### run a simple glm to see if inplant varies with abundance in active
+fit <- glm(as.numeric(df1$inplant) ~ df1$Active, family = binomial)
+summary(fit)
+
+# predict from our model
+# 1. create a new dataframe with dummy x variables
+# this must contain all the predictors in the model and their column names need to be THE SAME as in the model
+d_new <- data.frame(Active = seq(min(df1$Active), max(df1$Active), length.out = 47344))
+# 2. use the model and the new data to predict new y values from our new x values
+d_new$pred <- predict(fit, d_new, type = 'response')
+
+# plot data and model ####
+windows(6,6)
+ggplot() +
+  geom_point(aes(Active ,inplant), df1) +
+  geom_line(aes(Active, pred), d_new)
+
+# remove zeros ##########
+df0<-df1 %>% filter(Active>0)
+hist(df1$Active)
+hist(log10(df1$Active))
+df0$log <- log10(df0$Active)
+# plot
+ggplot() +
+  geom_point(aes(Active ,inplant), df0)
+ggplot() +
+  geom_point(aes(log ,inplant), df0)
+ 
+##### run a simple glm 
+fit <- glm(as.numeric(df0$inplant) ~ df0$Active, family = binomial)
+summary(fit)
+# AIC 1318 :\
+fitl <- glm(as.numeric(df0$inplant) ~ df0$log, family = binomial)
+summary(fitl)
+# Aic 1289.9 :|
+
+# predict from our model
+# 1. create a new dataframe with dummy x variables
+# this must contain all the predictors in the model and their column names need to be THE SAME as in the model
+d_new <- data.frame(Active = seq(min(df0$Active), max(df0$Active), length.out = 3787))
+# 2. use the model and the new data to predict new y values from our new x values
+d_new$pred <- predict(fit, d_new, type = 'response')
+summary(d_new$pred)
+
+# plot data and model ####
+windows(6,6)
+ggplot() +
+  geom_point(aes(Active ,inplant), df0) +
+  geom_line(aes(Active, pred), d_new)
+
+# plot with log transform
+
+
+### log transform ######
+df1$log_active <- log10(df1$Active+1)
+hist(df1$log_active)
+
+windows(6,6)
+p<-ggplot(df1, aes(y=inplant, x=log_active))
+p + geom_point()
+
+##### run a simple glm to see if inplant varies with abundance in active
+fit <- glm(as.numeric(df1$inplant) ~ df1$log_active, family = binomial)
+summary(fit)
+# This will change everytime you run it!!!
+
+# predict from our model
+# 1. create a new dataframe with dummy x variables
+# this must contain all the predictors in the model and their column names need to be THE SAME as in the model
+d_new <- data.frame(log_active = seq(min(df1$log_active), max(df1$log_active), length.out = 47344))
+# 2. use the model and the new data to predict new y values from our new x values
+d_new$pred <- predict(fit, d_new, type = 'response')
+
+
+# plot data and model ####
+windows(6,6)
+ggplot() +
+  geom_point(aes(log_active ,inplant), df1) #+
+  #geom_line(aes(log_active, pred), d_new)
+
+
+
+#############plotting probablity? ####
+#library(plyr)
+df0 <- ddply( df0, "Active", mutate, prob = mean(inplant)  )
+head(df0)
+hist(df0$prob)
+
+ggplot() +
+  geom_smooth(data = df0, aes(x = Active, y = inplant),
+              method = "glm", method.args = list(family = "binomial"), 
+              se = FALSE)+
+  geom_point(data = df0, aes(x = Active, y = inplant))
+
