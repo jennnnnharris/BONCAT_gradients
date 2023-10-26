@@ -23,14 +23,14 @@ rm(list=ls())
 #install.packages("tidyverse")
 library(tidyverse)
 library(vegan)
-library(RColorBrewer)
+#library(RColorBrewer)
 library(reshape2)
 library(scales)
 library(data.table)
 library(phyloseq)
 library(DT)
 library(Heatplus)
-library(viridis)
+#library(viridis)
 library(hrbrthemes)
 library(ade4)
 library(ape)
@@ -144,12 +144,23 @@ circle <- 21
 
 #####Import data ##########
 ## Set the working directory; ###
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Data/16s/")
+### Import Data silva###
+taxon <- read.table("asv_level_output/silva/taxonomy.txt", sep="\t", header=T, row.names=1)
+asvs.raw <- read.table("asv_level_output/silva/feature-table.tsv", sep="\t", header=T, row.names = 1 )
+metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
+asvs.seq  = system.file("extdata", "asv_level_output/silva/dna-sequences.fasta", package="phyloseq")
+asvs.biom  = system.file("extdata", "asv_level_output/silva/feature-table.biom",  package="phyloseq")
 
-### Import Data ###
+### Import Data Greengenes###
 taxon <- read.table("asv_level_output/greengenes/taxonomy.txt", sep="\t", header=T, row.names=1)
 asvs.raw <- read.table("asv_level_output/greengenes/feature-table.tsv", sep="\t", header=T, row.names = 1 )
 metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
+asvs.seq  = system.file("extdata", "asv_level_output/greengenes/dna-sequences.fasta", package="phyloseq")
+asvs.biom  = system.file("extdata", "asv_level_output/greengenes/feature-table.biom",  package="phyloseq")
+
+
+
 
 ## Transpose ASVS table ##
 asvs.t <- t(asvs.raw)
@@ -185,78 +196,144 @@ metadat<-as.data.frame(metadat)
 Workshop_OTU <- otu_table(as.matrix(asvs.phyloseq), taxa_are_rows = FALSE)
 Workshop_metadat <- sample_data(metadat)
 Workshop_taxo <- tax_table(as.matrix(taxon)) # this taxon file is from the prev phyloseq object length = 14833
-ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat)
+
+
+ps <- phyloseq(Workshop_taxo, Workshop_OTU,Workshop_metadat )
 ps
-# 12855 taxa
+# 15027 taxa
+# 12855 taxa greengenes2
+
+df<-as.data.frame(tax_table(ps))
+
+unique(df$Family)[grepl( " Mit", unique(df$Family))]
+unique(df$Family)[grepl( " Chl", unique(df$Family))]
+
+
+unique(df$Order)[grepl( " Mi", unique(df$Order))]
+unique(df$Order)[grepl( " Ch", unique(df$Order))]
+
+unique(df$Phyla)[grepl( " C", unique(df$Phyla))]
+unique(df$Phyla)[grepl( " M", unique(df$Phyla))]
+
+
+unique(df$Class)[grepl( " C", unique(df$Class))]
+unique(df$Class)[grepl( " M", unique(df$Class))]
+
+unique(df$Genus)[grepl( " Mit", unique(df$Order))]
+unique(df$Genus)[grepl( " Ch", unique(df$Order))]
+
+unique(df$Species)[grepl( " Mit", unique(df$Order))]
+unique(df$Species)[grepl( " Ch", unique(df$Order))]
+
+
 
 
 # remove chloroplast DNA
-ps<-subset_taxa(ps, Class!=" c__Chloroplast")
-ps<-subset_taxa(ps, Genus!=" c__Mitochondria")
+ps<-subset_taxa(ps, Order!=" Chloroplast")
+ps<-subset_taxa(ps, Family != " Mitochondria")
+ps<-subset_taxa(ps, Genus!= " Chloroplast")
+
+ps
+#ps<-subset_taxa(ps, Genus!=" c__Mitochondria")
 ps<-subset_taxa(ps, Genus!=" g__Chloroplast")
 # get rid of taxa that arent in any samples
 ps<-prune_taxa(taxa_sums(ps) > 0, ps)
 ps
 # 12855 taxa
+# 14833 from silva
+
+##### who are the Otus that there taxa is unassigned?? ########
+
+df<-subset_taxa(ps, Phyla=="" | Phyla == " p__")
+
+df<-as.data.frame(t(otu_table(df)))
+
+df<-select(df, contains ("E"))
+df1<-as.data.frame(rowSums(df))
+colnames(df1) <- "sum"
+
+df1<-filter(df1, sum!=0)
+
+head(df1)
+259366/sum(df1)
+#sequece of 2 most abundant otus
+GACGGGGGGGGCAAGTGTTCTTCGGAATGACTGGGCGTAAAGGGCACGTAGGCGGTGAATCGGGTTGAAAGTTAAAGTCGCCAAAAACTGGTGGAATGCTCTCGAAACCAATTCACTTGAGTGAGACAGAGGAGAGTGGAATTTCGTGTGTAGGGGTGAAATCCGCAGATCTACGAAGGAACGCCAAAAGCGAAGGCAGCTCTCTGGGTCCCTACCGACGCTGGAGTGCGAAAGCATGGGGAGCGAACGGGA
+GACGGGGGGGGCAAGTGTTCTTCAGAATGACTGGGCGTAAAGGGCACGTAGGCGGTGAATCGGGTTGAAAGTTAAAGTCGCCAAAAACTGGTGGAATGCTCTCGAAACCAATTCACTTGAGTGAGACAGAGGAGAGTGGAATTTCGTGTGTAGGGGTGAAATCCGCAGATCTACGAAGGAACGCCAAAAGCGAAGGCAGCTCTCTGGGTCCCTACCGACGCTGGAGTGCGAAAGCATGGGGAGCGAACGGGA
+
 
 ######------ percent abundance figure #####
 
 # grab data
 taxon<- as.data.frame(tax_table(ps))
 df<-as.data.frame(otu_table(ps))
+
 # make it percent
 df<-(df/rowSums(df))*100
 df<-as.data.frame(t(df))
 df<-cbind(df, taxon)
 
 
+# rename columns 
+colnames(df)
+length(n)
+length(colnames(df))
+n<-c("BEADS" ,    "Bulksoil.DNA.1"  , "Endo.BONCAT.1" , "Nodule.BONCAT.1" , "Nodule.Totalcells.1" ,"Rhizo.DNA.1",  "Rhizo.BONCAT.1" , "Rhizo.Totalcells.1" ,"Endo.BONCAT.2" ,  "Endo.Totalcells.2", 
+"Nodule.BONCAT.2" ,  "Nodule.Totalcells.2"  ,"Rhizo.DNA.2" ,   "Rhizo.BONCAT.2",   "Rhizo.Totalcells.2",  "Bulksoil.DNA.3",    "Endo.BONCAT.3",   "Endo.Totalcells.3" , "Nodule.BONCAT.3",   "Nodule.Totalcells.3" ,
+"Rhizo.DNA.3" ,  "Rhizo.BONCAT.3"  , "Rhizo.Totalcells.3" , "Bulksoil.DNA.4" ,    "Endo.BONCAT.4",    "Endo.Totalcells.4",  "Nodule.BONCAT.4" ,  "Rhizo.DNA.4",   "Rhizo.BONCAT.4",   "Rhizo.Totalcells.4" ,
+ "BulkSoil.DNA.5",   "Endo.BONCAT.5",   "Endo.Totalcells.5",  "Nodule.BONCAT.5" ,  "Nodule.Totalcells.5" , "Rhizo.DNA.5",   "Rhizo.Totalcells.5" , "CTL"  ,     "Bulksoil.DNA.6"  ,  "Bulksoil.DNA.7"  ,  
+ "Bulksoil.DNA.8",     "Bulksoil.DNA.9"  ,   "Domain"  ,      "Phyla"       ,  "Class"  ,       "Order"    ,     "Family"  ,      "Genus"    ,     "Species"   )
+df1<-df
+colnames(df1)<-n
+
+#make rownames null
 # summarize by phyla
-df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
-                    C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
-                    C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
-                    C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
-                    C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
-                    C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
-) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
+df1<-aggregate(cbind(BEADS , Bulksoil.DNA.1  , Endo.BONCAT.1 , Nodule.BONCAT.1 , Nodule.Totalcells.1 , Rhizo.DNA.1,  Rhizo.BONCAT.1 , Rhizo.Totalcells.1 ,Endo.BONCAT.2 ,  Endo.Totalcells.2, 
+Nodule.BONCAT.2 ,  Nodule.Totalcells.2  , Rhizo.DNA.2,   Rhizo.BONCAT.2,   Rhizo.Totalcells.2,  Bulksoil.DNA.3,    Endo.BONCAT.3,   Endo.Totalcells.3 , Nodule.BONCAT.3,   Nodule.Totalcells.3 ,
+Rhizo.DNA.3 ,  Rhizo.BONCAT.3  , Rhizo.Totalcells.3 , Bulksoil.DNA.4 ,    Endo.BONCAT.4,    Endo.Totalcells.4,  Nodule.BONCAT.4 ,  Rhizo.DNA.4,   Rhizo.BONCAT.4,   Rhizo.Totalcells.4 ,
+ BulkSoil.DNA.5,   Endo.BONCAT.5,   Endo.Totalcells.5,  Nodule.BONCAT.5 ,  Nodule.Totalcells.5 , Rhizo.DNA.5,   Rhizo.Totalcells.5 , CTL  ,     Bulksoil.DNA.6  ,  Bulksoil.DNA.7  ,  
+ Bulksoil.DNA.8,     Bulksoil.DNA.9) ~ Phyla, data = df1, FUN = sum, na.rm = TRUE)
 
-head(df)
-df$Phyla[c(1,2)] <- "other"
+# call empty phyla unassigned
+df1$Phyla[c(1,2)] <- "Unassigned"
+head(df1)
 
-# again so there is only 1 other
-#df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
- #                   C10R.SYBR_S20 , C1E.POS_S31,   C1E.SYBR_S21,  C1N.POS_S61,   C1N.SYBR_S13,  C1R.DNA_S8,    C1R.POS_S27,  
-  #                  C1R.SYBR_S16,  C2B.DNA_S1,    C2E.POS_S32,   C2E.SYBR_S22,  C2N.POS_S62,   C2N.SYBR_S15,  C2R.DNA_S10,  
-   #                 C2R.POS_S28,   C2R.SYBR_S17,  C5B.DNA_S2,    C5E.POS_S33,   C5E.SYBR_S23,  C5N.POS_S63,   C5R.DNA_S11,  
-    #                C5R.POS_S29 ,   C5R.SYBR_S18,  C7B.DNA_S3,    C7E.POS_S34,   C7E.SYBR_S24,  C7N.POS_S64,   C7N.SYBR_S25, 
-     #               C7R.DNA_S14,   C7R.SYBR_S19,  CTL_S66,       S10.DNA_S9,    S2.DNA_S5,     S3.DNA_S6,     S8.DNA_S7
-#) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
-
-
-# ?? look at how we plot the other one?
-df<-gather(df, "sample", value, 2:43 )
-
+# gather by sample
+df1<-gather(df1, "sample", value, 2:43 )
+head(df1)
 #remove zeros
-# anything that is less than 1% equals other
-df<-df[df$value!=0,]
-df
+df1<-df1[df1$value!=0,]
+head(df1)
 #df1<-df # place holder
-#df1$Phyla[df1$value<1] <- "other"
-#df1<-aggregate(cbind(value) ~ sample+Phyla, data = df1, FUN = sum, na.rm =TRUE)
+# order columns
 
-windows(10,10)
-df%>% 
+# make really low abundance taxa other
+df1$Phyla[df1$value<1] <- "other"
+df1<-aggregate(cbind(value) ~ sample+Phyla, data = df1, FUN = sum, na.rm =TRUE)
+head(df1)
+df1<-df1[order(df1$sample),]
+
+mycols18<- c( "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A" ,
+              "#FFFF99", "#B15928","#9ad6ce", "#1a635a", "#edceeb", "#eb05db", "#969696", "#232423")
+length(mycols18)
+
+windows(12,10)
+df1%>% 
   ggplot(aes(fill=Phyla, y=value, x=sample)) + 
   geom_bar(position="fill", stat= "identity")+
-  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
-  scale_fill_viridis(discrete = TRUE) +
+  scale_fill_manual(values=mycols18) +
+  #scale_fill_viridis(discrete = TRUE) +
   ggtitle("Top phyla") +
-  theme_bw()+
+  theme_bw(base_size = 14)+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
 
 dev.off()
 
-
-
+length(unique(df1$Phyla))
+display.brewer.pal(n = 8, name = 'Dark2')
+brewer.pal(n = 12, name = 'Paired')
+mycols18<- c( "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A" ,
+              "#FFFF99", "#B15928","#9ad6ce", "#1a635a", "#edceeb", "#eb05db", "#969696", "#232423")
+length(mycols18)
 #### remove unassigned taxa ########
 # okay for not in soil, who esn't have a ohylp
 ps
@@ -285,7 +362,7 @@ df<- as.data.frame(otu_table(ps))
 df<-(df/rowSums(df))*100
 df<-as.data.frame(t(df))
 df<-cbind(df, taxon)
-df
+
 
 # summarize by phyla
 df<-aggregate(cbind(BEADS_S67 ,    C10B.DNA_S4  , C10E.POS_S60  ,C10N.POS_S65 , C10N.SYBR_S26 , C10R.DNA_S12 ,  C10R.POS_S30 ,
@@ -301,25 +378,31 @@ head(df)
 
 #gather
 df<-gather(df, "sample", value, 2:43 )
-df
+
 #remove zeros
 # anything that is less than 1% equals other
 df<-df[df$value!=0,]
-df
-#df1<-df # place holder
-#df1$Phyla[df1$value<1] <- "other"
 
-## who are the other?
-#<-df[grep("E.", df$sample),]
+df1<-df # place holder
+df1$Phyla[df1$value<1] <- "other"
+unique(df1$Phyla)
 
-#df1<-aggregate(cbind(value) ~ sample+Phyla, data = df1, FUN = sum, na.rm =TRUE)
+
+mycols17<- c( "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A" ,
+              "#FFFF99", "#B15928","#9ad6ce", "#1a635a", "#edceeb", "#eb05db", "#969696")
+
+
+df1<-df1[order(df1$sample),]
+
+
 
 windows(10,10)
-df%>% 
+df1%>% 
   ggplot(aes(fill=Phyla, y=value, x=sample)) + 
   geom_bar(position="fill", stat= "identity")+
+  scale_fill_manual(values = mycols17)+
   #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
-  scale_fill_viridis(discrete = TRUE) +
+  #scale_fill_viridis(discrete = TRUE) +
   ggtitle("Top phyla") +
   theme_bw()+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
@@ -4528,8 +4611,7 @@ dev.off()
 
 ###########binomial model #########
 
-
-############make data frame##########
+###make data frame##
 #presence in plant ~ abundance in rhizosphere
 # at least in 2 samples min reads is 10
 #df<-ps_prune(df, min.samples = 2, min.reads = 10)
@@ -4539,6 +4621,7 @@ dev.off()
 # don't include taxa that are super rare less then 5 read
 #ps
 #sample_data(ps)
+
 ps1<-subset_samples(ps, Compartment != "ctl"& Fraction != "Total_DNA")
 #ps1
 taxon<- as.data.frame(tax_table(ps1))
@@ -4672,100 +4755,144 @@ df1$inplant <- as.numeric(df1$inplant)
 colnames(df1)
 dim(df1)
 
+
+
+######abundance in active######
+
+#Plot 1:
 p<-ggplot(df1, aes(y=inplant, x=Active))
 p + geom_point()
-
-##### run a simple glm to see if inplant varies with abundance in active
+#Model 1: 
 fit <- glm(as.numeric(df1$inplant) ~ df1$Active, family = binomial)
 summary(fit)
-
-# predict from our model
-# 1. create a new dataframe with dummy x variables
-# this must contain all the predictors in the model and their column names need to be THE SAME as in the model
-d_new <- data.frame(Active = seq(min(df1$Active), max(df1$Active), length.out = 47344))
-# 2. use the model and the new data to predict new y values from our new x values
-d_new$pred <- predict(fit, d_new, type = 'response')
-
-# plot data and model ####
-windows(6,6)
-ggplot() +
-  geom_point(aes(Active ,inplant), df1) +
-  geom_line(aes(Active, pred), d_new)
-
-# remove zeros ##########
-df0<-df1 %>% filter(Active>0)
-hist(df1$Active)
-hist(log10(df1$Active))
-df0$log <- log10(df0$Active)
-# plot
-ggplot() +
-  geom_point(aes(Active ,inplant), df0)
-ggplot() +
-  geom_point(aes(log ,inplant), df0)
- 
-##### run a simple glm 
-fit <- glm(as.numeric(df0$inplant) ~ df0$Active, family = binomial)
-summary(fit)
-# AIC 1318 :\
-fitl <- glm(as.numeric(df0$inplant) ~ df0$log, family = binomial)
-summary(fitl)
-# Aic 1289.9 :|
-
-# predict from our model
-# 1. create a new dataframe with dummy x variables
-# this must contain all the predictors in the model and their column names need to be THE SAME as in the model
-d_new <- data.frame(Active = seq(min(df0$Active), max(df0$Active), length.out = 3787))
-# 2. use the model and the new data to predict new y values from our new x values
-d_new$pred <- predict(fit, d_new, type = 'response')
-summary(d_new$pred)
-
-# plot data and model ####
-windows(6,6)
-ggplot() +
-  geom_point(aes(Active ,inplant), df0) +
-  geom_line(aes(Active, pred), d_new)
-
-# plot with log transform
+# AIC 7764.1
+ggplot()+
+  geom_smooth(data = df0, aes(x = Active, y = inplant),
+              method = "glm", method.args = list(family = "binomial"), se = FALSE)+
+  geom_point(data = df0, aes(x = Active, y = inplant))
 
 
-### log transform ######
-df1$log_active <- log10(df1$Active+1)
-hist(df1$log_active)
-
-windows(6,6)
-p<-ggplot(df1, aes(y=inplant, x=log_active))
+#Plot 2:
+# log transform data
+hist(df1$Active) # not normaly distrubuted 
+df1$Activelog<-log10(df1$Active+1)
+hist(df1$Activelog) # better still zero inflated
+p<-ggplot(df1, aes(y=inplant, x=Activelog))
 p + geom_point()
 
-##### run a simple glm to see if inplant varies with abundance in active
-fit <- glm(as.numeric(df1$inplant) ~ df1$log_active, family = binomial)
+ggplot()+
+  geom_smooth(data = df1, aes(x = Activelog, y = inplant),
+              method = "glm", method.args = list(family = "binomial"), se = FALSE)+
+  geom_point(data = df1, aes(x = Activelog, y = inplant))
+
+#Model 2: 
+fit <- glm(as.numeric(df1$inplant) ~ df1$Activelog, family = binomial)
 summary(fit)
-# This will change everytime you run it!!!
+#AIC 7696.6
 
-# predict from our model
-# 1. create a new dataframe with dummy x variables
-# this must contain all the predictors in the model and their column names need to be THE SAME as in the model
-d_new <- data.frame(log_active = seq(min(df1$log_active), max(df1$log_active), length.out = 47344))
-# 2. use the model and the new data to predict new y values from our new x values
-d_new$pred <- predict(fit, d_new, type = 'response')
-
-
-# plot data and model ####
-windows(6,6)
-ggplot() +
-  geom_point(aes(log_active ,inplant), df1) #+
-  #geom_line(aes(log_active, pred), d_new)
-
-
-
-#############plotting probablity? ####
-#library(plyr)
-df0 <- ddply( df0, "Active", mutate, prob = mean(inplant)  )
-head(df0)
-hist(df0$prob)
-
-ggplot() +
+#Plot 3:
+# remove taxa that are not active in the rhizosphere. 
+df0<-df1 %>% filter(Active>0)
+hist(df0$Active) # left skewed 
+ggplot()+
   geom_smooth(data = df0, aes(x = Active, y = inplant),
-              method = "glm", method.args = list(family = "binomial"), 
-              se = FALSE)+
+              method = "glm", method.args = list(family = "binomial"), se = FALSE)+
   geom_point(data = df0, aes(x = Active, y = inplant))
+
+#Model 3:
+fit <- glm(as.numeric(df0$inplant) ~ df0$Active, family = binomial)
+summary(fit)
+#AIC 1318.3
+
+#Plot 4:
+# log transform non zero data
+hist(df0$Activelog) # normal
+
+ggplot()+
+  geom_smooth(data = df0, aes(x = Activelog, y = inplant),
+              method = "glm", method.args = list(family = "binomial"), se = FALSE)+
+  geom_point(data = df0, aes(x = Activelog, y = inplant))
+
+
+#Model 4:
+fit <- glm(as.numeric(df0$inplant) ~ df0$Activelog, family = binomial)
+summary(fit)
+#    Null deviance: 1393.6  on 3786  degrees of freedom
+#Residual deviance: 1285.2  on 3785  degrees of freedom
+#AIC: 1289.2
+
+
+
+
+######Abundance in Total######
+# in plant for for is any taxa that was present in the plant for either the active or total population
+
+head(df1)
+
+
+#Plot 1:
+p<-ggplot(df1, aes(y=inplant, x=Total))
+p + geom_point()
+#Model 1: 
+fit <- glm(as.numeric(df1$inplant) ~ df1$Total, family = binomial)
+summary(fit)
+# AIC 7827.1
+ggplot()+
+  geom_smooth(data = df1, aes(x = Total, y = inplant),
+              method = "glm", method.args = list(family = "binomial"), se = FALSE)+
+  geom_point(data = df0, aes(x = Total, y = inplant))
+
+
+#Plot 2:
+# log transform data
+hist(df1$Total) # not normaly distrubuted 
+df1$Totallog<-log10(df1$Total+1)
+hist(df1$Totallog) # better still zero inflated
+p<-ggplot(df1, aes(y=inplant, x=Totallog))
+p + geom_point()
+
+ggplot()+
+  geom_smooth(data = df1, aes(x = Totallog, y = inplant),
+              method = "glm", method.args = list(family = "binomial"), se = FALSE)+
+  geom_point(data = df1, aes(x = Totallog, y = inplant))
+
+#Model 2: 
+fit <- glm(as.numeric(df1$inplant) ~ df1$Totallog, family = binomial)
+summary(fit)
+plot(fit)
+#AIC 7725
+
+#Plot 3:
+# remove taxa that are not Total in the rhizosphere. 
+df0<-df1 %>% filter(Total>0)
+hist(df0$Total) # left skewed 
+ggplot()+
+  geom_smooth(data = df0, aes(x = Total, y = inplant),
+              method = "glm", method.args = list(family = "binomial"), se = FALSE)+
+  geom_point(data = df0, aes(x = Total, y = inplant))
+
+#Model 3:
+fit <- glm(as.numeric(df0$inplant) ~ df0$Total, family = binomial)
+summary(fit)
+#AIC 1490
+
+#Plot 4:
+# log transform non zero data
+hist(df0$Totallog) # normal
+
+ggplot()+
+  geom_smooth(data = df0, aes(x = Totallog, y = inplant),
+              method = "glm", method.args = list(family = "binomial"), se = FALSE)+
+  geom_point(data = df0, aes(x = Totallog, y = inplant))
+
+
+#Model 4:
+fit <- glm(as.numeric(df0$inplant) ~ df0$Totallog, family = binomial)
+summary(fit)
+#    Null deviance: 1393.6  on 3786  degrees of freedom
+#Residual deviance: 1285.2  on 3785  degrees of freedom
+#AIC: 1385.2
+
+
+
 
