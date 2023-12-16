@@ -26,7 +26,7 @@ options(DT.options = list(
 
 data(atlas1006, package = "microbiome")
 tse = mia::makeTreeSummarizedExperimentFromPhyloseq(atlas1006)
-
+tse
 # subset to baseline
 tse = tse[, tse$time == 0]
 
@@ -58,6 +58,7 @@ tse = tse[, ! tse$region %in% c("EE", "unknown")]
 
 print(tse)
 
+tse
 
 out = ancombc(data = tse, assay_name = "counts", 
               tax_level = "Family", phyloseq = NULL, 
