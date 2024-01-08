@@ -126,32 +126,30 @@ heatmap.phylo <- function(x, Rowp, Colp, ...) {
 
 ### load colors 
 # colors :)
-
 #library(NatParksPalettes)
 #names(NatParksPalettes)
-
 #natparks.pals(name="Arches",n=8,type="discrete")
 #natparks.pals(name="Arches2",n=4,type="discrete")
-#natparks.pals(name="Banff",n=7,type="discrete")
-#natparks.pals(name="Cuyahoga",n=6,type="discrete")
 
 
-##########get colors#################
-#from national park pal
-mycols6<-c("#8fcafd",  "#4499f5" ,  "#0c62af" ,   "#f0ac7d", "#cd622e" , "#993203")
-
-mycols8 <- c( "#8fcafd",  "#4499f5" ,  "#0c62af" ,   "#f0ac7d", "#cd622e" , "#993203", "#b46db3", "#3a1f46")
+###### get colors ######
 square <- 22
 diamond <- 23
 triangle <- 24
 circle <- 21
 
-mycols18<- c( "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A" ,
-              "#FFFF99", "#B15928","#9ad6ce", "#1a635a", "#edceeb", "#eb05db", "#969696", "#232423")
+#from national park pal
+mycols6<-c("#8fcafd",  "#4499f5" ,  "#0c62af" ,   "#f0ac7d", "#cd622e" , "#993203")
+mycols8 <- c( "#8fcafd",  "#4499f5" ,  "#0c62af" ,   "#f0ac7d", "#cd622e" , "#993203", "#b46db3", "#3a1f46")
+
+#phyla
+mycols18<- c( "#9ad6ce","#1a635a", "#FDBF6F", "#FF7F00", "#FB9A99", "#E31A1C", "#B2DF8A", "#33A02C", "#CAB2D6", "#6A3D9A" ,
+              "#FFFF99", "#B15928","#1F78B4", "#A6CEE3" , "#edceeb", "#eb05db", "#969696", "#232423")
+
 
 phycols7<- c("#E31A1C", "#FB9A99","#FF7F00" , "#FDBF6F",  "#1F78B4","#A6CEE3", "#1a635a")
 
-#####Import data ##########
+####Import data####
 ## Set the working directory; ###
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Data/16s/")
 ### Import Data silva###
@@ -225,74 +223,12 @@ head(df1)
 #afb244d96b70a4c948b205f7f7eea5c5 259366
 #9bf55fb48ef29780111f9e54dd204793  33352
 
-##------ percent abundance figure
-
-# grab data
-taxon<- as.data.frame(tax_table(ps))
-df<-as.data.frame(otu_table(ps))
-# make it percent
-df<-(df/rowSums(df))*100
-df<-as.data.frame(t(df))
-df<-cbind(df, taxon)
-
-
-# rename columns 
-colnames(df)
-length(n)
-length(colnames(df))
-n<-c("BEADS" ,    "Bulksoil.DNA.1"  , "Endo.BONCAT.1" , "Nodule.BONCAT.1" , "Nodule.Totalcells.1" ,"Rhizo.DNA.1",  "Rhizo.BONCAT.1" , "Rhizo.Totalcells.1" ,"Endo.BONCAT.2" ,  "Endo.Totalcells.2", 
-"Nodule.BONCAT.2" ,  "Nodule.Totalcells.2"  ,"Rhizo.DNA.2" ,   "Rhizo.BONCAT.2",   "Rhizo.Totalcells.2",  "Bulksoil.DNA.3",    "Endo.BONCAT.3",   "Endo.Totalcells.3" , "Nodule.BONCAT.3",   "Nodule.Totalcells.3" ,
-"Rhizo.DNA.3" ,  "Rhizo.BONCAT.3"  , "Rhizo.Totalcells.3" , "Bulksoil.DNA.4" ,    "Endo.BONCAT.4",    "Endo.Totalcells.4",  "Nodule.BONCAT.4" ,  "Rhizo.DNA.4",   "Rhizo.BONCAT.4",   "Rhizo.Totalcells.4" ,
- "BulkSoil.DNA.5",   "Endo.BONCAT.5",   "Endo.Totalcells.5",  "Nodule.BONCAT.5" ,  "Nodule.Totalcells.5" , "Rhizo.DNA.5",   "Rhizo.Totalcells.5" , "CTL"  ,     "Bulksoil.DNA.6"  ,  "Bulksoil.DNA.7"  ,  
- "Bulksoil.DNA.8",     "Bulksoil.DNA.9"  ,   "Domain"  ,      "Phyla"       ,  "Class"  ,       "Order"    ,     "Family"  ,      "Genus"    ,     "Species"   )
-df1<-df
-colnames(df1)<-n
-
-#make rownames null
-# summarize by phyla
-df1<-aggregate(cbind(BEADS , Bulksoil.DNA.1  , Endo.BONCAT.1 , Nodule.BONCAT.1 , Nodule.Totalcells.1 , Rhizo.DNA.1,  Rhizo.BONCAT.1 , Rhizo.Totalcells.1 ,Endo.BONCAT.2 ,  Endo.Totalcells.2, 
-Nodule.BONCAT.2 ,  Nodule.Totalcells.2  , Rhizo.DNA.2,   Rhizo.BONCAT.2,   Rhizo.Totalcells.2,  Bulksoil.DNA.3,    Endo.BONCAT.3,   Endo.Totalcells.3 , Nodule.BONCAT.3,   Nodule.Totalcells.3 ,
-Rhizo.DNA.3 ,  Rhizo.BONCAT.3  , Rhizo.Totalcells.3 , Bulksoil.DNA.4 ,    Endo.BONCAT.4,    Endo.Totalcells.4,  Nodule.BONCAT.4 ,  Rhizo.DNA.4,   Rhizo.BONCAT.4,   Rhizo.Totalcells.4 ,
- BulkSoil.DNA.5,   Endo.BONCAT.5,   Endo.Totalcells.5,  Nodule.BONCAT.5 ,  Nodule.Totalcells.5 , Rhizo.DNA.5,   Rhizo.Totalcells.5 , CTL  ,     Bulksoil.DNA.6  ,  Bulksoil.DNA.7  ,  
- Bulksoil.DNA.8,     Bulksoil.DNA.9) ~ Phyla, data = df1, FUN = sum, na.rm = TRUE)
-
-# call empty phyla unassigned
-df1$Phyla[c(1,2)] <- "Unassigned"
-head(df1)
-
-# gather by sample
-df1<-gather(df1, "sample", value, 2:43 )
-head(df1)
-#remove zeros
-df1<-df1[df1$value!=0,]
-head(df1)
-#df1<-df # place holder
-# order columns
-
-# make really low abundance taxa other
-df1$Phyla[df1$value<1] <- "other"
-df1<-aggregate(cbind(value) ~ sample+Phyla, data = df1, FUN = sum, na.rm =TRUE)
-head(df1)
-df1<-df1[order(df1$sample),]
-
-windows(12,10)
-df1%>% 
-  ggplot(aes(fill=Phyla, y=value, x=sample)) + 
-  geom_bar(position="fill", stat= "identity")+
-  scale_fill_manual(values=mycols18) +
-  #scale_fill_viridis(discrete = TRUE) +
-  ggtitle("Top phyla") +
-  theme_bw(base_size = 14)+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-
-dev.off()
 
 ###### remove unassigned taxa  ########
 # taxa that are in the plant and are unassigned
 # remove 
 #afb244d96b70a4c948b205f7f7eea5c5 259366
 #9bf55fb48ef29780111f9e54dd204793  33352
-
 
 df<-subset_samples(ps, Compartment=="Roots" | Compartment=="Nodule" )
 df<-prune_taxa(taxa_sums(df) > 0, df)
@@ -310,342 +246,84 @@ ps<-prune_taxa(taxa_sums(ps) > 0, ps)
 ps
 # 12802 taxa
 
+##------ percent abundance figure ######
 
-
-##### percent abundance figure No. 2######
-###### remake figure
 # grab data
 taxon<- as.data.frame(tax_table(ps))
-df<- as.data.frame(otu_table(ps))
+df<-as.data.frame(otu_table(ps))
 # make it percent
 df<-(df/rowSums(df))*100
 df<-as.data.frame(t(df))
 df<-cbind(df, taxon)
 
-head(df)
-# summarize by phyla
-#make rownames null
+
+# rename columns 
+colnames(df)
+length(n)
+length(colnames(df))
 n<-c("BEADS" ,    "Bulksoil.DNA.1"  , "Endo.BONCAT.1" , "Nodule.BONCAT.1" , "Nodule.Totalcells.1" ,"Rhizo.DNA.1",  "Rhizo.BONCAT.1" , "Rhizo.Totalcells.1" ,"Endo.BONCAT.2" ,  "Endo.Totalcells.2", 
      "Nodule.BONCAT.2" ,  "Nodule.Totalcells.2"  ,"Rhizo.DNA.2" ,   "Rhizo.BONCAT.2",   "Rhizo.Totalcells.2",  "Bulksoil.DNA.3",    "Endo.BONCAT.3",   "Endo.Totalcells.3" , "Nodule.BONCAT.3",   "Nodule.Totalcells.3" ,
      "Rhizo.DNA.3" ,  "Rhizo.BONCAT.3"  , "Rhizo.Totalcells.3" , "Bulksoil.DNA.4" ,    "Endo.BONCAT.4",    "Endo.Totalcells.4",  "Nodule.BONCAT.4" ,  "Rhizo.DNA.4",   "Rhizo.BONCAT.4",   "Rhizo.Totalcells.4" ,
      "BulkSoil.DNA.5",   "Endo.BONCAT.5",   "Endo.Totalcells.5",  "Nodule.BONCAT.5" ,  "Nodule.Totalcells.5" , "Rhizo.DNA.5",   "Rhizo.Totalcells.5" , "CTL"  ,     "Bulksoil.DNA.6"  ,  "Bulksoil.DNA.7"  ,  
      "Bulksoil.DNA.8",     "Bulksoil.DNA.9"  ,   "Domain"  ,      "Phyla"       ,  "Class"  ,       "Order"    ,     "Family"  ,      "Genus"    ,     "Species"   )
-df<-df
-colnames(df)<-n
-row.names(df) <- NULL
+df1<-df
+colnames(df1)<-n
 
+#make rownames null
 # summarize by phyla
-df<-aggregate(cbind(BEADS , Bulksoil.DNA.1  , Endo.BONCAT.1 , Nodule.BONCAT.1 , Nodule.Totalcells.1 , Rhizo.DNA.1,  Rhizo.BONCAT.1 , Rhizo.Totalcells.1 ,Endo.BONCAT.2 ,  Endo.Totalcells.2, 
+df1<-aggregate(cbind(BEADS , Bulksoil.DNA.1  , Endo.BONCAT.1 , Nodule.BONCAT.1 , Nodule.Totalcells.1 , Rhizo.DNA.1,  Rhizo.BONCAT.1 , Rhizo.Totalcells.1 ,Endo.BONCAT.2 ,  Endo.Totalcells.2, 
                      Nodule.BONCAT.2 ,  Nodule.Totalcells.2  , Rhizo.DNA.2,   Rhizo.BONCAT.2,   Rhizo.Totalcells.2,  Bulksoil.DNA.3,    Endo.BONCAT.3,   Endo.Totalcells.3 , Nodule.BONCAT.3,   Nodule.Totalcells.3 ,
                      Rhizo.DNA.3 ,  Rhizo.BONCAT.3  , Rhizo.Totalcells.3 , Bulksoil.DNA.4 ,    Endo.BONCAT.4,    Endo.Totalcells.4,  Nodule.BONCAT.4 ,  Rhizo.DNA.4,   Rhizo.BONCAT.4,   Rhizo.Totalcells.4 ,
                      BulkSoil.DNA.5,   Endo.BONCAT.5,   Endo.Totalcells.5,  Nodule.BONCAT.5 ,  Nodule.Totalcells.5 , Rhizo.DNA.5,   Rhizo.Totalcells.5 , CTL  ,     Bulksoil.DNA.6  ,  Bulksoil.DNA.7  ,  
-                     Bulksoil.DNA.8,     Bulksoil.DNA.9) ~ Phyla, data = df, FUN = sum, na.rm = TRUE)
+                     Bulksoil.DNA.8,     Bulksoil.DNA.9) ~ Phyla, data = df1, FUN = sum, na.rm = TRUE)
 
+head(df1)
+# summ row 1 and 2 b\c they are both unassigned taxa
 
+row1<-df1[1,2:43]+ df1[2,2:43] 
+# call empty phyla unassigned
+row1<-c("Unassigned", row1)
+# put in df
+row1<-as.vector(row1)
+df1[1,] <- row1
+df1<-df1[c(1,3:53),]
 
-
-tail(df)
-
-#gather
-df<-gather(df, "sample", value, 2:43 )
-df
+# gather by sample
+df1<-gather(df1, "sample", value, 2:43 )
+head(df1)
 #remove zeros
-# anything that is less than 1% equals other
-df<-df[df$value!=0,]
-
+df1<-df1[df1$value!=0,]
+head(df1)
 #df1<-df # place holder
-df$Phyla[df$value<1] <- "other"
-unique(df$Phyla)
+# order columns
 
+# make really low abundance taxa other
+df1$Phyla[df1$value<1] <- "other"
+df1<-aggregate(cbind(value) ~ sample+Phyla, data = df1, FUN = sum, na.rm =TRUE)
+head(df1)
+df1<-df1[order(df1$sample),]
+head(df1)
 
-mycols17<- c( "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A" ,
-              "#FFFF99", "#B15928","#9ad6ce", "#1a635a", "#edceeb", "#eb05db", "#969696")
+#how many phyla?
+length(unique(df1$Phyla))
+# 18 families 
 
-df<-df[order(df$sample),]
-
-
-
-windows(10,10)
-df%>% 
+windows(12,10)
+df1%>% 
   ggplot(aes(fill=Phyla, y=value, x=sample)) + 
   geom_bar(position="fill", stat= "identity")+
-  scale_fill_manual(values = mycols18)+
-  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
+  scale_fill_manual(values=mycols18) +
   #scale_fill_viridis(discrete = TRUE) +
   ggtitle("Top phyla") +
-  theme_bw()+
+  theme_bw(base_size = 12)+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-dev.off()
 
-# use this ps!
-ps
-
-# this but just rhizosphere
-
-filter(df, sample!="BEADS")
-df1<-df[grep("Rhizo" , df$sample),]
-Total<-df1[grep("Total" , df1$sample),]
-bcat<-df1[grep("BONCAT" , df1$sample),]
-df<-rbind(Total, bcat)
-df<-df[order(df$sample),]
-df$Phyla[df$value<1] <- "other"
-unique(df$Phyla)
-
-windows(10,10)
-df%>% 
-  ggplot(aes(fill=Phyla, y=value, x=sample)) + 
-  geom_bar(position="fill", stat= "identity")+
-  scale_fill_manual(values = mycols17)+
-  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
-  #scale_fill_viridis(discrete = TRUE) +
-  ggtitle("Top phyla") +
-  theme_bw()+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-dev.off()
-
-# mak ea plot liek ryans
-
-
-
-########barplot of endophyte taxa
-
-endo<-subset_samples(ps, Compartment == "Roots")
-endo<-prune_taxa(taxa_sums(endo) > 0, endo)
-endo
-# 648 taxa
-
-# grab data
-taxon<- as.data.frame(tax_table(endo))
-df<- as.data.frame(otu_table(endo))
-# make it percent
-df<-(df/rowSums(df))*100
-df<-as.data.frame(t(df))
-df<-cbind(df, taxon)
-
-# summarize by phyla
-df<-aggregate(cbind(C10E.POS_S60  , C1E.POS_S31,   C1E.SYBR_S21,  C2E.POS_S32,   C2E.SYBR_S22,  C5E.POS_S33,
-                    C5E.SYBR_S23, C7E.POS_S34,   C7E.SYBR_S24) ~ Genus, data = df, FUN = sum, na.rm = TRUE)
-head(df)
-df$Genus[c(1,2)] <- "other"
-
-#gather
-df<-gather(df, "sample", value, 2:10 )
-#remove zeros
-df<-df[df$value!=0,]
-
-
-windows(10,10)
-df%>% 
-  ggplot(aes(fill=Genus, y=value, x=sample)) + 
-  geom_bar(position="fill", stat= "identity")+
-  #scale_fill_manual(values= c("#26808f","#6499b5", "#9db1d3","#d1cbe9", "#d2a0d0","#dc6e9c","#d43d51")) +
-  scale_fill_viridis(discrete = TRUE) +
-  ggtitle("Genus") +
-  theme_bw()+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  theme(legend.position="none")
-dev.off()
-
-df
-
-
-##old import Asvs data ##
-## Set the working directory; ###
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
-
-### Import Data ###
-#taxon <- read.table("asv_level_output/greengenes/taxonomy.txt", sep="\t", header=T, row.names=1)
-#asvs.raw <- read.table("asv_level_output/greengenes/feature-table.tsv", sep="\t", header=T, row.names = 1 )
-#metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
-
-## Transpose ASVS table ##
-#asvs.t <- t(asvs.raw)
-## order metadata
-#metadat<-metadat[order(metadat$SampleID),]
-## order asvs table
-#asvs.t<-asvs.t[order(row.names(asvs.t)),]
-
-#import it phyloseq
-#Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
-#Workshop_metadat <- sample_data(metadat)
-#Workshop_taxo <- tax_table(as.matrix(taxon))
-#ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
-
-# take a look at PS object
-#print(ps)
-# we a get a Plyloseq object with  15027 taxa
-
-## Determine minimum available reads per sample ##
-#min.s<-min(rowSums(asvs.t))
-
-### Rarefy to obtain even numbers of reads by sample ###
-#set.seed(336)
-#asvs.r<-rrarefy(asvs.t, min.s)
-#------------ rarefaction curve------------#
-#S <- specnumber(asvs.t) # observed number of species
-#raremax <- min(rowSums(asvs.t))
-#plot(asvs.t, asvs.r, xlab = "Observed No. of Species", ylab = "Rarefied No. of Species")
-#abline(0, 1)
-#out<-rarecurve(asvs.t, step = 20, sample = raremax, col = "blue", cex = 0.6)
-## build plots
-#col <- c("black")
-#lty <- c("solid")
-#lwd <- rep(1, 42)
-#pars <- expand.grid(col = col, lty = lty, lwd = lwd, 
-#                    stringsAsFactors = FALSE)
-#Nmax <- sapply(out, function(x) max(attr(x, "Subsample")))
-#Smax <- sapply(out, max)
-## save
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-#svg(file="figures/16s/rarecurve.svg",width = 6, height=6 )
-#plot(c(1, max(Nmax)), c(1, max(Smax)), xlab = "Number of Sequences",
-#     ylab = "ASV", type = "n")
-#abline(v = raremax)
-#for (i in seq_along(out)) {
-#  N <- attr(out[[i]], "Subsample")
-#  with(pars, lines(N, out[[i]], col = col[i], lty = lty[i], lwd = lwd[i]))
-#}
-#dev.off()
-
-
-###--- recode metadata----- #
-#metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
-#metadat<-metadat[, c(1,3:6)]
-#metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
-#to make coloring things easier I'm gong to added a combined fractionXboncat column 
-#metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
-
-##------make phyloseq object with rarefied data -------#
-
-#row.names(df) <- df$column1
-
-
-#asvs.phyloseq<- (asvs.t)
-#taxon<-taxon[,1:7]
-#metadat<-as.matrix(metadat)
-#y<-colnames(asvs.raw)
-#rownames(metadat) <- y
-#metadat<-as.data.frame(metadat)
-
-#import it phyloseq
-#Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
-#Workshop_metadat <- sample_data(metadat)
-#Workshop_taxo <- tax_table(as.matrix(taxon))
-#ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
-
-#test it worked
-#sample_names(ps)
-#print(ps)
-# 12855 taxa
-
-# remove chloroplast DNA
-#ps<-subset_taxa(ps, Class!=" Chloroplast")
-#ps<-subset_taxa(ps, Genus!=" Mitochondria")
-#ps<-subset_taxa(ps, Genus!=" Chloroplast")
-# get rid of taxa that aren; in any samples
-#ps<-prune_taxa(taxa_sums(ps) > 0, ps)
-#any(taxa_sums(ps) == 0)
-#ps
-# 12855 taxa
-
-#asvs.clean<-as.data.frame(t(as.data.frame(otu_table(ps))))
-#taxon<-as.data.frame(tax_table(ps))
-
-
-
-# rareferying by number of cells 
-## Set the working directory; modify to your own ###
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/16s")
-
-### Import Data ###
-
-
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/sequencing")
-#n_cells <- read_excel("Cell_counts_For_sequencing.xlsx", na = "NA")
-#n_cells<-select(n_cells, Sample_ID, Number_cells)
-#n_cells
-
-#data wrangleing and importing into Phyloseq#
-## recode metadata 
-#metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
-#metadat<-metadat[, c(1,3:6)]
-#metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Total_Cells', 'POS'='BONCAT_Active', 'ctl'= 'ctl'))
-#to make coloring things easier I'm gong to added a combined fractionXboncat column 
-#metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
-
-## Transpose ASVS table ##
-#otu.t <- t(otu.raw)
-## order metadata
-#metadat<-metadat[order(metadat$SampleID),]
-## order asvs table
-#otu.t<-otu.t[order(row.names(otu.t)),]
-
-## rearrange data for phyloseq
-#otu.phyloseq<- (otu.t)
-#taxon<-taxon[,1:7]
-#metadat<-as.matrix(metadat)
-#y<-colnames(otu.raw)
-#rownames(metadat) <- y
-#metadat<-as.data.frame(metadat)
-## import it phyloseq
-#Workshop_OTU <- otu_table(otu.phyloseq, taxa_are_rows = FALSE)
-#Workshop_metadat <- sample_data(metadat)
-#Workshop_taxo <- tax_table(as.matrix(taxon))
-#ps <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
-#ps
-# 7727 taxa
-# grab samples of total cells and boncat pos
-#ps1 <- subset_samples(ps,Fraction =="BONCAT_Active"  |Fraction=="Total_Cells")
-#ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
-#any(taxa_sums(ps1) == 0)
-#ps1
-# 3208 taxa
-#sample_data(ps1)
-
-#normalize by the number of cells in each sample.
-#otu.cells<-as.data.frame(otu_table(ps1))
-#n_cells<-na.omit(n_cells)
-#n_cells
-
-#otu.cells<-cbind(otu.cells, n_cells)
-
-#seq<-rowSums(otu.cells)
-#otu.cells<-otu.cells*n_cells$Number_cells/seq
-
-### looks great now put it back into phyloseq.
-
-## rearrange data for phyloseq
-#otu.phyloseq<- (otu.cells)
-
-## import it phyloseq
-#Workshop_OTU <- otu_table(otu.phyloseq, taxa_are_rows = FALSE)
-#Workshop_metadat <- sample_data(metadat)
-#Workshop_taxo <- tax_table(as.matrix(taxon))
-#ps <- phyloseq(Workshop_taxo, Workshop_OTU, Workshop_metadat)
-#ps
-# 3208 taxa
-
-
-#######------ remove chloroplasts-------#
-# remove chloroplast DNA
-#ps<-subset_taxa(ps, Class!=" Chloroplast")
-#ps<-subset_taxa(ps, Genus!=" Mitochondria")
-#ps<-subset_taxa(ps, Genus!=" Chloroplast")
-# get rid of taxa that arent in any samples
-#ps<-prune_taxa(taxa_sums(ps) > 0, ps)
-#any(taxa_sums(ps) == 0)
-
-
-# 3173 taxa
-# output df 
-#asvs.clean<-as.data.frame(t(as.data.frame(otu_table(ps))))
-#taxon<-as.data.frame(tax_table(ps))
-
+dev.off
 
 
 #####DIVERSITY  figure#####
 # set wd for figures
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
+#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
 
 # diversity 
 rich<-estimate_richness(ps, measures = c("Observed", "Shannon", "Simpson", "InvSimpson" ))
@@ -674,7 +352,7 @@ rich %>% group_by(rich$compartment_BCAT) %>% summarise(mean(Observed), sd(Observ
 rich %>% group_by(rich$Compartment) %>% summarise(mean(Observed), sd(Observed))
 
 
-# total + active number otus
+# total + active number asvs
 svg(file="figures/16s/observed_divserity.svg",width = 10, height=6 )
 windows(width = 6, height=3.5)
 rich %>%
@@ -693,7 +371,7 @@ rich %>%
   xlab("Compartment")
 dev.off()
 
-# total + active number otus
+# total + active shannon
 svg(file="figures/16s/shannon_divserity.svg",width = 8, height=5 )
 windows(width = 8, height=5)
 rich %>%
@@ -713,6 +391,8 @@ rich %>%
 dev.off()
 
 
+# summary table
+rich %>% group_by(compartment_BCAT) %>% summarise(mean(Shannon))
 
 ### t test
 
@@ -1049,25 +729,19 @@ summary(m1)
 ############ taxa exploration  ######################
 
 ######### remove rare taxa, is the endosphyte diversity still higher in active??
-
 root<-subset_samples(ps, Compartment=="Roots")
 root<-prune_taxa(taxa_sums(root) > 0, root)
 tax_table(root)
 root
-
-
-
 ## fitler for taxa that are rare
 root_total<-prune_taxa(taxa_sums(root_total) < 10, root_total)
 any(taxa_sums(root_total) == 0)
 root_total
 # 231 taxa
-
 x<-otu_table(root_total)
 x
 #calc richness
 rich<-estimate_richness(root, measures = c("Observed", "Shannon", "Simpson", "InvSimpson" ))
-
 # make little metadata
 metadat2<-metadat %>% filter(Compartment == "Roots")
 
@@ -1337,6 +1011,10 @@ ggplot(bcat, aes(x=reorder(otu, +order) , y=log_abundance, fill = location, patt
     
     #df[df== "-Inf"] <- 0
     colnames(df)
+
+    
+    
+########## DATA TABLE OF TOP GENRALIST TAXA ###########    
     
     # select taxa that are present in the plant 
     otu<-df%>% select(-contains("POS")) %>% select(-contains("SYBR")) 
@@ -1345,7 +1023,6 @@ ggplot(bcat, aes(x=reorder(otu, +order) , y=log_abundance, fill = location, patt
     # sort by abundance
     otu<-otu[order(otu$root.total.mean, decreasing = TRUE),]
     otu
-    
          write.csv(otu, file="topgeneralistasvs.csv")
     # lil labels
     df <- data.frame(x     = top$otu,
@@ -1386,7 +1063,7 @@ ggplot(bcat, aes(x=reorder(otu, +order) , y=log_abundance, fill = location, patt
            fill = guide_legend(override.aes = list(pattern = "none")))    
     
 
-#####RYAN plot shifts in from total to active phyla level#####
+####PLOT PHYLA LEVEL TOTAL to active #######
 # filter for total and active
     # filter for total and active
     ps
@@ -1394,6 +1071,7 @@ ggplot(bcat, aes(x=reorder(otu, +order) , y=log_abundance, fill = location, patt
     df<-subset_samples(ps, Compartment!="ctl"& Compartment=="Rhizosphere" & Fraction!="Total_DNA")
     df<-prune_taxa(taxa_sums(df) > 0, df)
     taxon<-tax_table(df)
+    df1<- as.data.frame(otu_table(df)) # this is for later :)
     df<-as.data.frame(otu_table(df))
     dim(df)
     #df
@@ -1442,6 +1120,103 @@ ggplot(top) +
   labs(y="proportion of reads in sample")+
   theme(axis.text.x=element_text(angle=45, hjust=0.9), axis.title.x = element_blank())
 
+#####stats for phyla barplot ########
+# mixed model with binomial regression
+# we need a data frame of # success to # failure
+
+
+df<-subset_samples(ps, Compartment!="ctl"& Compartment=="Rhizosphere" & Fraction!="Total_DNA")
+df<-prune_taxa(taxa_sums(df) > 0, df)
+taxon<-tax_table(df)
+df1<- as.data.frame(otu_table(df)) # this is for later :)
+# make column that is the number of reads
+reads<-rowSums(df1)
+df1<-as.data.frame(t(df1))
+# add taxa info
+df1<-cbind(taxon,df1)
+#aggregate
+df1<-aggregate(cbind(C10R.POS_S30, C10R.SYBR_S20, C1R.POS_S27,   C1R.SYBR_S16, C2R.POS_S28 , 
+                    C2R.SYBR_S17 , C5R.POS_S29 ,  C5R.SYBR_S18 , C7R.SYBR_S19  ) ~ Phyla, data = df1, FUN = sum, na.rm = TRUE)
+#colnames(df1)<- c("Phyla", "BONCAT_1" , "Total_1", "BONCAT_2",   "Total_2" , "BONCAT_3"  , "Total_3" ,
+#                 "BONCAT_4"  , "Total_4",  "Total_5") 
+head(df1)
+
+# grab top phyla
+row.names(df1) <- df1$tPhyla
+df1$sum <- rowSums(df1[,2:9])
+df1<-df1[order(-df1$sum),]    
+top<-df1[c(1:5,6,7),]
+top
+# pivot
+top<-top%>%
+  pivot_longer(2:10, values_to = "abundance", names_to= "rep_fraction" )
+top<-top%>%mutate(fraction = str_split_i(top$rep_fraction, "_", 1)) %>%
+  mutate(Phyla= str_split_i(top$Phyla, "_", 3))
+
+#put No. reads in
+top$reads =rep(reads, 7 )
+top<-select(top , -sum)
+top$failures = top$reads-top$abundance
+trt<-c(rep(c("Active", "Total"), 4), "Total")
+top$trt = rep(trt, 7)
+top$prop = top$abundance/top$reads
+
+#proteobacteria model
+df<-filter(top, Phyla=="Proteobacteria") %>% select(prop, trt )
+m1<-glm(data= df, prop~trt, family = binomial)
+m1
+anova(m1, test= "LRT")  
+#not sig 
+
+#proteobacteria model
+df<-filter(top, Phyla=="Acidobacteriota") %>% select(prop, trt )
+m1<-glm(data= df, prop~trt, family = binomial)
+m1
+anova(m1, test= "LRT")  
+#no digo nada
+
+#acidobacteria model
+df<-filter(top, Phyla=="Acidobacteriota") %>% select(prop, trt )
+m1<-glm(data= df, prop~trt, family = binomial)
+m1
+anova(m1, test= "LRT")  
+#no digo nada
+
+#Verrucomicrobiota model
+df<-filter(top, Phyla=="Verrucomicrobiota") %>% select(prop, trt )
+m1<-glm(data= df, prop~trt, family = binomial)
+m1
+anova(m1, test= "LRT")  
+#not sig
+
+# Actinobacteriota model
+df<-filter(top, Phyla=="Actinobacteriota") %>% select(prop, trt )
+m1<-glm(data= df, prop~trt, family = binomial)
+m1
+anova(m1, test= "LRT")  
+#not sig maybe a trend?
+
+#Bacteroidota model
+df<-filter(top, Phyla=="Bacteroidota") %>% select(prop, trt )
+m1<-glm(data= df, prop~trt, family = binomial)
+m1
+anova(m1, test= "LRT")  
+#not sig 
+
+#Planctomycetota model
+df<-filter(top, Phyla=="Planctomycetota") %>% select(prop, trt )
+m1<-glm(data= df, prop~trt, family = binomial)
+m1
+anova(m1, test= "LRT")  
+#not sig 
+
+
+#Chloroflexota model
+df<-filter(top, Phyla=="Chloroflexota") %>% select(prop, trt )
+m1<-glm(data= df, prop~trt, family = binomial)
+m1
+anova(m1, test= "LRT")  
+#not sig 
 
 
 
@@ -4736,7 +4511,7 @@ dev.off()
 # don't include taxa that are super rare less then 5 read
 #ps
 #sample_data(ps)
-ps1
+ps
 ps1<-subset_samples(ps, Compartment != "ctl"& Fraction != "Total_DNA")
 #ps1 12802 taxa
 taxon<- as.data.frame(tax_table(ps1))
@@ -4870,6 +4645,13 @@ df1$inplant <- as.numeric(df1$inplant)
 colnames(df1)
 dim(df1)
 # 51208 3
+
+#####TOP TAXA effecting the model
+
+head(df1[sort(df1$Active, decreasing = FALSE),])
+head(df1)
+
+
 ######SCATTERPLOT by inplant is red ######
 head(df1)
 
@@ -4904,9 +4686,8 @@ ggplot()+
               method = "glm", method.args = list(family = "binomial"), se = FALSE)+
   geom_point(data = df2, aes(x = Active, y = inplant))
 
-# both
-
 #Model 2: 
+# both
 fit <- glm(as.numeric(df2$inplant) ~ df2$Total + df2$Active + df2$Active*df2$Total, family = binomial)
 summary(fit)
 # active is a way stronger predictor
@@ -4916,6 +4697,7 @@ ggplot()+
               method = "glm", method.args = list(family = "binomial"), se = FALSE)+
   geom_point(data = df2, aes(x = Total, y = inplant))
 
+# Model 3
 #active
 #plot 3:
 ggplot(df2, aes(y=inplant, x=Active))+
@@ -4929,7 +4711,7 @@ ggplot()+
               method = "glm", method.args = list(family = "binomial"), se = FALSE)+
   geom_point(data = df2, aes(x = Active, y = inplant))
 
-
+df2
 
 
 ######LFC from ancom######
