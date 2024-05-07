@@ -9,62 +9,29 @@
 rm(list=ls())
 
 ## if trouble loading phyloseq, see: http://joey711.github.io/phyloseq/install
-#source("http://bioconductor.org/biocLite.R")
-#biocLite("Heatplus")
-#if (!require("BiocManager", quietly = TRUE))
- # install.packages("BiocManager")
-#BiocManager::install("phyloseq")
-#BiocManager::install("Heatplus")
 
 ################## Load required libraries ############
 
 #basic
 library(tidyverse)
 library(vegan)
-library(reshape2)
-library(scales)
-library(data.table)
-
-
-#Phyloseq and mbiome
+#Phyloseq
 library(phyloseq)
-library(microbiome)
+#for filtering no reads. no samples:
 library(MicEco)
-library(DT)
-options(DT.options = list(
-  initComplete = JS("function(settings, json) {",
-                    "$(this.api().table().header()).css({'background-color': 
-  '#000', 'color': '#fff'});","}")))
-
-#colors and patterns
-library(RColorBrewer)
-
-#tree
+#ANCOM
+library(ANCOMBC)
+# venn diagrams
+library(grid)
+library(ggvenn)
+#heatmaps
 library(Heatplus)
-library(ade4)
+library(gplots)
+#tree
 library(ape)
-library('TreeTools')
 library(ggtree)
 
-# heatmaps 
-library(gplots)
 
-# venn diagrams
-library(ggvenn)
-library(ggplot2)
-library(dplyr)
-library(grid)
-
-#Ancom
-library(ANCOMBC)
-
-## if trouble loading phyloseq, see: http://joey711.github.io/phyloseq/install
-#source("http://bioconductor.org/biocLite.R")
-#biocLite("Heatplus")
-#if (!require("BiocManager", quietly = TRUE))
-# install.packages("BiocManager")
-#BiocManager::install("phyloseq")
-#BiocManager::install("Heatplus")
 
 #####Import data#####
 ## Set the working directory; ###
@@ -644,9 +611,8 @@ pe2<-perc.exp[2]
 # subset metadata1
 metadat2<-as.data.frame(sample_data(ps2))
 metadat2<-metadat%>% filter(Compartment !=  "Nodule" & Compartment != "Roots" & Compartment!="ctl" & Fraction != "Total_DNA")
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-#svg(file="figures/16s/pcoa/soil_raw.svg",width = 4, height=4 )
-#windows(title="PCoA on asvs- Bray Curtis", width = 4, height = 4)
+
+
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="Rhizosphere",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 title(adj = 0, main= "B")
@@ -681,9 +647,7 @@ pe1<-perc.exp[1]
 pe2<-perc.exp[2]
 metadat2<- sample_data(ps2)
 
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-#svg(file="figures/16s/pcoa/roots.svg",width = 4, height=4 )
-#windows(title="PCoA on asvs- Bray Curtis", width = 4, height = 4)
+
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="Roots",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 title(adj = 0, main= "C")
@@ -718,9 +682,7 @@ pe2<-perc.exp[2]
 # subset metadata
 metadat2<- as.data.frame(sample_data(ps2))
 
-#setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT/Data/")
-#svg(file="figures/16s/pcoa/nodule.svg",width = 4, height=4 )
-#windows(title="PCoA on asvs- Bray Curtis", width = 4, height = 4)
+
 ordiplot(otus.pcoa,choices=c(1,2), type="none", main="Nodule",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
          ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
 title(adj = 0, main= "D")
@@ -1024,7 +986,7 @@ setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burg
 mycols<-c("#00436d", "#416d9a", "#729ac9", "#a3c9fa")
 
 svg(file="scatterplot.svg",width = 7, height=4)
-windows(8,4)
+#windows(8,4)
 
 filter(df) %>%
   ggplot(aes(x=log10(total) , y=log10(active), col=rep)) + 
@@ -1098,7 +1060,7 @@ mycols8<- c( "#1F78B4","#A6CEE3", "#75026d",  "#ed6361",  "#6A3D9A", "#B2DF8A", 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Manuscript/figures/")
 
 svg(file="Fig5_scatter/barplot_toptaxa.svg",width = 8, height=5)
-windows(6,5)
+  #windows(6,5)
 ggplot(top)+
   geom_bar(aes(x=reorder(otu1, -rhizo.total.mean) , y=rhizo.bcat.mean, fill= Phyla), stat="identity", position="identity") +
   geom_line(aes(x=as.numeric(reorder(otu1, -rhizo.total.mean)) , y=rhizo.total.mean), linewidth=1) +
@@ -1178,13 +1140,11 @@ top$fraction<-factor(top$fraction, levels = c('Viable Cells', 'BONCAT'))
 # verrucomicrobiota - pale gold
 
 
-mycols8<- c( "#1F78B4","#A6CEE3", "#75026d",  "#ed6361",  "#6A3D9A", "#B2DF8A", "#FF7F00","#FDBF6F")
-
 phycols7<-c("#1F78B4","#A6CEE3", "#75026d",  "#FB9A99", "#33A02C","#FF7F00",  "#FB9A99")
 
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Manuscript/figures/Fig6_DAtaxa")
 svg(file="barplot_phyla.svg",width = 8, height=4)
-windows(7,3)
+  #windows(7,3)
 ggplot(top) +
   geom_boxplot(aes(x= reorder(fraction, -sum), y= abundance, fill=Phyla), outlier.shape = NA, alpha=.5, show.legend = FALSE)+
   geom_jitter(aes(x= reorder(fraction, -sum), y= abundance, fill=Phyla), position = position_jitter(width = .2), show.legend = FALSE)+
@@ -1197,7 +1157,6 @@ dev.off()
 #####BARPLOT STATS ########
 # mixed model with binomial regression
 # we need a data frame of # success to # failure
-
 
 df<-subset_samples(ps, Compartment!="ctl"& Compartment=="Rhizosphere" & Fraction!="Total_DNA")
 df<-prune_taxa(taxa_sums(df) > 0, df)
@@ -1445,11 +1404,13 @@ df$LFC_FractionViable_Cell<-df$LFC_FractionViable_Cell*-1
 #rm "p__" in phyla
 df$Phyla<-sub(" p__", "", df$Phyla)
 # number ASvs
-df$asv_no <- paste0("ASV", row.names(df))
-
+df<-df[order(df$rhizo.total.mean, decreasing = TRUE),]
+df$asv_no <- paste0("ASV", rep(1:length(df$asv)))
+df
 # quick overall volcano plot to check distribution
-ggplot(df, aes(x=LFC_FractionViable_Cell , y=p_viable)) + 
+ggplot(df, aes(x=LFC_FractionViable_Cell , y=p_viable, col=DA_Fraction_Total_cells_Active)) + 
   geom_jitter()+ 
+  scale_color_manual(values=c("#999999", "#56B4E9"))+
   theme_bw()
 # lfc verse the pvalue
 ggplot(df, aes(x=LFC_FractionViable_Cell , y=-log(p_viable), col=DA_Fraction_Total_cells_Active)) + 
@@ -1478,13 +1439,27 @@ write.csv(active, file ="ancom_activetaxa.csv")
 
 ######DA TAXA figure ############ 
 # filter for at least 50 reads
+DA<-df %>% filter(DA_Fraction_Total_cells_Active==TRUE)
 DA<-filter(DA, DA$rhizo.bcat.mean>50 |  DA$rhizo.total.mean>50  )
-dim(DA)
+head(DA)
 
 #remove numbers as the end of labels to make them easier to read in the figure
-DA$label<-gsub("_48326", "", DA$label)
-DA$label<-gsub("_48670", "", DA$label)
-DA$label<-gsub("_A_50105", "", DA$label)
+
+DA$label
+DA$label<-gsub("_483265", "", DA$label)
+DA$label<-gsub("_L_486704", "", DA$label)
+DA$label<-gsub("_A_501058", "", DA$label)
+DA$label<- gsub(  "_A_400748", "", DA$label)
+DA$label<- gsub(  "_A" ,"", DA$label)
+
+#relabel taxa that don't have a clear species or genus name
+DA$label<- gsub(  " g__AG11" , " f__Gemmatimonadaceae", DA$label)
+DA$label<- gsub(  " s__Palsa-739 sp003139545"  , " f__Gaiellaceae", DA$label)
+DA$label
+
+#remove the " f__ " part
+DA$label <-substr(DA$label, 5, nchar(DA$label))
+DA$label
 
 #add asvs No. label
 DA$label<-paste(DA$asv_no, DA$label)
@@ -1497,51 +1472,23 @@ DA$sig<-ifelse( DA$DA_Fraction_Total_cells_Active=="TRUE", "*", "")
 DA$label<-paste(DA$label, DA$sig)
 DA$label
 
-#plot
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Manuscript/figures/Fig6_DAtaxa")
-
-### cols for this plot
-# actinobacteria - 
-# acidobacteria - dk blue 
-# actino - light blue
-# proteobaceria - light green
-# gemma - 
-
-
-svg(file="barplot_top20_DA.svg",width = 8, height=7.5)
-windows(8,7.5)
-ggplot(DA)+
-  geom_bar(aes(x=reorder(label, +rhizo.total.mean) , y=LFC_FractionViable_Cell, fill= Phyla),
-           stat="identity", position="dodge")+
-  geom_errorbar(aes(x=label, ymin=LFC_FractionViable_Cell-se_viable,
-                    ymax=LFC_FractionViable_Cell+se_viable))+ 
-  scale_fill_manual(values=c("#A6CEE3", "#75026d","#B2DF8A"))+
-  theme_minimal(base_size = 14) +
-  coord_flip()+
-  ylim(c(-5,3))+
-  xlab("Differentially Abundant Asvs")+
-  ylab("Log fold change viable to active")
-  #theme(legend.position = "none")
-  
-dev.off()  
-
-
 ###LFC top 10 taxa ##
 ## filter for top 50 most abundant taxa or DA taxa
 df<-df %>%
   arrange( -rhizo.total.mean)
 top<-df[1:10,]
 
-#remove the " f__ " part
-top$label <-substr(top$label, 5, nchar(top$label)-1)
-
 #remove numbers as the end of labels to make them easier to read in the figure
-top$label<-gsub("_48326", "", top$label)
-top$label<-gsub("_48670", "", top$label)
-top$label<-gsub("_A_50105", "", top$label)
-top$label<-gsub("_E_64746", "", top$label)
-top$label<-gsub("_58024", "", top$label)
-top$label<-gsub("_A_58049", "", top$label)
+top$label
+top$label<-gsub("_A_501058", "", top$label)
+top$label<-gsub("_483265", "", top$label)
+top$label<-gsub("_A_580492", "", top$label)
+top$label<-gsub("_580243", "", top$label)
+top$label<-gsub("_A_501803", "", top$label)
+top$label<-gsub("_E_647464", "", top$label)
+
+#remove the " f__ " part
+top$label <-substr(top$label, 5, nchar(top$label)-0)
 top$label
 
 #add asvs label
@@ -1554,28 +1501,6 @@ top$label
 
 #group label
 top$type <- "Most Abundant Asvs"
-### cols for this plots
-# acidobacteria - dk blue 
-# proteobaceria - light green
-head(top)
-#plot
-
-svg(file="barplot_top10.svg",width = 8, height=3.5)
-windows(8,8)
-ggplot(top)+
-  geom_bar(aes(x=reorder(label, +rhizo.total.mean) , y=LFC_FractionViable_Cell, fill= Phyla), 
-           stat="identity", position="dodge")+
-  geom_errorbar(aes(x=label, ymin=LFC_FractionViable_Cell-se_viable,
-                    ymax=LFC_FractionViable_Cell+se_viable))+ 
-  scale_fill_manual(values=c("#1F78B4", "#B2DF8A"))+
-  theme_minimal(base_size = 14) +
-  coord_flip()+
-  ylim(c(-5,3))+
-  xlab("Most abudant Asvs")+
-  ylab("Log fold change viable to active")+
-  # facet_grid( scales = "free", space = "free",  rows=vars(Phyla)) 
-  theme(legend.position = "none")
-dev.off()  
 
 ##DA fig combined###
 #combine
@@ -1606,25 +1531,6 @@ ggplot(combine)+
   ylab("Log fold change viable to active")
   #facet_grid( space = "free",  rows=vars(Type))
   #theme(legend.position = "none")
-dev.off()  
-
-#plot
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Manuscript/figures/Fig6_DAtaxa")
-svg(file="barplot_big_label.svg",width = 8, height=7)
-windows(8,8)
-ggplot(combine)+
-  geom_bar(aes(x=reorder(label, +rhizo.total.mean) , y=LFC_FractionViable_Cell, fill= Phyla), 
-           stat="identity", position="dodge")+
-  geom_errorbar(aes(x=label, ymin=-se_viable+LFC_FractionViable_Cell,
-                    ymax=LFC_FractionViable_Cell+se_viable))+ 
-  scale_fill_manual(values= mycols)+
-  theme_minimal(base_size = 14) +
-  coord_flip()+
-  ylim(c(-5,3))+
-  xlab(" Asvs")+
-  ylab("Log fold change viable to active")+
-  #facet_grid( space = "free",  rows=vars(Type))+
-  theme(legend.position = "none")
 dev.off()  
 
 #####VENN DIAGRAM Viable#####
@@ -1676,7 +1582,6 @@ x <- list(
 
 
 #### venn diagram #
-library(ggvenn)
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Manuscript/figures/Fig7_heatmap")
 svg(file="OTU_level_total_venn.svg",width = 4, height=4 )
 windows(4,4)
@@ -1864,21 +1769,6 @@ cluster = hclust(distance, method = "ward.D2")
 my_list<-cluster$labels
 #### use this order for heatmaps with out phylogeny
 m<-m[match(row.names(m),as.character(my_list)),]
-
-#p<-ggtree(cluster) + 
-#  geom_tiplab(size=3, align=TRUE, linesize=0, offset = -.2) + 
-#  theme_tree2()+
-#  xlim_tree(1) 
-
-#gheatmap(p, m, 
-#         colnames=FALSE,
-#         legend_title="active taxa", offset = .5) 
-  #scale_x_ggtree() + 
-  #scale_fill_gradient(low= "#fffaa2", high =  "#bb0000", aesthetics = "fill", na.value = "white",
-  #                    name="Abundance in Active")+
-
-   #ggtitle("Families in Active Community")
-#dev.off()
 
 
 # creates a own color palette
@@ -2228,74 +2118,9 @@ dev.off()
 
 ###BINOMIAL model####
 # rrarefied data to be able to compare samples 
-## Set the working directory; ###
-setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Data/16s/")
-### Import Data ###
-taxon <- read.table("asv_level_output/greengenes/taxonomy.txt", sep="\t", header=T, row.names=1)
-asvs.raw <- read.table("asv_level_output/greengenes/feature-table.tsv", sep="\t", header=T, row.names = 1 )
-metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
-
-## Transpose ASVS table ##
-asvs.t <- t(asvs.raw)
-## order metadata
-metadat<-metadat[order(metadat$SampleID),]
-## order asvs table
-asvs.t<-asvs.t[order(row.names(asvs.t)),]
-
-## Determine minimum available reads per sample ##
-min.s<-min(rowSums(asvs.t))
-min.s
-### Rarefy to obtain even numbers of reads by sample ###
-set.seed(336)
-asvs.r<-rrarefy(asvs.t, min.s)
-dim(asvs.t)
-dim(asvs.r)
-
-###--- recode metadata----- #
-metadat<-metadat%>% mutate(Compartment=recode(Fraction, 'Bulk'='Bulk_Soil', 'Rhizo'='Rhizosphere','Endo'='Roots', 'Nod'='Nodule'))
-metadat<-metadat[, c(1,3:6)]
-metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Viable_Cell', 'POS'='Active_Cell', 'ctl'= 'ctl'))
-#to make coloring things easier I'm gong to added a combined fractionXboncat column 
-metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Fraction, metadat$Compartment))
-
-##---make phyloseq object with rarefied data -------#
-asvs.phyloseq<- (asvs.r)
-taxon<-taxon[,1:7]
-metadat<-as.matrix(metadat)
-y<-colnames(asvs.raw)
-rownames(metadat) <- y
-metadat<-as.data.frame(metadat)
-
-#import it phyloseq
-Workshop_ASVS <- otu_table(asvs.phyloseq, taxa_are_rows = FALSE)
-Workshop_metadat <- sample_data(metadat)
-Workshop_taxo <- tax_table(as.matrix(taxon))
-ps <- phyloseq(Workshop_taxo, Workshop_ASVS,Workshop_metadat)
-
-# taxa that are in the plant and are unassigned
-#afb244d96b70a4c948b205f7f7eea5c5 259366
-#9bf55fb48ef29780111f9e54dd204793  33352
-df<-subset_samples(ps, Compartment=="Roots" | Compartment=="Nodule" )
-df<-prune_taxa(taxa_sums(df) > 0, df)
-remove<-subset_taxa(df, Domain=="Unassigned" |  Phyla=="" | Phyla==" p__"  ) 
-remove
-# 53 taxa
-unique(taxon$Domain)
-########## remove these guys
-badtaxa<-taxa_names(remove)
-alltaxa<-taxa_names(ps)
-mytaxa <- alltaxa[!(alltaxa %in% badtaxa)]
-ps<-prune_taxa(mytaxa, ps )
-ps<-prune_taxa(taxa_sums(ps) > 0, ps)
-ps
-# 12652 taxa
-
 ###make data frame##
-#presence in plant ~ abundance in rhizosphere
-# don't include taxa that are super rare less than 10
-# in 3 samples
 
-ps1<-subset_samples(ps, Compartment != "ctl"& Fraction != "Total_DNA")
+ps1<-subset_samples(ps.r, Compartment != "ctl"& Fraction != "Total_DNA")
 ps1<-ps_prune(ps1, min.samples = 3, min.reads = 50)
 ps1<-prune_taxa(taxa_sums(ps1) > 0, ps1)
 ps1
