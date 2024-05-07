@@ -168,46 +168,6 @@ qiime metadata tabulate \
   --m-input-file taxonomy.qza \
   --o-visualization taxonomy.qzv
 
-# if classifying with silva didn't work i'll just use the naive bayes trained on greenhenes sequences
-# https://docs.qiime2.org/2022.2/tutorials/moving-pictures/index.html
-wget \
-  -O "gg-13-8-99-515-806-nb-classifier.qza" \
-  "https://data.qiime2.org/2022.2/common/gg-13-8-99-515-806-nb-classifier.qza"
-
-qiime feature-classifier classify-sklearn \
-  --i-classifier gg-13-8-99-515-806-nb-classifier.qza \
-  --i-reads demux.trimmed.dada2.qza \
-  --o-classification taxonomy.qza
-
-qiime metadata tabulate \
-  --m-input-file taxonomy.qza \
-  --o-visualization taxonomy.qzv
-
-#output taxomny file
-
-qiime tools export \
-  --input-path taxonomy.pretrained.gg2.qza \
-  --output-path ./
-
-############### green genes classification #############################
-
-pip install q2-greengenes2
-wget http://ftp.microbio.me/greengenes_release/2022.10/2022.10.taxonomy.asv.nwk.qza
-
-qiime greengenes2 filter-features \
-	--i-feature-table feature-table.biom \
-	--i-reference 2022.10.taxonomy.asv.nwk.qza \
-	--o-filtered-feature-table filter.table.biom.qza
-
-qiime greengenes2 taxonomy-from-table \
-     --i-reference-taxonomy 2022.10.taxonomy.asv.nwk.qza \
-     --i-table filter.table.biom.qza \
-     --o-classification table.taxonomy.qza
-
-wget http://ftp.microbio.me/greengenes_release/current/2022.10.phylogeny.asv.nwk.qza
-
-# green genes2 has a tree I can probably use
-
 
 ######## using the pre trained classifier #######
 
@@ -216,30 +176,6 @@ qiime feature-classifier classify-sklearn \
   --i-reads demux.trimmed.dada2.qza \
   --o-classification taxonomy.qza
 
-####### assign phylogeny @ KELSEY no need to do this part. ##########
-
-##use MAFFT to make a reference alignment
-
-qiime alignment mafft \
---i-sequences 2022.10.backbone.v4.fna.qza \
---o-alignment aligned-ref-sequences.qza
-
-# another helpful tutorial https://john-quensen.com/tutorials/processing-16s-sequences-with-qiime2-and-dada2/
-qiime phylogeny align-to-tree-mafft-fasttree \
-  --i-sequences asvs/trimmed.dada2.qza \
-  --o-alignment aligned-rep-seqs.qza \
-  --o-masked-alignment masked-aligned-rep-seqs.qza \
-  --o-tree unrooted-tree.qza \
-  --o-rooted-tree rooted-tree.qza
-
-qiime tools export \
---input-path unrooted.tree.qza \
---output-path /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/output
-
-
-qiime tools export \
---input-path rooted-tree.qza \
---output-path /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/output
 
 #######################download things from the cluster to my pc#########################
 
@@ -251,11 +187,7 @@ mv *.qzv qzv_files
 #1 metadata (usually called metadate.txt)
 #2 table of all the asvs (usually feature-table.tsv)
 #3 taxomony file (usually taxnomy.tsv)
-
-#tree
-#4 phylogeny tree output rooted tree
-#5 phylogeny unrooted tree
-#6 export representative sequences (called asvs/trimmed.dada2.tsv)
+#4 export representative sequences (called asvs/trimmed.dada2.tsv)
 
 qiime tools export \
 --input-path feature.table.otu.qza \
@@ -266,59 +198,5 @@ qiime tools export \
 --output-path /storage/group/ltb5167/default/JennHarris/BONCAT_16S/output_greengenes2
 
 
-#############extra_ things #################################################
 
-## cluster into OTUS 
-# https://docs.qiime2.org/2023.2/plugins/available/vsearch/cluster-features-de-novo/
-
-qiime vsearch cluster-features-de-novo \
-  --i-sequences asvs/rep.seqs.dada2.qza \
-  --i-table  asvs/feature.table.dada2.qza \
-  --p-perc-identity .97 \
-  --p-threads 2 \
-  --o-clustered-table /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/feature.table.otu.qza \
-  --o-clustered-sequences /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/rep.seqs.otu.qza  
-
-#######################################################################
-
-
-#qiime plug in for inserting fragments
-
-wget \
-  -O "sepp-refs-gg-13-8.qza" \
-  "https://data.qiime2.org/2019.10/common/sepp-refs-gg-13-8.qza"
-    
-qiime fragment-insertion sepp \
-  --i-representative-sequences rep-seqs.qza \
-  --i-reference-database sepp-refs-gg-13-8.qza \
-  --o-tree insertion-tree.qza \
-  --o-placements insertion-placements.qza
-
-qiime fragment-insertion filter-features \
-  --i-table table.qza \
-  --i-tree insertion-tree.qza \
-  --o-filtered-table filtered_table.qza \
-  --o-removed-table removed_table.qza
-
-qiime phylogeny filter-tree \
- --i-tree insertion-tree.qza \
- --i-table filter_table.qza \
- --o-filtered-tree filter-tree.qza
-
-
-################
-
-#output tree
-
-
-qiime tools export \
---input-path /storage/home/jeh6121/burghardt/JennHarris/BONCAT_16S/qiime_sepp/filter-tree.qza \
---output-path /storage/home/jeh6121/burghardt/JennHarris/BONCAT_16S/qiime_sepp/output
-
-#output feature table
-qiime tools export \
---input-path /storage/home/jeh6121/burghardt/JennHarris/BONCAT_16S/qiime_sepp/insertion-placements.qza \
---output-path /storage/home/jeh6121/burghardt/JennHarris/BONCAT_16S/qiime_sepp/output
-
-######
 
