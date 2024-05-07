@@ -99,8 +99,6 @@ df$Compartment
 #-------set colors--------
 mycols = c("#45924b", "#aac581", "#fffac9", "#f2a870", "#de425b")
 mycols= c("#003f5c","#bc5090", "#ffa600")
-#colors from 16s 
-mycols1<- c("grey27", "#6eda0a")
 
 #----set directory for figures------
 
@@ -129,20 +127,6 @@ svg(file="figures/bulkrhizo.svg",width = 4, height=4 )
   scale_y_log10(limits= c(1E7, 1E9))
   
 dev.off()
-
-#Rhizo + bulk
-svg(file="figures/rhizobulk_a17.svg",width = 4, height=4 )
-rhizobulk%>% filter(Plant!="A17")%>%
-  ggplot( aes(x=Fraction, y=cells_per_gram_soil)) +
-  geom_jitter(width = .2)+
-  geom_boxplot(alpha=.6,outlier.shape = NA , fill= mycols3[5])+
-  scale_fill_manual(values = mycols3[5])+
-  theme_minimal(base_size = 22, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  scale_y_log10(limits= c(1E7, 1E9)) +
-  #xlab("Plant")+
-  ggtitle("Medicago")+
-  ylab("Number Cells/ g soil")
 
 ###--------  model for n cells------
 #linear
@@ -187,7 +171,6 @@ df%>%
 dev.off()
 
 #--------model n active cells---------
-# lil model of this. 
 #log transformed#
 #seems to be the best model for this
 hist(log(rhizobulk$cells_active_per_ul))
@@ -211,57 +194,9 @@ a<-aov(log(clo$cells_active_per_ul)
     ~clo$Fraction)
 summary(a)
 
-#pea
-hist(log(pea$cells_active_per_ul))
-# ehh
-pea<-rhizobulk%>%filter(Plant=="Pea")
-m1<-lm(log(cells_active_per_ul)
-       ~Fraction, data=pea)
-anova(m1)
-# p is very tiny
-
-
-#a17
-hist(log(a17$cells_active_per_ul))
-# ehh
-a17<-rhizobulk%>%filter(Plant=="Medicago")
-m1<-lm(log(a17$cells_active_per_ul)
-            ~a17$Fraction)
-anova(m1)
-# p is very tiny
-
-
 
 #-------percent active figures-------
 setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Manuscript/figures/Fig3_activity_diversity")
-
-
-
-
-
-
-
-
-
-
-
-#all plants
-svg(file="figures/allfractions_percentwihtpea.svg",width =6, height=6 )
-df %>%
-  filter(Plant!="soil", Dyes=="BONCAT-SYTO", flowcyto=="Fortessa")%>%
-  ggplot( aes(x=Compartment, y=Percent_Boncat_pos)) +
-  geom_boxplot(alpha=.7, outlier.shape = NA)+
-  geom_jitter(width = .2)+
-  scale_color_manual(values = mycols[c(1,2,3)])+
-  theme_bw(base_size = 20, )+
-  theme(axis.text.x = element_text(angle=60, hjust=1))+
-  facet_wrap(~Plant)+
-  scale_y_log10()+
-  xlab("compartment")+
-  ylab("Percent Active")
-  #ylim(0, 3E8)
-dev.off()
-
 
 #clover
 svg(file="percent_active.svg",width = 5, height=4 )
@@ -283,8 +218,18 @@ df %>%
 #ylim(0, 3E8)
 dev.off()
 
-  
+# avg % active in soil?
+df%>%
+  filter(Dyes == "BONCAT-SYTO", flowcyto=="Fortessa", Plant=="Clover") %>%
+  filter(Compartment!="Nodule", Compartment!="Roots") %>% #group_by(Compartment) %>%
+  summarise(meanpercent=mean(Percent_Boncat_pos),
+            SD= sd(Percent_Boncat_pos))
 
+df%>%
+  filter(Dyes == "BONCAT-SYTO", flowcyto=="Fortessa", Plant=="Clover") %>%
+  filter(Compartment!="Rhizosphere", Compartment!="Bulk Soil") %>% #group_by(Compartment) %>%
+  summarise(meanpercent=mean(Percent_Boncat_pos),
+            SD= sd(Percent_Boncat_pos))
 
 #---------model for percent active cells ---------
 # our data of boncat activity is a proportion
