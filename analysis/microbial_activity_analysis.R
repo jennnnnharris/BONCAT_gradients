@@ -2,16 +2,16 @@
 # March 2023
 #Jennifer Harris
 
-library(readxl)
-library(tidyverse)
-library(dplyr)
-library(lubridate)
-library(Hmisc) 
-library(lme4) # for generalized linear models
-library(multcompView)
-library(emmeans)
-library(multcomp)
-library(lmtest)
+#library(readxl)
+#library(tidyverse)
+#library(dplyr)
+#library(lubridate)
+#library(Hmisc) 
+#library(lme4) # for generalized linear models
+#library(multcompView)
+#library(emmeans)
+#library(multcomp)
+#library(lmtest)
 
 
 ###------import data --------
