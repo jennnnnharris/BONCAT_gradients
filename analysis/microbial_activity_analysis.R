@@ -10,24 +10,24 @@ library(lubridate)
 ###------import data --------
 
 setwd("C:/Users/Jenn/OneDrive - The Pennsylvania State University/Documents/Github/BONCAT_gradients/data")
-#import data from fortessa and VYB flow cyto
+#import data from fortessa 
 df<- read_excel("FlowCyto_data.xlsx")
 
 
 #------cleaning data-------
 #make date column date format
-df$Date<-as.Date(df_fort$Date , format = "%y%m$d")
-df$Date<-ymd(df_fort$Date)
+df$Date<-as.Date(df$Date , format = "%y%m$d")
+df$Date<-ymd(df$Date)
 
 #add dyes column
 Dyes <-c()
-Dyes <-ifelse(grepl("W",df_fort$ID), 'unstained', 'BONCAT-SYTO')
+Dyes <-ifelse(grepl("W",df$ID), 'unstained', 'BONCAT-SYTO')
 df$Dyes <- Dyes
 head(df)
 
 
 ### making levels a factor for plotting
-df$Compartment<-factor(df$Compartment, levels = c("Bulk", "Rhizo", "Endo", "Nod"))
+df$Compartment<-factor(df$Compartment, levels = c("Bulk", "Rhizo", "Root", "Nod"))
 
 
 #-------set colors--------
@@ -40,7 +40,7 @@ setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burg
 
 svg(file="percent_active.svg",width = 5, height=4 )
 df %>%
-  filter(df$Dyes=="BONCAT-SYTO")%>%
+  filter(Treatment=="HPG")%>%
   ggplot(aes(x=Compartment, y=Percent_Boncat_pos)) +
   geom_boxplot(alpha=.7, outlier.shape = NA)+
   geom_jitter(width = .1, size=1)+
@@ -58,18 +58,24 @@ df %>%
 dev.off()
 
 # avg % active in soil?
-df%>%
-  filter(Dyes == "BONCAT-SYTO") %>%
-  filter(Compartment!="Nodule", Compartment!="Roots") %>% #group_by(Compartment) %>%
+soil <- df%>%
+  filter(Treatment == "HPG") %>%
+  filter(Compartment!="Nod", Compartment!="Root") 
+
+soil %>%  group_by(Compartment) %>%
   summarise(meanpercent=mean(Percent_Boncat_pos),
             SD= sd(Percent_Boncat_pos))
 
 # avg % active in plant?
-df%>%
-  filter(Dyes == "BONCAT-SYTO") %>%
-  filter(Compartment!="Rhizosphere", Compartment!="Bulk Soil") %>% #group_by(Compartment) %>%
+endosphere<-df%>%
+  filter(Treatment == "HPG") %>%
+  filter(Compartment!="Rhizo", Compartment!="Bulk") 
+
+endosphere%>%
+  group_by(Compartment) %>%
   summarise(meanpercent=mean(Percent_Boncat_pos),
             SD= sd(Percent_Boncat_pos))
+
 
 #---------model for percent active cells ---------
 # our data of BONCAT activity is a proportion

@@ -85,8 +85,8 @@ qiime dada2 denoise-paired \
     --i-demultiplexed-seqs ./16S.trimmed.primer.qza \
     --p-n-threads 0 \
     --p-trunc-q 2 \
-    --p-trunc-len-f 205 \
-    --p-trunc-len-r 205 \
+    --p-trunc-len-f 220 \
+    --p-trunc-len-r 220 \
     --p-max-ee-f 2 \
     --p-max-ee-r 5 \
     --p-n-reads-learn 1000000 \
@@ -216,7 +216,7 @@ qiime feature-classifier classify-sklearn \
   --i-reads demux.trimmed.dada2.qza \
   --o-classification taxonomy.qza
 
-####### assign phylogeny @ KELSEY no need to do this part. ##########
+####### assign phylogeny ##########
 
 ##use MAFFT to make a reference alignment
 
