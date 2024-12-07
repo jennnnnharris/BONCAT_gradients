@@ -82,7 +82,7 @@ endosphere%>%
 # to model this data some functions require a df frame with # failures # successes and proportion of each 
 
 prop<-df %>%
-  filter(Plant!="Soil", Dyes=="BONCAT-SYTO", ID!="beads", flowcyto=='Fortessa') %>%
+  filter(Plant!="Soil", Treatment!="Methione",Dyes=="BONCAT-SYTO", ID!="beads", machine=='Fortessa') %>%
   mutate(n_failures = n_Events_Cells-n_Events_Boncat)
   
 y<-cbind(prop$n_Events_Boncat, prop$n_failures)
@@ -97,52 +97,52 @@ y<-cbind(prop$n_Events_Boncat, prop$n_failures)
  
  anova(m1, test= "LRT")  
  anova(m1, test= "Chisq")
-
+prop
 # subset to compare compartment
   y<-cbind(prop$n_Events_Boncat, prop$n_failures)
-  Fraction = prop$Fraction
-  m2<-glm(y~Fraction, quasibinomial)
+  Fraction = prop$Compartment
+  m2<-glm(y~prop$Compartment, quasibinomial)
   anova(m2, test= "LRT")
   
 # bulk verse rhizosphere
-  prop1<-prop%>% filter(Fraction!="Endo") %>% filter(Fraction!="Nod")
+  prop1<-prop%>% filter(Compartment!="Endo") %>% filter(Compartment!="Nod")
   y<-cbind(prop1$n_Events_Boncat, prop1$n_failures)
-  Fraction = prop1$Fraction
-  m2<-glm(y~Fraction, quasibinomial)
+  Compartment = prop1$Compartment
+  m2<-glm(y~Compartment, quasibinomial)
   anova(m2, test= "LRT")
     
 # bulk verse endo
-  prop1<-prop%>% filter(Fraction!="Rhizo") %>% filter(Fraction!="Nod")
+  prop1<-prop%>% filter(Compartment!="Rhizo") %>% filter(Compartment!="Nod")
   y<-cbind(prop1$n_Events_Boncat, prop1$n_failures)
-  Fraction = prop1$Fraction
-  m2<-glm(y~Fraction, quasibinomial)
+  Compartment = prop1$Compartment
+  m2<-glm(y~Compartment, quasibinomial)
   anova(m2, test= "LRT")
   
 # bulk verse nodules
-  prop1<-prop%>% filter(Fraction!="Rhizo") %>% filter(Fraction!="Endo")
+  prop1<-prop%>% filter(Compartment!="Rhizo") %>% filter(Compartment!="Root")
   y<-cbind(prop1$n_Events_Boncat, prop1$n_failures)
-  Fraction = prop1$Fraction
-    m2<-glm(y~Fraction, quasibinomial)
+  Compartment = prop1$Compartment
+    m2<-glm(y~Compartment, quasibinomial)
   anova(m2, test= "LRT")  
 
 # rhizo verse endo
-  prop1<-prop%>% filter(Fraction!="Bulk") %>% filter(Fraction!="Nod")
+  prop1<-prop%>% filter(Compartment!="Bulk") %>% filter(Compartment!="Nod")
   y<-cbind(prop1$n_Events_Boncat, prop1$n_failures)
-  Fraction = prop1$Fraction
-  m2<-glm(y~Fraction, quasibinomial)
+  Compartment = prop1$Compartment
+  m2<-glm(y~Compartment, quasibinomial)
   anova(m2, test= "LRT") 
   
 # rhizo verse nodules
-  prop1<-prop%>% filter(Fraction!="Bulk") %>% filter(Fraction!="Endo")
+  prop1<-prop%>% filter(Compartment!="Bulk") %>% filter(Compartment!="Root")
   y<-cbind(prop1$n_Events_Boncat, prop1$n_failures)
-  Fraction = prop1$Fraction
-  m2<-glm(y~Fraction, quasibinomial)
+  Compartment = prop1$Compartment
+  m2<-glm(y~Compartment, quasibinomial)
   anova(m2, test= "LRT") 
   
 # endo verse nodules  
-  prop1<-prop%>% filter(Fraction!="Bulk") %>% filter(Fraction!="Rhizo")
+  prop1<-prop%>% filter(Compartment!="Bulk") %>% filter(Compartment!="Rhizo")
   y<-cbind(prop1$n_Events_Boncat, prop1$n_failures)
-  Fraction = prop1$Fraction
-  m2<-glm(y~Fraction, quasibinomial)
+  Compartment = prop1$Compartment
+  m2<-glm(y~Compartment, quasibinomial)
   anova(m2, test= "LRT") 
   
