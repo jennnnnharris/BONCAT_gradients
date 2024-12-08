@@ -1,6 +1,6 @@
 # Microbial activity analysis
-# May 2024
-#Jennifer Harris
+# last updated 7 December 2024
+# Jennifer Harris
 
 library(readxl)
 library(tidyverse)
