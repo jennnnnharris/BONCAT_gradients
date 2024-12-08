@@ -1,6 +1,6 @@
 # 16S analysis
 # Jennifer Harris
-# Last updated: May 7 2024
+# Last updated: Dec 7 2024
 
 ### 1. Initial Setup ###
 
@@ -2096,7 +2096,7 @@ require(gridExtra)
 grid.arrange(p1, p2, ncol=2)
 dev.off()
 
-##########TOP TAXA effecting the model #######
+##########most abudant plant colonizers #######
 
 df2<-filter(df1, inplant=="1")
 head(df2)

@@ -1,11 +1,13 @@
 #bioinformatics pipeline for 16s microbiome data
+#this script is in bash 
+#designed to be run line by line in the terminal on linux
 
 #you will need
 ## 16s sequences
 ## Qiime2
 
 #step are
-## 1. install software if you haven't already
+## 1. install software 
 ## 2. make a qiime map file
 ## 3. check quality of reads
 ## 4. Pair reads and assign ASVs
@@ -102,7 +104,7 @@ qiime tools export \
    --output-path ./asvs/stats.dada2.qzv
 
 # most samples had low chimeras, 80% to 90% of sequences were non chimeric
-# for some samples (C1B DNA, C2B DNA, C2R DNA, C5B DNA) about 50% of sequences where chimeras
+# for some samples (C1B DNA, C2B DNA, C2R DNA, C5B DNA) about 60% of total sequences where chimeras
 # this is not great but I'm going to keep moving forward the pipeline
 
 #### summerize and export
@@ -136,60 +138,8 @@ qiime tools export \
   --output-path ./
 
 
-######################## silva classification ############################
 
-# downloaded the silva  classfier sequences from Qiimes website
-# the upload files to cluster 
-#scp silva-138-99-seqs-515-806.qza silva-138-99-tax-515-806.qza jeh6121@datamgr.aci.ics.psu.edu:/storage/work/jeh6121/TTC_16S/
-
-# train classifier
-# optimize clasifier by finding sections that are with the primers you used
-qiime feature-classifier extract-reads \
-  --i-sequences silva/silva-138-99-seqs-515-806.qza \
-  --p-f-primer GTGYCAGCMGCCGCGGTAA \
-  --p-r-primer CCGYCAATTYMTTTRAGTTT \
-  --o-reads silva/silva-138-99-extracts.qza
-
-# train the classifiers
-qiime feature-classifier fit-classifier-naive-bayes \
-  --i-reference-reads /silva/silva-138-99-extracts.qza \
-  --i-reference-taxonomy /silva/silva-138-99-tax.qza \
-  --o-classifier /silva/silva-138-99-classifier.qza
-
-# test the classifier
-qiime feature-classifier classify-sklearn
-  --i-classifier silva/silva-138-99-nb-classifier.qza \
-  --i-reads otu/rep.seqs.otu.qza \
-  --o-classification otu/taxonomy.otu2.qza
-
-rep.seqs.otu.qza
-
-qiime metadata tabulate \
-  --m-input-file taxonomy.qza \
-  --o-visualization taxonomy.qzv
-
-# if classifying with silva didn't work i'll just use the naive bayes trained on greenhenes sequences
-# https://docs.qiime2.org/2022.2/tutorials/moving-pictures/index.html
-wget \
-  -O "gg-13-8-99-515-806-nb-classifier.qza" \
-  "https://data.qiime2.org/2022.2/common/gg-13-8-99-515-806-nb-classifier.qza"
-
-qiime feature-classifier classify-sklearn \
-  --i-classifier gg-13-8-99-515-806-nb-classifier.qza \
-  --i-reads demux.trimmed.dada2.qza \
-  --o-classification taxonomy.qza
-
-qiime metadata tabulate \
-  --m-input-file taxonomy.qza \
-  --o-visualization taxonomy.qzv
-
-#output taxomny file
-
-qiime tools export \
-  --input-path taxonomy.pretrained.gg2.qza \
-  --output-path ./
-
-############### green genes classification #############################
+############### green genes taxanomy classification #############################
 
 pip install q2-greengenes2
 wget http://ftp.microbio.me/greengenes_release/2022.10/2022.10.taxonomy.asv.nwk.qza
@@ -266,59 +216,5 @@ qiime tools export \
 --output-path /storage/group/ltb5167/default/JennHarris/BONCAT_16S/output_greengenes2
 
 
-#############extra_ things #################################################
 
-## cluster into OTUS 
-# https://docs.qiime2.org/2023.2/plugins/available/vsearch/cluster-features-de-novo/
-
-qiime vsearch cluster-features-de-novo \
-  --i-sequences asvs/rep.seqs.dada2.qza \
-  --i-table  asvs/feature.table.dada2.qza \
-  --p-perc-identity .97 \
-  --p-threads 2 \
-  --o-clustered-table /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/feature.table.otu.qza \
-  --o-clustered-sequences /storage/group/ltb5167/default/JennHarris/BONCAT_16S/otu/rep.seqs.otu.qza  
-
-#######################################################################
-
-
-#qiime plug in for inserting fragments
-
-wget \
-  -O "sepp-refs-gg-13-8.qza" \
-  "https://data.qiime2.org/2019.10/common/sepp-refs-gg-13-8.qza"
-    
-qiime fragment-insertion sepp \
-  --i-representative-sequences rep-seqs.qza \
-  --i-reference-database sepp-refs-gg-13-8.qza \
-  --o-tree insertion-tree.qza \
-  --o-placements insertion-placements.qza
-
-qiime fragment-insertion filter-features \
-  --i-table table.qza \
-  --i-tree insertion-tree.qza \
-  --o-filtered-table filtered_table.qza \
-  --o-removed-table removed_table.qza
-
-qiime phylogeny filter-tree \
- --i-tree insertion-tree.qza \
- --i-table filter_table.qza \
- --o-filtered-tree filter-tree.qza
-
-
-################
-
-#output tree
-
-
-qiime tools export \
---input-path /storage/home/jeh6121/burghardt/JennHarris/BONCAT_16S/qiime_sepp/filter-tree.qza \
---output-path /storage/home/jeh6121/burghardt/JennHarris/BONCAT_16S/qiime_sepp/output
-
-#output feature table
-qiime tools export \
---input-path /storage/home/jeh6121/burghardt/JennHarris/BONCAT_16S/qiime_sepp/insertion-placements.qza \
---output-path /storage/home/jeh6121/burghardt/JennHarris/BONCAT_16S/qiime_sepp/output
-
-######
 
