@@ -203,7 +203,7 @@ setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burg
           legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14),
           axis.text.y = element_text(size = 14),
           legend.position = "none")+
-  ylab("cells / per ul")
+  ylab("cells / µL")
   dev.off()
   
   
