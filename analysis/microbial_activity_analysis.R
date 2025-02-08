@@ -146,3 +146,78 @@ prop
   m2<-glm(y~Compartment, quasibinomial)
   anova(m2, test= "LRT") 
   
+
+  
+#-----cell counts-----
+
+  
+#import data
+
+setwd("C:/Users/Jenn/OneDrive - The Pennsylvania State University/Documents/Github/BONCAT_gradients/data")
+#import data from fortessa 
+df<- read_excel("Cell_counts.xlsx")
+  
+#------data cleaning------
+head(df)
+### making levels a factor for plotting
+df$Compartment<-factor(df$Compartment, levels = c("Bulk", "Rhizo", "Root", "Nodule"))
+### remove unstained samples and flow cytometer controls. We will not be plotting these.
+df<-df %>% filter(df$Stained=="1") 
+# remove  flow cytometer controls. We will not be plotting these.
+df<-df %>% filter(df$Plant!="CTL")
+#make cell per ge soil numeric
+df$approx_cells_per_g_soil<-as.numeric(df$approx_cells_per_g_soil)
+#we are just going to focus on bulk soil and rhizo sphere
+df<-df %>%filter(Compartment!= "Root" & Compartment!= "Nodule")
+
+  
+#set directory for figures
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Manuscript/figures/Supplement")
+  
+#-------cell counts figures-------
+  
+  svg(file="Cell_counts_per_g.svg",width = 5, height=4 )
+  df %>%
+    filter(Compartment!= "Root" & Compartment!= "Nodule")%>%
+    ggplot(aes(x=Compartment, y=approx_cells_per_g_soil)) +
+    geom_boxplot(alpha=.7, outlier.shape = NA)+
+    geom_jitter(width = .1, size=1)+
+    theme_classic(base_size = 14)+
+    theme(axis.text.x = element_text(angle=60, hjust=1))+ 
+    theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
+          legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14),
+          axis.text.y = element_text(size = 14),
+          legend.position = "none")+
+    ylab("approximate cells / gram soil")
+  dev.off()
+
+  svg(file="Cell_counts.svg",width = 5, height=4 )
+  df%>%
+    filter(Compartment!= "Root" & Compartment!= "Nodule")%>%
+    ggplot(aes(x=Compartment, y=cells_per_ul_sample)) +
+    geom_boxplot(alpha=.7, outlier.shape = NA)+
+    geom_jitter(width = .1, size=1)+
+    theme_classic(base_size = 14)+
+    theme(axis.text.x = element_text(angle=60, hjust=1))+ 
+    theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
+          legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14),
+          axis.text.y = element_text(size = 14),
+          legend.position = "none")+
+  ylab("cells / per ul")
+  dev.off()
+  
+  
+#----summary statistics-----  
+  
+# avg % active in soil?
+df %>%  group_by(Compartment) %>%
+    summarise(mean_cell_count=mean(cells_per_ul_sample),
+              SD_cell_count= sd(cells_per_ul_sample),
+              mean_cell_per_g=mean(approx_cells_per_g_soil),
+              SD_cell_per_g= sd(approx_cells_per_g_soil)
+              )
+  
+#----anova----
+  
+m1<-lm(data=df, cells_per_ul_sample~Compartment )  
+summary(m1)  
