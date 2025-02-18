@@ -1,6 +1,7 @@
 # 16S analysis
 # Jennifer Harris
-# Last updated: Dec 7 2024
+# Last updated: Feb 18 2025
+# The activity of soil microbial taxa in the rhizosphere predicts the success of root colonization"
 
 ### 1. Initial Setup ###
 
@@ -31,10 +32,11 @@ library(ggtree)
 
 #####Import data#####
 ## Set the working directory; ###
-setwd("C:/Users/Jenn/OneDrive - The Pennsylvania State University/Documents/Github/BONCAT_gradients/data/16s")
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Data/16s/asv_level_output/greengenes")
 
 taxon <- read.table("taxonomy.txt", sep="\t", header=T, row.names=1)
 asvs.raw <- read.table("feature-table.tsv", sep="\t", header=T, row.names = 1 )
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Data/16s/")
 metadat <- read.delim("metadata.txt", sep="\t", header = T, check.names=FALSE)
 
 ## Transpose ASVS table ##
@@ -50,7 +52,7 @@ metadat<-metadat[, c(1,3:6)]
 metadat<-metadat%>% mutate(Fraction=recode(BONCAT, 'DNA'= 'Total_DNA', 'SYBR'= 'Viable_Cell', 'POS'='Active_Cell', 'ctl'= 'ctl'))
 metadat<-mutate(metadat, compartment_BCAT = paste0(metadat$Compartment, metadat$Fraction))
 
-##------make phyloseq object with percent data -------#
+##------make phyloseq object with data -------#
 asvs.phyloseq<- (asvs.t)
 taxon<-taxon[,1:7]
 metadat<-as.matrix(metadat)
@@ -2137,7 +2139,7 @@ df<-na.omit(df)
 dim(df)
 
 
-####PERCENT abundance figure: SUPPLEMENT####
+#### SUPPLEMENT: PERCENT abundance figure:####
 # grab data
 taxon<- as.data.frame(tax_table(ps))
 df<-as.data.frame(otu_table(ps))
@@ -2206,6 +2208,262 @@ df1%>%
   scale_fill_manual(values=mycols18) +
   theme_bw(base_size = 12)+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
+dev.off()
+
+
+#### SUPPLEMENT: Diversity plots with un-rarefied data ####
+
+# diversity is calculated on rarefied to compare samples reads b/c many diversity metric use singleton to calculate diversity. 
+rich<-estimate_richness(ps, measures = c("Observed", "Shannon", "Simpson", "InvSimpson"))
+# calculated eveness
+# eveness = shannon/ ln(richness)
+H<-rich$Shannon  
+S1<-rich$Observed  
+S<-log(S1)  
+Evenness<-H/S
+rich$Evenness <- Evenness
+
+
+# Data wrangling fo rdiversity of active microbes in each fraction
+rich<-cbind(rich, metadat)
+rich<-as.data.frame(rich)
+head(rich)
+unique(rich$Compartment)
+rich<- rich %>%  filter(Compartment!="ctl")
+rich$Compartment<-factor(rich$Compartment, levels = c("Bulk_Soil", "Rhizosphere", "Roots", "Nodule"))
+rich %>%  arrange( -Observed)
+rich$Fraction<-factor(rich$Fraction, levels = c("Total_DNA", "Viable_Cell", "Active_Cell"))
+
+
+mycols3 <- c("#bcd3e8",  "#140c9c", "#fc8449")
+mycols3.1 <- c("#84aac2",  "#282c55", "#c2590a")
+
+
+
+rich<-rich %>% filter(Plant=="Clover") # remove no plant controls
+
+#shannon
+p1<-rich %>%
+  ggplot(aes(x=Compartment, y=Shannon,  col= Fraction, fill=Fraction))+
+  geom_boxplot(alpha=.5, outlier.shape = NA) +
+  scale_color_manual(values=mycols3) +
+  scale_fill_manual(values = mycols3)+
+  geom_jitter(width = .12, size=1.5, col=mycols3.1 [as.factor(rich$Fraction)] )+
+  theme_classic(base_size = 14)+
+  theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
+        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14),
+        axis.text.y = element_text(size = 14),
+        legend.position = "none")+
+  facet_wrap(~Fraction, scales = "free_x")+
+  scale_x_discrete(drop = TRUE) +
+  ylab("Shannon Diversity
+       ")+
+  xlab(" ")
+p1
+#n asvs
+p2<-rich %>%
+  ggplot(aes(x=Compartment, y=Observed,  col= Fraction, fill=Fraction))+
+  geom_boxplot(alpha=.5,  outlier.shape = NA) +
+  scale_color_manual(values=mycols3) +
+  scale_fill_manual(values=mycols3) +
+  geom_jitter(width = .1, size=1, col=mycols3.1 [as.factor(rich$Fraction)]  )+
+  theme_classic(base_size = 14)+
+  theme(axis.text.x = element_text(angle=60, hjust=1, size = 14),
+        legend.text = element_text(size = 14), axis.title.y =  element_text(size = 14),
+        axis.text.y = element_text(size = 14),
+        legend.position = "none")+
+  facet_wrap(~Fraction, scales = "free_x")+
+  scale_x_discrete(drop = TRUE) +
+  ylab("Numbers of ASVs")+
+  xlab("")
+
+p2
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Manuscript/figures/supplement")
+svg(file="diversity.unrarefied.svg",width = 8, height=7)
+windows(8,7)
+require(gridExtra)
+grid.arrange(p1, p2, ncol=1)
+dev.off()
+
+#### SUPPLEMENT: beta diversity plots with un-rarefied data ####
+
+
+##all comparents##
+#Pcoa on rarefied asvs Data
+ps<-subset_samples(ps, Compartment !="ctl")
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps), method = "bray")
+# Perform PCoA analysis of BC distances #
+otus.pcoa <- cmdscale(otus.bray, k=(38-1), eig=TRUE)
+# Store coordinates for first two axes in new variable #
+otus.p <- otus.pcoa$points[,1:2]
+# swtich order
+switch<-otus.p[,2:1]
+# Calculate % variance explained by each axis #
+otus.eig<-otus.pcoa$eig
+perc.exp<-otus.eig/(sum(otus.eig))*100
+pe1<-perc.exp[1]
+pe2<-perc.exp[2]
+
+
+# subset metadata
+metadat2<-filter(metadat, Compartment!="ctl")
+as.factor(metadat2$Compartment)
+as.factor(metadat2$Fraction)
+as.factor(metadat2$compartment_BCAT)
+levels(as.factor(metadat2$compartment_BCAT))
+unique(levels(as.factor(metadat2$Fraction)))
+#color and shapes
+mycols3 <-  c("#fc8449", "#282c55","#bcd3e8" )
+
+mycols2 <-  c("#fc8449",  "#282c55" )
+
+#get shapes
+square <- 22
+diamond <- 23
+triangle <- 24
+circle <- 21
+upsidedown_tri <- 25
+
+
+setwd("C:/Users/Jenn/The Pennsylvania State University/Burghardt, Liana T - Burghardt Lab Shared Folder/Projects/BONCAT-MicrobialActivity/BONCAT_gradients/Manuscript/figures/supplement")
+svg(file="pcoa-unrarefied.svg",width = 8, height=8)
+par(mfrow=c(2,2))
+
+#all
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="All Compartments",xlab=paste("PCoA1 (",round(pe1,2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+title(adj = 0, main= "A")
+points(otus.p, col=c("darkgrey"),
+       pch=c(25, circle, diamond, triangle)[as.factor(metadat2$Compartment)],
+       lwd=1,cex=2,
+       bg=mycols3[c(1,3,2)][as.factor(metadat2$Fraction)])
+ordiellipse(otus.pcoa, metadat2$Compartment,  
+            kind = "ehull", conf=0.95, label=T, 
+            draw = "polygon",
+            border = 0,
+            lwd=.1,
+            col= mycols3[2],
+            alpha = 50)
+
+legend("topleft", legend=c( "Active Cell"   ,   "Viable Cell", "TotalDNA"  ),
+       fill= mycols3,
+       cex=1,
+       title = "Fraction",
+       bty = "n")
+legend("top", legend=c("Nodule", "Root", "Rhizosphere", "Bulk soil"  ),
+       pch=c(1, 2, 5, 6),
+       cex=1,
+       title = "Compartment",     bty = "n")
+#dev.off()
+
+
+##soil##
+ps2<-subset_samples(ps, Compartment !=  "Nodule" & Compartment != "Roots" & Compartment !="ctl" & Fraction != "Total_DNA")
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+# Perform PCoA analysis of BC distances #
+otus.pcoa <- cmdscale(otus.bray, k=(8-1), eig=TRUE)
+# Store coordinates for first two axes in new variable #
+otus.p <- otus.pcoa$points[,1:2]
+# Calculate % variance explained by each axis #
+otus.eig<-otus.pcoa$eig
+perc.exp<-otus.eig/(sum(otus.eig))*100
+pe1<-perc.exp[1]
+pe2<-perc.exp[2]
+# subset metadata1
+metadat2<-as.data.frame(sample_data(ps2))
+metadat2<-metadat%>% filter(Compartment !=  "Nodule" & Compartment != "Roots" & Compartment!="ctl" & Fraction != "Total_DNA")
+
+
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="Rhizosphere",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+title(adj = 0, main= "B")
+points(otus.p[,1:2],
+       col=c("darkgray"),
+       pch=(diamond),
+       lwd=1,cex=2,
+       bg= c(mycols2)[as.factor(metadat2$Fraction)])
+ordiellipse(otus.pcoa, metadat2$Fraction,  
+            kind = "ehull", conf=0.95, label=T, 
+            draw = "polygon",
+            border = 0,
+            #lwd=.1,
+            col= mycols3[c(1,3)],
+            alpha = 50)
+
+## roots ###
+ps2<-subset_samples(ps, Compartment == "Roots")
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+df<-as.data.frame(otu_table(ps2))
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+# Perform PCoA analysis of BC distances #
+otus.pcoa <- cmdscale(otus.bray, k=(8-1), eig=TRUE)
+# Store coordinates for first two axes in new variable #
+otus.p <- otus.pcoa$points[,1:2]
+# Calculate % variance explained by each axis #
+otus.eig<-otus.pcoa$eig
+perc.exp<-otus.eig/(sum(otus.eig))*100
+pe1<-perc.exp[1]
+pe2<-perc.exp[2]
+metadat2<- sample_data(ps2)
+
+
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="Root Endosphere",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+title(adj = 0, main= "C")
+points(otus.p[,1:2],col=c("darkgrey"),
+       pch=triangle,
+       lwd=1,cex=2,
+       bg=c(fill= c(mycols2) )[as.factor(metadat2$Fraction)])
+ordiellipse(otus.pcoa, metadat2$Fraction,  
+            kind = "ehull", conf=0.95, label=T, 
+            draw = "polygon",
+            border = 0,
+            #lwd=.1,
+            col= c(mycols2),
+            alpha = 50)
+
+###nodule###
+ps2<-subset_samples(ps, Compartment == "Nodule")
+ps2<-prune_taxa(taxa_sums(ps2) > 0, ps2)
+any(taxa_sums(ps2) == 0)
+df<-as.data.frame(otu_table(ps2))
+# Calculate Bray-Curtis distance between samples
+otus.bray<-vegdist(otu_table(ps2), method = "bray")
+# Perform PCoA analysis of BC distances #
+otus.pcoa <- cmdscale(otus.bray, k=(8-1), eig=TRUE)
+# Store coordinates for first two axes in new variable #
+otus.p <- otus.pcoa$points[,1:2]
+# Calculate % variance explained by each axis #
+otus.eig<-otus.pcoa$eig
+perc.exp<-otus.eig/(sum(otus.eig))*100
+pe1<-perc.exp[1]
+pe2<-perc.exp[2]
+# subset metadata
+metadat2<- as.data.frame(sample_data(ps2))
+
+
+ordiplot(otus.pcoa,choices=c(1,2), type="none", main="Nodule",xlab=paste("PCoA1(",round(pe1, 2),"% variance explained)"),
+         ylab=paste("PCoA2 (",round(pe2,2),"% variance explained)"))
+title(adj = 0, main= "D")
+points(col=c("darkgrey"),
+       otus.p[,1:2],
+       pch=c(circle),
+       lwd=1,cex=2,
+       bg=c(fill= c(mycols2 ) )[as.factor(metadat2$Fraction)])
+ordiellipse(otus.pcoa, metadat2$Fraction,  
+            kind = "ehull", conf=0.95, label=T, 
+            draw = "polygon",
+            border = 0,
+            #lwd=.1,
+            col= c(mycols2),
+            alpha = 50)
 
 dev.off()
 
